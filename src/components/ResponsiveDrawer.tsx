@@ -87,7 +87,7 @@ export default function ResponsiveDrawer({
     <Box
       sx={{
         display: "flex",
-        flexDirection: "column",
+        flexDirection: "row",
         width: "100%",
         height: "100%",
       }}
