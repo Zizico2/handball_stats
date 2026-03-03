@@ -31,7 +31,14 @@ export default async function RootLayout({
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme} defaultMode="dark">
             <CssBaseline />
-            <Box sx={{ height: "100dvh", display: "flex" }}>
+            <Box
+              sx={{
+                height: "100dvh",
+                width: "100dvw",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
               <ResponsiveDrawer>{children}</ResponsiveDrawer>
             </Box>
           </ThemeProvider>

@@ -84,7 +84,14 @@ export default function ResponsiveDrawer({
   );
 
   return (
-    <Box sx={{ display: "flex" }}>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        width: "100%",
+        height: "100%",
+      }}
+    >
       <AppBar
         position="absolute"
         sx={{
@@ -162,9 +169,12 @@ export default function ResponsiveDrawer({
         sx={{
           flexGrow: 1,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         <Toolbar />
+
         {children}
       </Box>
     </Box>
