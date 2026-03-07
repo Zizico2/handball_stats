@@ -40,24 +40,6 @@ export const basePlayerEventSchema = z.object({
 });
 export type BasePlayerEvent = z.infer<typeof basePlayerEventSchema>;
 
-// export const interceptionEventSchema = z.object({
-//   event: z.literal("interception"),
-// });
-// export type InterceptionEvent = z.infer<typeof interceptionEventSchema>;
-
-// export const shotEventSchema = shotSchema.extend({
-//   event: shotSchema,
-// });
-// export type ShotEvent = z.infer<typeof shotEventSchema>;
-
-// export const playerEventSchema = basePlayerEventSchema.extend({
-//   event: z.union([
-//     shotEventSchema.shape.event,
-//     interceptionEventSchema.shape.event
-//   ]),
-// });
-// export type PlayerEvent = z.infer<typeof playerEventSchema>;
-
 export const interceptionEventSchema = z.object({
   eventType: z.literal("interception"),
 });
@@ -72,5 +54,13 @@ export type ShotEvent = z.infer<typeof shotEventSchema>;
 export const playerEventSchema = basePlayerEventSchema.and(
   shotEventSchema.or(interceptionEventSchema),
 );
+
+// const withBase = <T extends z.ZodRawShape>(schema: z.ZodObject<T>) =>
+//   basePlayerEventSchema.extend(schema.shape);
+
+// export const playerEventSchema = z.discriminatedUnion("eventType", [
+//   withBase(shotEventSchema),
+//   withBase(interceptionEventSchema),
+// ]);
 
 export type PlayerEvent = z.infer<typeof playerEventSchema>;
