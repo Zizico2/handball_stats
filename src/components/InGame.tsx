@@ -100,8 +100,6 @@ function InGame() {
   return (
     <>
       <Box sx={{ height: "100%", width: "100%" }}>
-        sa
-        <h1>In Game</h1>
         <Box
           sx={{
             display: "flex",
