@@ -37,25 +37,40 @@ export const basePlayerEventSchema = z.object({
   player: playerSchema,
   game_id: z.number(),
   ellapsed_seconds: z.number(),
-  // event: z.union([shotSchema, z.literal("interception")]),
 });
 export type BasePlayerEvent = z.infer<typeof basePlayerEventSchema>;
 
-export const interceptionEventSchema = basePlayerEventSchema.extend({
-  event: z.literal("interception"),
+// export const interceptionEventSchema = z.object({
+//   event: z.literal("interception"),
+// });
+// export type InterceptionEvent = z.infer<typeof interceptionEventSchema>;
+
+// export const shotEventSchema = shotSchema.extend({
+//   event: shotSchema,
+// });
+// export type ShotEvent = z.infer<typeof shotEventSchema>;
+
+// export const playerEventSchema = basePlayerEventSchema.extend({
+//   event: z.union([
+//     shotEventSchema.shape.event,
+//     interceptionEventSchema.shape.event
+//   ]),
+// });
+// export type PlayerEvent = z.infer<typeof playerEventSchema>;
+
+export const interceptionEventSchema = z.object({
+  eventType: z.literal("interception"),
 });
 export type InterceptionEvent = z.infer<typeof interceptionEventSchema>;
 
-export const shotEventSchema = basePlayerEventSchema.extend({
+export const shotEventSchema = z.object({
+  eventType: z.literal("shot"),
   event: shotSchema,
 });
 export type ShotEvent = z.infer<typeof shotEventSchema>;
 
-export const playerEventSchema = z.union([
-  shotEventSchema,
-  interceptionEventSchema,
-]) satisfies z.Schema<{
-  event: unknown;
-  player: Player;
-}>;
+export const playerEventSchema = basePlayerEventSchema.and(
+  shotEventSchema.or(interceptionEventSchema),
+);
+
 export type PlayerEvent = z.infer<typeof playerEventSchema>;

@@ -1,11 +1,4 @@
 "use client";
-import {
-  BasePlayerEvent,
-  basePlayerEventSchema,
-  PlayerEvent,
-  playerEventSchema,
-  playerSchema,
-} from "@/datamodel";
 import { Box, Button, Dialog, DialogContent, DialogTitle } from "@mui/material";
 import {
   createCollection,
@@ -15,9 +8,18 @@ import {
   useLiveQuery,
   useLiveSuspenseQuery,
 } from "@tanstack/react-db";
+import { atom } from "jotai";
 import dynamic from "next/dynamic";
 import { useRef, useState } from "react";
-import { atom } from "jotai";
+import z from "zod";
+import {
+  BasePlayerEvent,
+  basePlayerEventSchema,
+  type InterceptionEvent,
+  type PlayerEvent,
+  playerEventSchema,
+  playerSchema,
+} from "@/datamodel";
 
 const playerEventsCollection = createCollection(
   localStorageCollectionOptions({
@@ -40,18 +42,22 @@ const playersCollection = createCollection(
 // const currentEvent = atom({});
 
 function InGame() {
-  const shots = useLiveSuspenseQuery((q) =>
-    q
-      .from({ shot: playerEventsCollection })
-      .orderBy(({ shot }) => shot.id, "desc")
-      .where(({ shot }) => not(eq(shot.event, "interception"))),
-  );
+  // const shots = useLiveSuspenseQuery((q) =>
+  //   q
+  //     .from({ shot: playerEventsCollection })
+  //     .orderBy(({ shot }) => shot.id, "desc")
+  //     .where(({ shot }) => not(eq(shot.eventType, "interception"))),
+  // );
 
-  const interceptions = useLiveSuspenseQuery((q) =>
-    q
-      .from({ shot: playerEventsCollection })
-      .orderBy(({ shot }) => shot.id, "desc")
-      .where(({ shot }) => eq(shot.event, "interception")),
+  // const interceptions = useLiveSuspenseQuery((q) =>
+  //   q
+  //     .from({ shot: playerEventsCollection })
+  //     .orderBy(({ shot }) => shot.id, "desc")
+  //     .where(({ shot }) => eq(shot.eventType, "interception")),
+  // );
+
+  const playerEvents = useLiveSuspenseQuery((q) =>
+    q.from({ shot: playerEventsCollection }),
   );
 
   const nextUserId = useLiveSuspenseQuery((q) =>
@@ -71,6 +77,26 @@ function InGame() {
 
   const currentEvent = useRef<Partial<PlayerEvent>>({});
 
+  const finishCurrentEvent = () => {
+    try {
+      const parsedEvent = playerEventSchema.parse(currentEvent.current);
+      try {
+        playerEventsCollection.insert(parsedEvent);
+        console.log("Inserted event:", parsedEvent);
+      } catch (error) {
+        console.error("Failed to insert event into collection:", error);
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        // TODO
+        error.issues;
+        console.error("Validation error:", error.issues);
+      }
+    }
+  };
+  // const currentInterceptionEvent = useRef<Partial<InterceptionEvent>>({});
+  // currentEvent.current.event = "interception";
+
   return (
     <>
       <Box sx={{ height: "100%", width: "100%" }}>
@@ -85,10 +111,10 @@ function InGame() {
             width: "fit-content",
           }}
         >
-          <Button onClick={() => playersCollection.insert({ number: 1 })}>
+          {/* <Button onClick={() => playersCollection.insert({ number: 1 })}>
             Add Sample Player
-          </Button>
-          <Button
+          </Button> */}
+          {/* <Button
             variant="contained"
             onClick={() =>
               playerEventsCollection.insert({
@@ -100,11 +126,12 @@ function InGame() {
                   goal: true,
                   direction: "OnTarget",
                 },
+                eventType: "shot",
               })
             }
           >
             Insert Sample Shot
-          </Button>
+          </Button> */}
           <Button
             variant="contained"
             onClick={() => {
@@ -114,7 +141,12 @@ function InGame() {
               //   ellapsed_seconds: 0,
               //   event: "interception",
               // });
-              currentEvent.current.event = "interception";
+              currentEvent.current = {
+                id: nextUserId.data ? nextUserId.data.id + 1 : 1,
+                game_id: 1,
+                ellapsed_seconds: 0,
+                eventType: "interception",
+              };
               setIsPickPlayerDialogOpen(true);
             }}
           >
@@ -122,22 +154,22 @@ function InGame() {
           </Button>
         </Box>
         <Box>
-          <h2>Shots</h2>
-          {shots.data.map((shot) => {
-            if (shot.event === "interception") return null; // This should not happen due to the query filter, but we check just in case.
-            return (
-              <Box key={shot.id}>
-                {shot.event.goal ? "Goal" : "Missed"} by player {shot.player} at{" "}
-                {shot.ellapsed_seconds} seconds
-              </Box>
-            );
-          })}
-        </Box>
-        <Box>
-          <h2>Interceptions</h2>
-          {interceptions.data.map((interception) => (
-            <Box key={interception.id}>
-              Interception at {interception.ellapsed_seconds} seconds
+          <h2>Player Events</h2>
+          {playerEvents.data.map((event) => (
+            <Box key={event.id} sx={{ border: "1px solid black", padding: 1 }}>
+              <div>Event ID: {event.id}</div>
+              <div>Player: {event.player}</div>
+              <div>Game ID: {event.game_id}</div>
+              <div>Ellapsed Seconds: {event.ellapsed_seconds}</div>
+              <div>Event Type: {event.eventType}</div>
+              {"event" in event && event.eventType === "shot" && (
+                <>
+                  <div>Goal: {event.event.goal ? "Yes" : "No"}</div>
+                  <div>
+                    Direction: {event.event.direction ?? "Not specified"}
+                  </div>
+                </>
+              )}
             </Box>
           ))}
         </Box>
@@ -157,6 +189,7 @@ function InGame() {
           if (pickedPlayer) {
             currentEvent.current.player = pickedPlayer;
             console.log("Picked player:", pickedPlayer);
+            finishCurrentEvent();
           } else {
             currentEvent.current = {};
           }

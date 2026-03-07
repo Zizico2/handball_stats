@@ -16,8 +16,8 @@ const roboto = Roboto({
   variable: "--font-roboto",
 });
 
-import InitColorSchemeScript from "@mui/material/InitColorSchemeScript";
 import { Box } from "@mui/material";
+import InitColorSchemeScript from "@mui/material/InitColorSchemeScript";
 
 export default async function RootLayout({
   children,

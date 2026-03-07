@@ -16,7 +16,7 @@ import ListItemText from "@mui/material/ListItemText";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import NextLink from "next/link";
-import * as React from "react";
+import type * as React from "react";
 import { useState } from "react";
 
 const drawerWidth = 240;
