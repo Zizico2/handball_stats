@@ -1,5 +1,5 @@
-import InGameClient from "../../components/InGameClient";
+import InGame from "../../components/InGame";
 
 export default async function Home() {
-  return <InGameClient />;
+  return <InGame />;
 }

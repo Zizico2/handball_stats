@@ -1,63 +1,204 @@
 "use client";
-import { Box, Button } from "@mui/material";
+import {
+  BasePlayerEvent,
+  basePlayerEventSchema,
+  PlayerEvent,
+  playerEventSchema,
+  playerSchema,
+} from "@/datamodel";
+import { Box, Button, Dialog, DialogContent, DialogTitle } from "@mui/material";
 import {
   createCollection,
+  eq,
   localStorageCollectionOptions,
+  not,
   useLiveQuery,
   useLiveSuspenseQuery,
 } from "@tanstack/react-db";
+import dynamic from "next/dynamic";
 import { useRef, useState } from "react";
-import z from "zod";
+import { atom } from "jotai";
 
-const todoSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  // text: z.string(),
-  // completed: z.boolean().default(false),
-  // created_at: z.string().transform(val => new Date(val)),  // string → Date
-  // priority: z.number().default(0)
-});
-
-const userPreferencesCollection = createCollection(
+const playerEventsCollection = createCollection(
   localStorageCollectionOptions({
-    id: "user-preferences",
-    storageKey: "app-user-prefs",
-    schema: todoSchema,
+    id: "game-events",
+    storageKey: "game-events",
+    schema: playerEventSchema,
     getKey: (item) => item.id,
   }),
 );
 
-export default function InGame(
-  // { data, columns }
-) {
-  const activeUsers = useLiveSuspenseQuery((q) =>
-    q.from({ user: userPreferencesCollection }),
+const playersCollection = createCollection(
+  localStorageCollectionOptions({
+    id: "players",
+    storageKey: "players",
+    schema: playerSchema,
+    getKey: (item) => `${item}`,
+  }),
+);
+
+// const currentEvent = atom({});
+
+function InGame() {
+  const shots = useLiveSuspenseQuery((q) =>
+    q
+      .from({ shot: playerEventsCollection })
+      .orderBy(({ shot }) => shot.id, "desc")
+      .where(({ shot }) => not(eq(shot.event, "interception"))),
   );
-  const userIdCounter = useRef(1);
+
+  const interceptions = useLiveSuspenseQuery((q) =>
+    q
+      .from({ shot: playerEventsCollection })
+      .orderBy(({ shot }) => shot.id, "desc")
+      .where(({ shot }) => eq(shot.event, "interception")),
+  );
+
+  const nextUserId = useLiveSuspenseQuery((q) =>
+    q
+      .from({ user: playerEventsCollection })
+      .orderBy(({ user }) => user.id, "desc")
+      // .limit(1)
+      .findOne(),
+  );
+
+  const players = useLiveSuspenseQuery((q) =>
+    q.from({ player: playersCollection }),
+  );
+
+  // const userIdCounter = useRef(1);
+  const [isPickPlayerDialogOpen, setIsPickPlayerDialogOpen] = useState(false);
+
+  const currentEvent = useRef<Partial<PlayerEvent>>({});
 
   return (
-    <Box sx={{ backgroundColor: "blue", height: "100%", width: "100%" }}>
-      sa
-      <h1>In Game</h1>
-      <Button
-        onClick={() => {
-          userPreferencesCollection.insert({
-            id: userIdCounter.current,
-            name: "John Doe",
-          });
-          userIdCounter.current += 1;
-        }}
-      >
-        Test User Preferences Collection
-      </Button>
-      <Box>
-        hi
-        {activeUsers.data.map((user) => (
-          <div key={user.id}>
-            {user.id}:{user.name}
-          </div>
-        ))}
+    <>
+      <Box sx={{ height: "100%", width: "100%" }}>
+        sa
+        <h1>In Game</h1>
+        <Box
+          sx={{
+            display: "flex",
+            gap: 2,
+            flexDirection: "column",
+            margin: "auto",
+            width: "fit-content",
+          }}
+        >
+          <Button onClick={() => playersCollection.insert({ number: 1 })}>
+            Add Sample Player
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() =>
+              playerEventsCollection.insert({
+                id: nextUserId.data ? nextUserId.data.id + 1 : 1,
+                game_id: 1,
+                ellapsed_seconds: 0,
+                player: 1,
+                event: {
+                  goal: true,
+                  direction: "OnTarget",
+                },
+              })
+            }
+          >
+            Insert Sample Shot
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              // userPreferencesCollection.insert({
+              //   id: nextUserId.data ? nextUserId.data.id + 1 : 1,
+              //   game_id: 1,
+              //   ellapsed_seconds: 0,
+              //   event: "interception",
+              // });
+              currentEvent.current.event = "interception";
+              setIsPickPlayerDialogOpen(true);
+            }}
+          >
+            Interception
+          </Button>
+        </Box>
+        <Box>
+          <h2>Shots</h2>
+          {shots.data.map((shot) => {
+            if (shot.event === "interception") return null; // This should not happen due to the query filter, but we check just in case.
+            return (
+              <Box key={shot.id}>
+                {shot.event.goal ? "Goal" : "Missed"} by player {shot.player} at{" "}
+                {shot.ellapsed_seconds} seconds
+              </Box>
+            );
+          })}
+        </Box>
+        <Box>
+          <h2>Interceptions</h2>
+          {interceptions.data.map((interception) => (
+            <Box key={interception.id}>
+              Interception at {interception.ellapsed_seconds} seconds
+            </Box>
+          ))}
+        </Box>
       </Box>
-    </Box>
+      <PickPlayerFullscreenDialog
+        open={isPickPlayerDialogOpen}
+        // TODO: players={players}
+        players={[
+          { number: 1 },
+          { number: 2 },
+          { number: 3 },
+          { number: 4 },
+          { number: 5 },
+        ]}
+        onPickPlayer={(pickedPlayer) => {
+          setIsPickPlayerDialogOpen(false);
+          if (pickedPlayer) {
+            currentEvent.current.player = pickedPlayer;
+            console.log("Picked player:", pickedPlayer);
+          } else {
+            currentEvent.current = {};
+          }
+        }}
+      />
+    </>
   );
 }
+
+// // TODO: only keep this for testing, while InGame is using localStorageCollection, which is not SSR compatible.
+// // Once we have a proper collection setup, we can remove this and use InGame directly in the page.
+export default dynamic(() => Promise.resolve(InGame), {
+  ssr: false,
+});
+
+const PickPlayerFullscreenDialog = ({
+  players,
+  open,
+  onPickPlayer,
+}: {
+  players: { number: number }[];
+  open: boolean;
+  onPickPlayer: (pickedPlayer: number | null) => void;
+}) => {
+  return (
+    <Dialog fullScreen open={open}>
+      {/* <DialogTitle>Pick a Player</DialogTitle> */}
+      <DialogContent>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {players.map((player) => (
+            <Button
+              key={player.number}
+              variant="contained"
+              onClick={() => {
+                onPickPlayer(player.number);
+              }}
+            >
+              Player {player.number}
+            </Button>
+          ))}
+        </Box>
+      </DialogContent>
+    </Dialog>
+  );
+};
