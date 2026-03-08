@@ -24,6 +24,7 @@
     "@mui/material-nextjs": "^7.3.8",
     "@opennextjs/cloudflare": "^1.16.3",
     "@tanstack/react-db": "^0.1.74",
+    "@xstate/react": "^6.1.0",
     "jotai": "^2.18.0",
     "next": "16.1.6",
     "react": "19.2.3",
@@ -31,6 +32,7 @@
     "react-dropzone": "^15.0.0",
     "react-image-crop": "^11.0.10",
     "react-timer-hook": "^4.0.5",
+    "xstate": "^5.28.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

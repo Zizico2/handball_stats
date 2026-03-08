@@ -1,5 +1,7 @@
 "use client";
 import { Box, Button, Dialog, DialogContent, DialogTitle } from "@mui/material";
+import { useActor, useMachine } from "@xstate/react";
+import { eventMachine } from "@/utils";
 import {
   createCollection,
   eq,
@@ -19,6 +21,8 @@ import {
   type PlayerEvent,
   playerEventSchema,
   playerSchema,
+  type ShotDirection,
+  shotDirectionSchema,
 } from "@/datamodel";
 
 const playerEventsCollection = createCollection(
@@ -73,7 +77,11 @@ function InGame() {
   );
 
   // const userIdCounter = useRef(1);
-  const [isPickPlayerDialogOpen, setIsPickPlayerDialogOpen] = useState(false);
+  // const [isPickPlayerDialogOpen, setIsPickPlayerDialogOpen] = useState(false);
+  // const [isPickShotDirectionDialogOpen, setIsPickShotDirectionDialogOpen] =
+  //   useState(false);
+  const [state, send, machineRef] = useMachine(eventMachine);
+
 
   const currentEvent = useRef<Partial<PlayerEvent>>({});
 
@@ -109,27 +117,6 @@ function InGame() {
             width: "fit-content",
           }}
         >
-          {/* <Button onClick={() => playersCollection.insert({ number: 1 })}>
-            Add Sample Player
-          </Button> */}
-          {/* <Button
-            variant="contained"
-            onClick={() =>
-              playerEventsCollection.insert({
-                id: nextUserId.data ? nextUserId.data.id + 1 : 1,
-                game_id: 1,
-                ellapsed_seconds: 0,
-                player: 1,
-                event: {
-                  goal: true,
-                  direction: "OnTarget",
-                },
-                eventType: "shot",
-              })
-            }
-          >
-            Insert Sample Shot
-          </Button> */}
           <Button
             variant="contained"
             onClick={() => {
@@ -149,6 +136,26 @@ function InGame() {
             }}
           >
             Interception
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              // userPreferencesCollection.insert({
+              //   id: nextUserId.data ? nextUserId.data.id + 1 : 1,
+              //   game_id: 1,
+              //   ellapsed_seconds: 0,
+              //   event: "interception",
+              // });
+              currentEvent.current = {
+                id: nextUserId.data ? nextUserId.data.id + 1 : 1,
+                game_id: 1,
+                ellapsed_seconds: 0,
+                eventType: "shot",
+              };
+              setIsPickPlayerDialogOpen(true);
+            }}
+          >
+            Shot
           </Button>
         </Box>
         <Box>
@@ -187,7 +194,35 @@ function InGame() {
           if (pickedPlayer) {
             currentEvent.current.player = pickedPlayer;
             console.log("Picked player:", pickedPlayer);
-            finishCurrentEvent();
+
+            if (currentEvent.current.eventType === "shot") {
+              // Open shot direction dialog
+              setIsPickShotDirectionDialogOpen(true);
+            } else if (currentEvent.current.eventType === "interception") {
+              finishCurrentEvent();
+            }
+          } else {
+            currentEvent.current = {};
+          }
+        }}
+      />
+      <PickShotDirectionDialog
+        open={isPickShotDirectionDialogOpen}
+        onPickDirection={(direction) => {
+          setIsPickShotDirectionDialogOpen(false);
+          if (currentEvent.current.eventType !== "shot") {
+            console.error("Current event is not a shot event");
+            return;
+          }
+          if (direction) {
+            currentEvent.current.event = {
+              goal: direction === "OnTarget" ? true : false,
+              direction,
+            };
+            console.log("Picked direction:", direction);
+            if (currentEvent.current.eventType === "shot") {
+              finishCurrentEvent();
+            }
           } else {
             currentEvent.current = {};
           }
@@ -226,6 +261,35 @@ const PickPlayerFullscreenDialog = ({
               }}
             >
               Player {player.number}
+            </Button>
+          ))}
+        </Box>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const PickShotDirectionDialog = ({
+  open,
+  onPickDirection,
+}: {
+  open: boolean;
+  onPickDirection: (direction: ShotDirection | null) => void;
+}) => {
+  return (
+    <Dialog fullScreen open={open}>
+      {/* <DialogTitle>Pick Shot Direction</DialogTitle> */}
+      <DialogContent>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {shotDirectionSchema.options.map((direction) => (
+            <Button
+              key={direction}
+              variant="contained"
+              onClick={() => {
+                onPickDirection(direction);
+              }}
+            >
+              {direction}
             </Button>
           ))}
         </Box>
