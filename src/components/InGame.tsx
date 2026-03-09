@@ -180,7 +180,9 @@ function InGame() {
           <Button
             variant="outlined"
             onClick={() => {
-              pause();
+              const offset = new Date();
+              offset.setSeconds(offset.getSeconds() + 60 * 30);
+              reset(offset, false);
               setMatchStatus("halftime");
             }}
             disabled={matchStatus !== "firstHalf"}
