@@ -1,5 +1,13 @@
 "use client";
-import { Box, Button, Dialog, DialogContent, DialogTitle } from "@mui/material";
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Typography,
+} from "@mui/material";
+import { useStopwatch } from "react-timer-hook";
 import {
   createCollection,
   eq,
@@ -16,9 +24,12 @@ import {
   playerSchema,
   type ShotDirection,
   shotDirectionSchema,
+  shotPosition,
+  ShotPosition,
 } from "@/datamodel";
 import { eventMachine } from "@/utils";
 import z from "zod";
+import { useState } from "react";
 
 const playerEventsCollection = createCollection(
   localStorageCollectionOptions({
@@ -69,6 +80,23 @@ function InGame() {
     q.from({ player: playersCollection }),
   );
 
+  const {
+    totalSeconds,
+    milliseconds,
+    seconds,
+    minutes,
+    hours,
+    days,
+    isRunning,
+    start,
+    pause,
+    reset,
+  } = useStopwatch({ autoStart: false });
+
+  type MatchStatus = "firstHalf" | "halftime" | "secondHalf";
+  const [matchStatus, setMatchStatus] = useState<MatchStatus | null>(null);
+  const [matchPaused, setMatchPaused] = useState(false);
+
   const [state, send, machineRef] = useMachine(
     eventMachine.provide({
       actions: {
@@ -109,13 +137,66 @@ function InGame() {
             width: "fit-content",
           }}
         >
+          <Box>
+            <Typography variant="h4">Match Clock</Typography>
+            <Typography>
+              {String(minutes).padStart(2, "0")}:
+              {String(seconds).padStart(2, "0")}
+            </Typography>
+          </Box>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              start();
+              setMatchStatus("firstHalf");
+            }}
+            disabled={matchStatus !== null}
+          >
+            Start First Half
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              start();
+              setMatchStatus("secondHalf");
+            }}
+            disabled={matchStatus !== "halftime"}
+          >
+            Start Second Half
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              pause();
+              setMatchStatus("halftime");
+            }}
+            disabled={matchStatus !== "firstHalf"}
+          >
+            Start Halftime
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              if (matchPaused) {
+                start();
+                setMatchPaused(false);
+              } else {
+                pause();
+                setMatchPaused(true);
+              }
+            }}
+            disabled={matchStatus === null}
+          >
+            {matchPaused ? "Resume Match" : "Pause Match"}
+          </Button>
+
           <Button
             variant="contained"
             onClick={() => {
               send({
                 type: "START",
                 eventType: "interception",
-                ellapsed_seconds: 0,
+                ellapsed_seconds: totalSeconds,
                 game_id: 1,
                 id: nextUserId.data ? nextUserId.data.id + 1 : 1,
               });
@@ -129,7 +210,7 @@ function InGame() {
               send({
                 type: "START",
                 eventType: "shot",
-                ellapsed_seconds: 0,
+                ellapsed_seconds: totalSeconds,
                 game_id: 1,
                 id: nextUserId.data ? nextUserId.data.id + 1 : 1,
               });
@@ -193,6 +274,16 @@ function InGame() {
           if (goal !== null) {
             console.log("Picked goal or no goal:", goal);
             send({ type: "PICK_GOAL_OR_NO_GOAL", goal });
+          } else {
+          }
+        }}
+      />
+      <PickShotPositionDialog
+        open={state.matches("pickingShotPosition")}
+        onPickShotPosition={(position) => {
+          if (position) {
+            console.log("Picked shot position:", position);
+            send({ type: "PICK_SHOT_POSITION", position });
           } else {
           }
         }}
@@ -295,6 +386,35 @@ const PickGoalOrNoGoalDialog = ({
           >
             No Goal
           </Button>
+        </Box>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const PickShotPositionDialog = ({
+  open,
+  onPickShotPosition,
+}: {
+  open: boolean;
+  onPickShotPosition: (position: ShotPosition | null) => void;
+}) => {
+  return (
+    <Dialog fullScreen open={open}>
+      {/* <DialogTitle>Pick Shot Position</DialogTitle> */}
+      <DialogContent>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {shotPosition.options.map((position) => (
+            <Button
+              key={position}
+              variant="contained"
+              onClick={() => {
+                onPickShotPosition(position);
+              }}
+            >
+              {position}
+            </Button>
+          ))}
         </Box>
       </DialogContent>
     </Dialog>

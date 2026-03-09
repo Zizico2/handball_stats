@@ -6,6 +6,7 @@ import type {
   Player,
   PlayerEvent,
   ShotDirection,
+  ShotPosition,
 } from "./datamodel";
 
 export type DeepPartial<T> = T extends object
@@ -35,7 +36,8 @@ export type Event =
     }
   | { type: "PICK_PLAYER"; player: Player }
   | { type: "PICK_SHOT_DIRECTION"; direction: ShotDirection }
-  | { type: "PICK_GOAL_OR_NO_GOAL"; goal: boolean };
+  | { type: "PICK_GOAL_OR_NO_GOAL"; goal: boolean }
+  | { type: "PICK_SHOT_POSITION"; position: ShotPosition };
 // | { type: "SET_PLAYER"; player: string }
 // | { type: "SET_SHOT_DIRECTION"; direction: string }
 // | { type: "SET_GOAL"; goal: boolean }
@@ -123,7 +125,7 @@ export const eventMachine = setup({
             }),
           },
           {
-            target: "pickingShotDirection",
+            target: "pickingShotPosition",
             guard: ({ context }) => context.playerEvent.eventType === "shot",
             actions: assign(({ context, event }) => {
               return {
@@ -132,6 +134,32 @@ export const eventMachine = setup({
             }),
           },
         ],
+      },
+    },
+    pickingShotPosition: {
+      on: {
+        PICK_SHOT_POSITION: {
+          target: "pickingShotDirection",
+          actions: assign(({ context, event }) => {
+            if (context.playerEvent.eventType !== "shot") {
+              console.error(
+                "Invalid event type in pickingShotPosition state:",
+                context.playerEvent.eventType,
+              );
+              return context; // Return the original context if the event type is invalid
+            }
+            return {
+              ...context,
+              playerEvent: {
+                ...context.playerEvent,
+                event: {
+                  ...context.playerEvent.event,
+                  position: event.position,
+                },
+              },
+            };
+          }),
+        },
       },
     },
     pickingShotDirection: {

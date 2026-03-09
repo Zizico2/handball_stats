@@ -52,10 +52,10 @@ export default function ResponsiveDrawer({
         {[
           { text: "Home", href: "/" },
           { text: "In Game", href: "/in-game" },
-          { text: "Inbox", href: "/inbox" },
-          { text: "Starred", href: "/starred" },
-          { text: "Send email", href: "/send-email" },
-          { text: "Drafts", href: "/drafts" },
+          // { text: "Inbox", href: "/inbox" },
+          // { text: "Starred", href: "/starred" },
+          // { text: "Send email", href: "/send-email" },
+          // { text: "Drafts", href: "/drafts" },
         ].map((item, index) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton component={NextLink} href={item.href}>
@@ -67,7 +67,7 @@ export default function ResponsiveDrawer({
           </ListItem>
         ))}
       </List>
-      <Divider />
+      {/* <Divider />
       <List>
         {["All mail", "Trash", "Spam"].map((text, index) => (
           <ListItem key={text} disablePadding>
@@ -79,7 +79,7 @@ export default function ResponsiveDrawer({
             </ListItemButton>
           </ListItem>
         ))}
-      </List>
+      </List> */}
     </>
   );
 
@@ -110,7 +110,7 @@ export default function ResponsiveDrawer({
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div">
-            Responsive drawer
+            Arcazzi
           </Typography>
         </Toolbar>
       </AppBar>
