@@ -30,6 +30,7 @@ import {
 import { eventMachine } from "@/utils";
 import z from "zod";
 import { useState } from "react";
+import { usePersistentStopwatch } from "@/usePersistentStopwatch";
 
 const playerEventsCollection = createCollection(
   localStorageCollectionOptions({
@@ -80,6 +81,18 @@ function InGame() {
     q.from({ player: playersCollection }),
   );
 
+  // const {
+  //   totalSeconds,
+  //   milliseconds,
+  //   seconds,
+  //   minutes,
+  //   hours,
+  //   days,
+  //   isRunning,
+  //   start,
+  //   pause,
+  //   reset,
+  // } = useStopwatch({ autoStart: false });
   const {
     totalSeconds,
     milliseconds,
@@ -91,7 +104,7 @@ function InGame() {
     start,
     pause,
     reset,
-  } = useStopwatch({ autoStart: false });
+  } = usePersistentStopwatch({ autoStart: false });
 
   type MatchStatus = "firstHalf" | "halftime" | "secondHalf";
   const [matchStatus, setMatchStatus] = useState<MatchStatus | null>(null);
@@ -200,7 +213,7 @@ function InGame() {
                 setMatchPaused(true);
               }
             }}
-            disabled={matchStatus === null}
+            disabled={matchStatus === null || matchStatus === "halftime"}
           >
             {matchPaused ? "Resume Match" : "Pause Match"}
           </Button>
