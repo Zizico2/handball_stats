@@ -145,6 +145,19 @@ function InGame() {
             </Typography>
           </Box>
           <Button
+            color="error"
+            variant="outlined"
+            onClick={() => {
+              const allItems = playerEvents.data;
+              for (const item of allItems) {
+                console.log("Deleting item:", item);
+                playerEventsCollection.delete(item.id);
+              }
+            }}
+          >
+            Clear Game Events
+          </Button>
+          <Button
             variant="outlined"
             onClick={() => {
               start();
