@@ -1,7 +1,5 @@
 "use client";
 import { Box, Button, Dialog, DialogContent, DialogTitle } from "@mui/material";
-import { useActor, useMachine } from "@xstate/react";
-import { eventMachine } from "@/utils";
 import {
   createCollection,
   eq,
@@ -10,20 +8,17 @@ import {
   useLiveQuery,
   useLiveSuspenseQuery,
 } from "@tanstack/react-db";
-import { atom } from "jotai";
+import { useMachine } from "@xstate/react";
 import dynamic from "next/dynamic";
-import { useRef, useState } from "react";
-import z from "zod";
+import { assign } from "xstate";
 import {
-  BasePlayerEvent,
-  basePlayerEventSchema,
-  type InterceptionEvent,
-  type PlayerEvent,
   playerEventSchema,
   playerSchema,
   type ShotDirection,
   shotDirectionSchema,
 } from "@/datamodel";
+import { eventMachine } from "@/utils";
+import z from "zod";
 
 const playerEventsCollection = createCollection(
   localStorageCollectionOptions({
@@ -42,8 +37,6 @@ const playersCollection = createCollection(
     getKey: (item) => `${item}`,
   }),
 );
-
-// const currentEvent = atom({});
 
 function InGame() {
   // const shots = useLiveSuspenseQuery((q) =>
@@ -76,34 +69,33 @@ function InGame() {
     q.from({ player: playersCollection }),
   );
 
-  // const userIdCounter = useRef(1);
-  // const [isPickPlayerDialogOpen, setIsPickPlayerDialogOpen] = useState(false);
-  // const [isPickShotDirectionDialogOpen, setIsPickShotDirectionDialogOpen] =
-  //   useState(false);
-  const [state, send, machineRef] = useMachine(eventMachine);
-
-
-  const currentEvent = useRef<Partial<PlayerEvent>>({});
-
-  const finishCurrentEvent = () => {
-    try {
-      const parsedEvent = playerEventSchema.parse(currentEvent.current);
-      try {
-        playerEventsCollection.insert(parsedEvent);
-        console.log("Inserted event:", parsedEvent);
-      } catch (error) {
-        console.error("Failed to insert event into collection:", error);
-      }
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        // TODO
-        error.issues;
-        console.error("Validation error:", error.issues);
-      }
-    }
-  };
-  // const currentInterceptionEvent = useRef<Partial<InterceptionEvent>>({});
-  // currentEvent.current.event = "interception";
+  const [state, send, machineRef] = useMachine(
+    eventMachine.provide({
+      actions: {
+        finishEvent: assign(({ context }) => {
+          const eventToInsert = context.playerEvent;
+          console.log("Event to insert:", eventToInsert);
+          try {
+            const parsedEvent = playerEventSchema.parse(eventToInsert);
+            try {
+              playerEventsCollection.insert(parsedEvent);
+              console.log("Inserted event:", parsedEvent);
+            } catch (error) {
+              console.error("Failed to insert event into collection:", error);
+            }
+          } catch (error) {
+            if (error instanceof z.ZodError) {
+              console.error("Validation error:", error.issues);
+            } else {
+              console.error("Unexpected error during event parsing:", error);
+            }
+            return context; // Return the original context if parsing fails
+          }
+          return {};
+        }),
+      },
+    }),
+  );
 
   return (
     <>
@@ -120,19 +112,13 @@ function InGame() {
           <Button
             variant="contained"
             onClick={() => {
-              // userPreferencesCollection.insert({
-              //   id: nextUserId.data ? nextUserId.data.id + 1 : 1,
-              //   game_id: 1,
-              //   ellapsed_seconds: 0,
-              //   event: "interception",
-              // });
-              currentEvent.current = {
-                id: nextUserId.data ? nextUserId.data.id + 1 : 1,
-                game_id: 1,
-                ellapsed_seconds: 0,
+              send({
+                type: "START",
                 eventType: "interception",
-              };
-              setIsPickPlayerDialogOpen(true);
+                ellapsed_seconds: 0,
+                game_id: 1,
+                id: nextUserId.data ? nextUserId.data.id + 1 : 1,
+              });
             }}
           >
             Interception
@@ -140,19 +126,13 @@ function InGame() {
           <Button
             variant="contained"
             onClick={() => {
-              // userPreferencesCollection.insert({
-              //   id: nextUserId.data ? nextUserId.data.id + 1 : 1,
-              //   game_id: 1,
-              //   ellapsed_seconds: 0,
-              //   event: "interception",
-              // });
-              currentEvent.current = {
-                id: nextUserId.data ? nextUserId.data.id + 1 : 1,
-                game_id: 1,
-                ellapsed_seconds: 0,
+              send({
+                type: "START",
                 eventType: "shot",
-              };
-              setIsPickPlayerDialogOpen(true);
+                ellapsed_seconds: 0,
+                game_id: 1,
+                id: nextUserId.data ? nextUserId.data.id + 1 : 1,
+              });
             }}
           >
             Shot
@@ -180,7 +160,7 @@ function InGame() {
         </Box>
       </Box>
       <PickPlayerFullscreenDialog
-        open={isPickPlayerDialogOpen}
+        open={state.matches("pickingPlayer")}
         // TODO: players={players}
         players={[
           { number: 1 },
@@ -190,41 +170,30 @@ function InGame() {
           { number: 5 },
         ]}
         onPickPlayer={(pickedPlayer) => {
-          setIsPickPlayerDialogOpen(false);
           if (pickedPlayer) {
-            currentEvent.current.player = pickedPlayer;
             console.log("Picked player:", pickedPlayer);
-
-            if (currentEvent.current.eventType === "shot") {
-              // Open shot direction dialog
-              setIsPickShotDirectionDialogOpen(true);
-            } else if (currentEvent.current.eventType === "interception") {
-              finishCurrentEvent();
-            }
+            send({ type: "PICK_PLAYER", player: pickedPlayer });
           } else {
-            currentEvent.current = {};
           }
         }}
       />
       <PickShotDirectionDialog
-        open={isPickShotDirectionDialogOpen}
+        open={state.matches("pickingShotDirection")}
         onPickDirection={(direction) => {
-          setIsPickShotDirectionDialogOpen(false);
-          if (currentEvent.current.eventType !== "shot") {
-            console.error("Current event is not a shot event");
-            return;
-          }
           if (direction) {
-            currentEvent.current.event = {
-              goal: direction === "OnTarget" ? true : false,
-              direction,
-            };
             console.log("Picked direction:", direction);
-            if (currentEvent.current.eventType === "shot") {
-              finishCurrentEvent();
-            }
+            send({ type: "PICK_SHOT_DIRECTION", direction });
           } else {
-            currentEvent.current = {};
+          }
+        }}
+      />
+      <PickGoalOrNoGoalDialog
+        open={state.matches("pickingGoalOrNoGoal")}
+        onPickGoalOrNoGoal={(goal) => {
+          if (goal !== null) {
+            console.log("Picked goal or no goal:", goal);
+            send({ type: "PICK_GOAL_OR_NO_GOAL", goal });
+          } else {
           }
         }}
       />
@@ -292,6 +261,40 @@ const PickShotDirectionDialog = ({
               {direction}
             </Button>
           ))}
+        </Box>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const PickGoalOrNoGoalDialog = ({
+  open,
+  onPickGoalOrNoGoal,
+}: {
+  open: boolean;
+  onPickGoalOrNoGoal: (goal: boolean | null) => void;
+}) => {
+  return (
+    <Dialog fullScreen open={open}>
+      {/* <DialogTitle>Was it a Goal?</DialogTitle> */}
+      <DialogContent>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <Button
+            variant="contained"
+            onClick={() => {
+              onPickGoalOrNoGoal(true);
+            }}
+          >
+            Goal
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              onPickGoalOrNoGoal(false);
+            }}
+          >
+            No Goal
+          </Button>
         </Box>
       </DialogContent>
     </Dialog>

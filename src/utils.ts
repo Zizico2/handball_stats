@@ -1,7 +1,12 @@
-import { setup, assign } from "xstate";
-import { EventType, Player, PlayerEvent, ShotDirection } from "./datamodel";
 import { finished } from "stream";
+import { assign, setup } from "xstate";
 import { set } from "zod";
+import type {
+  EventType,
+  Player,
+  PlayerEvent,
+  ShotDirection,
+} from "./datamodel";
 
 export type DeepPartial<T> = T extends object
   ? {
@@ -16,10 +21,21 @@ export type DeepPartial<T> = T extends object
 //   goal?: boolean;
 // };
 
+interface Context {
+  playerEvent: DeepPartial<PlayerEvent>;
+}
+
 export type Event =
-  | { type: "START"; eventType: EventType }
+  | {
+      type: "START";
+      eventType: EventType;
+      ellapsed_seconds: number;
+      game_id: number;
+      id: number;
+    }
   | { type: "PICK_PLAYER"; player: Player }
-  | { type: "PICK_SHOT_DIRECTION"; direction: ShotDirection };
+  | { type: "PICK_SHOT_DIRECTION"; direction: ShotDirection }
+  | { type: "PICK_GOAL_OR_NO_GOAL"; goal: boolean };
 // | { type: "SET_PLAYER"; player: string }
 // | { type: "SET_SHOT_DIRECTION"; direction: string }
 // | { type: "SET_GOAL"; goal: boolean }
@@ -28,54 +44,67 @@ export type Event =
 
 export const eventMachine = setup({
   types: {
-    context: {} as DeepPartial<PlayerEvent>,
+    context: { playerEvent: {} } as Context,
     events: {} as Event,
   },
   actions: {
-    resetContext: assign(({ context, event }) => {
-      return {}; // Return your default PlayerEventPayload properties here
+    resetContext: assign(() => {
+      return {
+        playerEvent: {},
+      };
     }),
+    // allow for the outside to override finishEvent
+    finishEvent: () => {},
   },
   guards: {
-    isShotEvent: ({ context }) => context.eventType === "shot",
+    isShotEvent: ({ context }) => context.playerEvent.eventType === "shot",
   },
 }).createMachine({
   id: "eventFlow",
   initial: "idle",
-  context: {},
+  context: {
+    playerEvent: {},
+  },
   states: {
     idle: {
+      entry: "resetContext",
       on: {
-        START: [
-          {
-            target: "startingShot",
-            guard: ({ event }) => event.eventType === "shot",
-            // actions: assign(({ event }) => {
-            //   return { eventType: event.eventType };
-            // }),
-          },
-          {
-            target: "startingInterception",
-            guard: ({ event }) => event.eventType === "interception",
-            // actions: assign(({ event }) => {
-            //   return { eventType: event.eventType };
-            // }),
-          },
-        ],
+        START: {
+          target: "starting",
+          actions: assign(({ context, event }) => {
+            return {
+              playerEvent: {
+                ...context.playerEvent,
+                eventType: event.eventType,
+                ellapsed_seconds: event.ellapsed_seconds,
+                game_id: event.game_id,
+                id: event.id,
+              },
+            };
+          }),
+        },
       },
     },
+
+    starting: {
+      always: [
+        {
+          target: "startingShot",
+          guard: ({ context }) => context.playerEvent.eventType === "shot",
+        },
+        {
+          target: "startingInterception",
+          guard: ({ context }) =>
+            context.playerEvent.eventType === "interception",
+        },
+      ],
+    },
     startingShot: {
-      entry: assign(() => {
-        return { eventType: "shot" };
-      }),
       always: {
         target: "pickingPlayer",
       },
     },
     startingInterception: {
-      entry: assign(() => {
-        return { eventType: "interception" };
-      }),
       always: {
         target: "pickingPlayer",
       },
@@ -85,26 +114,114 @@ export const eventMachine = setup({
         PICK_PLAYER: [
           {
             target: "finished",
-            guard: ({ context }) => context.eventType === "interception",
-            actions: assign(({ event }) => {
-              return { player: event.player };
+            guard: ({ context }) =>
+              context.playerEvent.eventType === "interception",
+            actions: assign(({ context, event }) => {
+              return {
+                playerEvent: { ...context.playerEvent, player: event.player },
+              };
             }),
           },
           {
-            target: "settingShotDirection",
-            guard: ({ context }) => context.eventType === "shot",
-            actions: assign(({ event }) => {
-              return { player: event.player };
+            target: "pickingShotDirection",
+            guard: ({ context }) => context.playerEvent.eventType === "shot",
+            actions: assign(({ context, event }) => {
+              return {
+                playerEvent: { ...context.playerEvent, player: event.player },
+              };
             }),
           },
         ],
       },
     },
-    pickingShotDirection: {},
-    finished: {},
+    pickingShotDirection: {
+      on: {
+        PICK_SHOT_DIRECTION: {
+          target: "pickingShotDirectionRouting",
+          actions: assign(({ context, event }) => {
+            if (context.playerEvent.eventType !== "shot") {
+              console.error(
+                "Invalid event type in pickingShotDirection state:",
+                context.playerEvent.eventType,
+              );
+              return context; // Return the original context if the event type is invalid
+            }
+            return {
+              ...context,
+              playerEvent: {
+                ...context.playerEvent,
+                event: {
+                  ...context.playerEvent.event,
+                  direction: event.direction,
+                },
+              },
+            };
+          }),
+        },
+      },
+    },
+    pickingShotDirectionRouting: {
+      always: [
+        {
+          target: "pickingGoalOrNoGoal",
+          guard: ({ context }) =>
+            context.playerEvent.eventType === "shot" &&
+            context.playerEvent.event?.direction === "OnTarget",
+        },
+        {
+          target: "finished",
+          actions: assign(({ context }) => {
+            if (context.playerEvent.eventType !== "shot") {
+              console.error(
+                "Invalid event type in pickingShotDirectionRouting state:",
+                context.playerEvent.eventType,
+              );
+              return context; // Return the original context if the event type is invalid
+            }
+            return {
+              ...context,
+              playerEvent: {
+                ...context.playerEvent,
+                event: {
+                  ...context.playerEvent.event,
+                  goal: false,
+                },
+              },
+            };
+          }),
+        },
+      ],
+    },
+    pickingGoalOrNoGoal: {
+      on: {
+        PICK_GOAL_OR_NO_GOAL: {
+          target: "finished",
+          actions: assign(({ context, event }) => {
+            if (context.playerEvent.eventType !== "shot") {
+              console.error(
+                "Invalid event type in pickingGoalOrNoGoal state:",
+                context.playerEvent.eventType,
+              );
+              return context; // Return the original context if the event type is invalid
+            }
+            return {
+              playerEvent: {
+                ...context.playerEvent,
+                event: {
+                  ...context.playerEvent.event,
+                  goal: event.goal,
+                },
+              },
+            };
+          }),
+        },
+      },
+    },
+    finished: {
+      entry: "finishEvent",
+      always: {
+        target: "idle",
+      },
+    },
   },
 });
-
-// function assign() {
-//   throw new Error("Function not implemented.");
-// }

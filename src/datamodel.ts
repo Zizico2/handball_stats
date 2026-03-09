@@ -21,7 +21,7 @@ export const baseShotSchema = z.object({
 });
 
 export const shotSchema = baseShotSchema
-  .extend({ direction: shotDirectionSchema.nullish() })
+  .extend({ direction: shotDirectionSchema })
   .refine(({ direction, goal }) => !(direction === "OffTarget" && goal), {
     message: "An off-target shot cannot be a goal",
     path: ["goal"],
