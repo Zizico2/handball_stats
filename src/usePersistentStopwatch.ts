@@ -29,6 +29,7 @@ export function usePersistentStopwatch(
   options: UsePersistentStopwatchOptions = {},
 ): PersistentStopwatchResult {
   const { storageKey = "persistentStopwatch" } = options;
+  
   // 1. Calculate the starting offset and state on the first render
   const [initialState] = useState<{
     autoStart: boolean;
@@ -119,14 +120,14 @@ export function usePersistentStopwatch(
 
   const resetStopwatch = (offset: Date, autoStart: boolean = false): void => {
     if (typeof window !== "undefined") {
+      const offsetMs = offset.getTime() - Date.now();
       const newState: StopwatchStorageState = {
         isRunning: autoStart,
-        accumulatedMs: 0,
+        accumulatedMs: Math.max(0, offsetMs),
         lastStartTime: Date.now(),
       };
       localStorage.setItem(storageKey, JSON.stringify(newState));
     }
-    // passing a fresh Date zeros out the react-timer-hook stopwatch
     stopwatch.reset(offset, autoStart);
   };
 

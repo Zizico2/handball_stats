@@ -166,9 +166,13 @@ function InGame() {
                 console.log("Deleting item:", item);
                 playerEventsCollection.delete(item.id);
               }
+              localStorage.removeItem("persistentStopwatch");
+              setMatchPaused(false);
+              setMatchStatus(null);
+              reset(new Date(), false);
             }}
           >
-            Clear Game Events
+            Clear Game
           </Button>
           <Button
             variant="outlined"
