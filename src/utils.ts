@@ -23,17 +23,26 @@ export type DeepPartial<T> = T extends object
 // };
 
 interface Context {
+  eventGroup?: EventGroup;
   playerEvent: DeepPartial<PlayerEvent>;
 }
+
+// TODO: shouldn't be here I don't think
+export type EventGroup = "attack" | "defense" | "sanction";
 
 export type Event =
   | {
       type: "START";
-      eventType: EventType;
+      // eventType: EventType;
+      eventGroup: EventGroup;
       ellapsed_seconds: number;
       game_id: number;
       id: number;
     }
+  //
+  | { type: "PICK_ATTACK_EVENT_TYPE"; eventType: EventType }
+  | { type: "PICK_DEFENSE_EVENT_TYPE"; eventType: EventType }
+  //
   | { type: "PICK_PLAYER"; player: Player }
   | { type: "PICK_SHOT_DIRECTION"; direction: ShotDirection }
   | { type: "PICK_GOAL_OR_NO_GOAL"; goal: boolean }
@@ -72,12 +81,14 @@ export const eventMachine = setup({
       entry: "resetContext",
       on: {
         START: {
-          target: "starting",
+          target: "startingRouting",
+
           actions: assign(({ context, event }) => {
             return {
+              eventGroup: event.eventGroup,
               playerEvent: {
                 ...context.playerEvent,
-                eventType: event.eventType,
+                // eventType: event.eventType,
                 ellapsed_seconds: event.ellapsed_seconds,
                 game_id: event.game_id,
                 id: event.id,
@@ -87,20 +98,73 @@ export const eventMachine = setup({
         },
       },
     },
-
-    starting: {
+    startingRouting: {
       always: [
         {
-          target: "startingShot",
-          guard: ({ context }) => context.playerEvent.eventType === "shot",
+          target: "startingAttack",
+          guard: ({ context }) => context.eventGroup === "attack",
         },
         {
-          target: "startingInterception",
-          guard: ({ context }) =>
-            context.playerEvent.eventType === "interception",
+          target: "startingDefense",
+          guard: ({ context }) => context.eventGroup === "defense",
+        },
+        {
+          target: "startingSanction",
+          guard: ({ context }) => context.eventGroup === "sanction",
         },
       ],
     },
+    startingSanction: {},
+    startingAttack: {
+      on: {
+        PICK_ATTACK_EVENT_TYPE: [
+          {
+            target: "startingShot",
+            guard: ({ event }) => event.eventType === "shot",
+            actions: assign(({ context, event }) => {
+              return {
+                playerEvent: {
+                  ...context.playerEvent,
+                  eventType: event.eventType,
+                },
+              };
+            }),
+          },
+        ],
+      },
+    },
+    startingDefense: {
+      on: {
+        PICK_DEFENSE_EVENT_TYPE: [
+          {
+            target: "startingInterception",
+            guard: ({ event }) => event.eventType === "interception",
+            actions: assign(({ context, event }) => {
+              return {
+                playerEvent: {
+                  ...context.playerEvent,
+                  eventType: event.eventType,
+                },
+              };
+            }),
+          },
+        ],
+      },
+    },
+
+    // starting: {
+    //   always: [
+    //     {
+    //       target: "startingShot",
+    //       guard: ({ context }) => context.playerEvent.eventType === "shot",
+    //     },
+    //     {
+    //       target: "startingInterception",
+    //       guard: ({ context }) =>
+    //         context.playerEvent.eventType === "interception",
+    //     },
+    //   ],
+    // },
     startingShot: {
       always: {
         target: "pickingPlayer",

@@ -20,6 +20,7 @@ import { useMachine } from "@xstate/react";
 import dynamic from "next/dynamic";
 import { assign } from "xstate";
 import {
+  EventType,
   playerEventSchema,
   playerSchema,
   type ShotDirection,
@@ -227,28 +228,28 @@ function InGame() {
             onClick={() => {
               send({
                 type: "START",
-                eventType: "interception",
+                eventGroup: "attack",
                 ellapsed_seconds: totalSeconds,
                 game_id: 1,
                 id: nextUserId.data ? nextUserId.data.id + 1 : 1,
               });
             }}
           >
-            Interception
+            Attack
           </Button>
           <Button
             variant="contained"
             onClick={() => {
               send({
                 type: "START",
-                eventType: "shot",
+                eventGroup: "defense",
                 ellapsed_seconds: totalSeconds,
                 game_id: 1,
                 id: nextUserId.data ? nextUserId.data.id + 1 : 1,
               });
             }}
           >
-            Shot
+            Defense
           </Button>
         </Box>
         <Box>
@@ -320,15 +321,75 @@ function InGame() {
           }
         }}
       />
+      <PickAttackEventTypeDialog
+        open={state.matches("startingAttack")}
+        onPickAttackEventType={(eventType) => {
+          if (eventType) {
+            console.log("Picked attack event type:", eventType);
+            send({ type: "PICK_ATTACK_EVENT_TYPE", eventType });
+          } else {
+          }
+        }}
+      />
+      <PickDefenseEventTypeDialog
+        open={state.matches("startingDefense")}
+        onPickDefenseEventType={(eventType) => {
+          if (eventType) {
+            console.log("Picked defense event type:", eventType);
+            send({ type: "PICK_DEFENSE_EVENT_TYPE", eventType });
+          } else {
+          }
+        }}
+      />
     </>
   );
 }
 
-// // TODO: only keep this for testing, while InGame is using localStorageCollection, which is not SSR compatible.
-// // Once we have a proper collection setup, we can remove this and use InGame directly in the page.
+// TODO: only keep this for testing, while InGame is using localStorageCollection, which is not SSR compatible.
+// Once we have a proper collection setup, we can remove this and use InGame directly in the page.
 export default dynamic(() => Promise.resolve(InGame), {
   ssr: false,
 });
+
+const PickAttackEventTypeDialog = ({
+  open,
+  onPickAttackEventType,
+}: {
+  open: boolean;
+  onPickAttackEventType: (eventType: EventType | null) => void;
+}) => {
+  return (
+    <ListSelectionDialog
+      open={open}
+      title="Pick Attack Event Type"
+      options={[
+        { text: "Shot", key: "shot", value: "shot" },
+        // { text: "Provoked 7m", key: "provoked7m", value: "provoked7m" },
+        // { text: "Provoked 2m", key: "provoked2m", value: "provoked2m" },
+      ]}
+      onPickOption={onPickAttackEventType}
+    />
+  );
+}
+
+const PickDefenseEventTypeDialog = ({
+  open,
+  onPickDefenseEventType,
+}: {
+  open: boolean;
+  onPickDefenseEventType: (eventType: EventType | null) => void;
+}) => {
+  return (
+    <ListSelectionDialog
+      open={open}
+      title="Pick Defense Event Type"
+      options={[
+        { text: "Interception", key: "interception", value: "interception" },
+      ]}
+      onPickOption={onPickDefenseEventType}
+    />
+  );
+}
 
 const PickPlayerFullscreenDialog = ({
   players,
