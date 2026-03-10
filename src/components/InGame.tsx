@@ -369,24 +369,16 @@ const PickShotDirectionDialog = ({
   onPickDirection: (direction: ShotDirection | null) => void;
 }) => {
   return (
-    <Dialog fullScreen open={open}>
-      {/* <DialogTitle>Pick Shot Direction</DialogTitle> */}
-      <DialogContent>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {shotDirectionSchema.options.map((direction) => (
-            <Button
-              key={direction}
-              variant="contained"
-              onClick={() => {
-                onPickDirection(direction);
-              }}
-            >
-              {direction}
-            </Button>
-          ))}
-        </Box>
-      </DialogContent>
-    </Dialog>
+    <ListSelectionDialog
+      open={open}
+      title="Pick Shot Direction"
+      options={shotDirectionSchema.options.map((option) => ({
+        text: option,
+        key: option,
+        value: option,
+      }))}
+      onPickOption={onPickDirection}
+    />
   );
 };
 
@@ -398,29 +390,21 @@ const PickGoalOrNoGoalDialog = ({
   onPickGoalOrNoGoal: (goal: boolean | null) => void;
 }) => {
   return (
-    <Dialog fullScreen open={open}>
-      {/* <DialogTitle>Was it a Goal?</DialogTitle> */}
-      <DialogContent>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <Button
-            variant="contained"
-            onClick={() => {
-              onPickGoalOrNoGoal(true);
-            }}
-          >
-            Goal
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => {
-              onPickGoalOrNoGoal(false);
-            }}
-          >
-            No Goal
-          </Button>
-        </Box>
-      </DialogContent>
-    </Dialog>
+    <ListSelectionDialog
+      open={open}
+      title="Was it a Goal?"
+      options={[
+        { text: "Goal", key: "goal", value: true },
+        { text: "No Goal", key: "no_goal", value: false },
+      ]}
+      onPickOption={(option) => {
+        if (option !== null) {
+          console.log("Picked goal or no goal:", option);
+          onPickGoalOrNoGoal(option);
+        } else {
+        }
+      }}
+    />
   );
 };
 
@@ -432,23 +416,55 @@ const PickShotPositionDialog = ({
   onPickShotPosition: (position: ShotPosition | null) => void;
 }) => {
   return (
+    <ListSelectionDialog
+      open={open}
+      title="Pick Shot Position"
+      options={shotPosition.options.map((option) => ({
+        text: option,
+        key: option,
+        value: option,
+      }))}
+      onPickOption={onPickShotPosition}
+    />
+  );
+};
+
+// Abstracted list style dialog, since the 3 dialogs are very similar, only differing in the options they show and the type of data they return.
+interface Option<T> {
+  text: string;
+  key: string;
+  value: T;
+}
+
+function ListSelectionDialog<T>({
+  open,
+  title,
+  options,
+  onPickOption,
+}: {
+  open: boolean;
+  title: string;
+  options: Option<T>[];
+  onPickOption: (option: T | null) => void;
+}) {
+  return (
     <Dialog fullScreen open={open}>
-      {/* <DialogTitle>Pick Shot Position</DialogTitle> */}
+      <DialogTitle>{title}</DialogTitle>
       <DialogContent>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {shotPosition.options.map((position) => (
+          {options.map((option) => (
             <Button
-              key={position}
+              key={option.key}
               variant="contained"
               onClick={() => {
-                onPickShotPosition(position);
+                onPickOption(option.value);
               }}
             >
-              {position}
+              {option.text}
             </Button>
           ))}
         </Box>
       </DialogContent>
     </Dialog>
   );
-};
+}
