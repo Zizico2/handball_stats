@@ -12,31 +12,12 @@ import {
   Typography,
 } from "@mui/material";
 import {
-  createCollection,
-  localStorageCollectionOptions,
   useLiveSuspenseQuery,
 } from "@tanstack/react-db";
 import dynamic from "next/dynamic";
 import { useState } from "react";
-import { type Team, type TeamPlayer, teamPlayerSchema, teamSchema } from "@/datamodel";
-
-const teamsCollection = createCollection(
-  localStorageCollectionOptions({
-    id: "teams",
-    storageKey: "teams",
-    schema: teamSchema,
-    getKey: (item) => item.id,
-  }),
-);
-
-const teamPlayersCollection = createCollection(
-  localStorageCollectionOptions({
-    id: "team-players",
-    storageKey: "team-players",
-    schema: teamPlayerSchema,
-    getKey: (item) => item.id,
-  }),
-);
+import { teamsCollection, teamPlayersCollection } from "@/collections";
+import type { Team, TeamPlayer } from "@/datamodel";
 
 function CreateTeams() {
   const teams = useLiveSuspenseQuery((q) =>

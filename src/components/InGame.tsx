@@ -6,18 +6,19 @@ import {
   Button,
   Dialog,
   DialogContent,
+  FormControl,
   IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
   Toolbar,
   Typography,
 } from "@mui/material";
 import {
-  createCollection,
-  localStorageCollectionOptions,
   useLiveSuspenseQuery,
 } from "@tanstack/react-db";
 import { useMachine } from "@xstate/react";
 import dynamic from "next/dynamic";
-import { useState } from "react";
 import { assign } from "xstate";
 import z from "zod";
 import {
@@ -29,18 +30,16 @@ import {
   type ShotPosition,
   shotDirectionSchema,
   shotPosition,
+  type TeamPlayer,
 } from "@/datamodel";
+import {
+  playerEventsCollection,
+  teamPlayersCollection,
+  teamsCollection,
+} from "@/collections";
 import { usePersistentStopwatch } from "@/usePersistentStopwatch";
 import { eventMachine } from "@/utils";
-
-const playerEventsCollection = createCollection(
-  localStorageCollectionOptions({
-    id: "game-events",
-    storageKey: "game-events",
-    schema: playerEventSchema,
-    getKey: (item) => item.id,
-  }),
-);
+import { useEffect, useState } from "react";
 
 type MatchStatus = "firstHalf" | "halftime" | "secondHalf";
 
@@ -62,6 +61,12 @@ function InGame() {
     q.from({ event: playerEventsCollection }),
   );
 
+  const teams = useLiveSuspenseQuery((q) => q.from({ team: teamsCollection }));
+
+  const teamPlayers = useLiveSuspenseQuery((q) =>
+    q.from({ player: teamPlayersCollection }),
+  );
+
   const lastEvent = useLiveSuspenseQuery((q) =>
     q
       .from({ event: playerEventsCollection })
@@ -73,6 +78,7 @@ function InGame() {
     usePersistentStopwatch({ autoStart: false });
 
   const [matchStatus, setMatchStatus] = useState<MatchStatus | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
 
   const [state, send] = useMachine(
     eventMachine.provide({
@@ -86,6 +92,28 @@ function InGame() {
   );
 
   const nextEventId = (lastEvent.data?.id ?? 0) + 1;
+
+  useEffect(() => {
+    if (teams.data.length === 0) {
+      if (selectedTeamId !== null) {
+        setSelectedTeamId(null);
+      }
+
+      return;
+    }
+
+    const selectedTeamStillExists = teams.data.some(
+      (team) => team.id === selectedTeamId,
+    );
+
+    if (!selectedTeamStillExists) {
+      setSelectedTeamId(teams.data[0].id);
+    }
+  }, [selectedTeamId, teams.data]);
+
+  const selectedTeamPlayers = teamPlayers.data
+    .filter((player) => player.teamId === selectedTeamId)
+    .sort((left, right) => left.number - right.number);
 
   const handleClearGame = () => {
     for (const event of playerEvents.data) {
@@ -119,6 +147,11 @@ function InGame() {
           }}
         >
           <MatchClock minutes={minutes} seconds={seconds} />
+          <TeamSelection
+            selectedTeamId={selectedTeamId}
+            teams={teams.data}
+            onChange={setSelectedTeamId}
+          />
           <MatchControls
             matchStatus={matchStatus}
             isRunning={isRunning}
@@ -145,20 +178,16 @@ function InGame() {
               }
             }}
           />
-          <EventGroupButtons onRecordEvent={handleStartEvent} />
+          <EventGroupButtons
+            onRecordEvent={handleStartEvent}
+            disabled={selectedTeamId === null || selectedTeamPlayers.length === 0}
+          />
         </Box>
         <EventLog events={playerEvents.data} />
       </Box>
       <PickPlayerFullscreenDialog
         open={state.matches("pickingPlayer")}
-        // TODO: replace with players from a playersCollection (localStorageCollectionOptions)
-        players={[
-          { number: 1 },
-          { number: 2 },
-          { number: 3 },
-          { number: 4 },
-          { number: 5 },
-        ]}
+        players={selectedTeamPlayers}
         onPickPlayer={(pickedPlayer) => {
           if (pickedPlayer) {
             console.log("Picked player:", pickedPlayer);
@@ -261,6 +290,41 @@ function MatchClock({
   );
 }
 
+function TeamSelection({
+  selectedTeamId,
+  teams,
+  onChange,
+}: {
+  selectedTeamId: number | null;
+  teams: Array<{ id: number; name: string }>;
+  onChange: (teamId: number | null) => void;
+}) {
+  return (
+    <FormControl fullWidth>
+      <InputLabel id="team-select-label">Team</InputLabel>
+      <Select
+        labelId="team-select-label"
+        label="Team"
+        value={selectedTeamId?.toString() ?? ""}
+        onChange={(event) => {
+          const value = event.target.value;
+          onChange(value === "" ? null : Number(value));
+        }}
+      >
+        {teams.length === 0 ? (
+          <MenuItem value="">No teams available</MenuItem>
+        ) : (
+          teams.map((team) => (
+            <MenuItem key={team.id} value={team.id.toString()}>
+              {team.name}
+            </MenuItem>
+          ))
+        )}
+      </Select>
+    </FormControl>
+  );
+}
+
 interface MatchControlsProps {
   matchStatus: MatchStatus | null;
   isRunning: boolean;
@@ -319,18 +383,32 @@ function MatchControls({
 
 function EventGroupButtons({
   onRecordEvent,
+  disabled,
 }: {
   onRecordEvent: (group: EventGroup) => void;
+  disabled: boolean;
 }) {
   return (
     <>
-      <Button variant="contained" onClick={() => onRecordEvent("attack")}>
+      <Button
+        variant="contained"
+        onClick={() => onRecordEvent("attack")}
+        disabled={disabled}
+      >
         Attack
       </Button>
-      <Button variant="contained" onClick={() => onRecordEvent("defense")}>
+      <Button
+        variant="contained"
+        onClick={() => onRecordEvent("defense")}
+        disabled={disabled}
+      >
         Defense
       </Button>
-      <Button variant="contained" onClick={() => onRecordEvent("sanction")}>
+      <Button
+        variant="contained"
+        onClick={() => onRecordEvent("sanction")}
+        disabled={disabled}
+      >
         Sanction
       </Button>
     </>
@@ -430,7 +508,7 @@ const PickPlayerFullscreenDialog = ({
   open,
   onPickPlayer,
 }: {
-  players: { number: number }[];
+  players: TeamPlayer[];
   open: boolean;
   onPickPlayer: (pickedPlayer: number | null) => void;
 }) => {
@@ -439,7 +517,7 @@ const PickPlayerFullscreenDialog = ({
       open={open}
       title="Pick a Player"
       options={players.map((player) => ({
-        text: `Player ${player.number}`,
+        text: `#${player.number} ${player.name}`,
         key: `${player.number}`,
         value: player.number,
       }))}
