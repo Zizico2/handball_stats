@@ -453,6 +453,10 @@ const PickAttackEventTypeDialog = ({
         { text: "Shot", key: "shot", value: "shot" },
         { text: "Provoked 7meter", key: "provoked7meter", value: "provoked7meter" },
         { text: "Provoked 2min", key: "provoked2min", value: "provoked2min" },
+        { text: "Travelling", key: "travelling", value: "travelling" },
+        { text: "Dribble Fault", key: "dribbleFault", value: "dribbleFault" },
+        { text: "Forcing", key: "forcing", value: "forcing" },
+        { text: "Lost Ball", key: "lostBall", value: "lostBall" },
       ]}
       onPickOption={onPickAttackEventType}
     />

@@ -162,7 +162,11 @@ export const eventMachine = setup({
             target: "pickingPlayer",
             guard: ({ event }) =>
               event.eventType === "provoked7meter" ||
-              event.eventType === "provoked2min",
+              event.eventType === "provoked2min" ||
+              event.eventType === "travelling" ||
+              event.eventType === "dribbleFault" ||
+              event.eventType === "forcing" ||
+              event.eventType === "lostBall",
             actions: assign(({ context, event }) => {
               return {
                 playerEvent: {
@@ -226,6 +230,10 @@ export const eventMachine = setup({
               context.playerEvent.eventType === "interception" ||
               context.playerEvent.eventType === "provoked7meter" ||
               context.playerEvent.eventType === "provoked2min" ||
+              context.playerEvent.eventType === "travelling" ||
+              context.playerEvent.eventType === "dribbleFault" ||
+              context.playerEvent.eventType === "forcing" ||
+              context.playerEvent.eventType === "lostBall" ||
               context.playerEvent.eventType === "redCard" ||
               context.playerEvent.eventType === "yellowCard" ||
               context.playerEvent.eventType === "twoMinuteSuspension",

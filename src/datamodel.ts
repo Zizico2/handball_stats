@@ -76,6 +76,38 @@ export const provoked2minEventSchema = withBase(
 );
 export type Provoked2minEvent = z.infer<typeof provoked2minEventSchema>;
 
+export const travellingEventSchema = withBase(
+  z.object({
+    eventType: z.literal("travelling"),
+    eventGroup: z.literal("attack"),
+  }),
+);
+export type TravellingEvent = z.infer<typeof travellingEventSchema>;
+
+export const dribbleFaultEventSchema = withBase(
+  z.object({
+    eventType: z.literal("dribbleFault"),
+    eventGroup: z.literal("attack"),
+  }),
+);
+export type DribbleFaultEvent = z.infer<typeof dribbleFaultEventSchema>;
+
+export const forcingEventSchema = withBase(
+  z.object({
+    eventType: z.literal("forcing"),
+    eventGroup: z.literal("attack"),
+  }),
+);
+export type ForcingEvent = z.infer<typeof forcingEventSchema>;
+
+export const lostBallEventSchema = withBase(
+  z.object({
+    eventType: z.literal("lostBall"),
+    eventGroup: z.literal("attack"),
+  }),
+);
+export type LostBallEvent = z.infer<typeof lostBallEventSchema>;
+
 export const redCardEventSchema = withBase(
   z.object({
     eventType: z.literal("redCard"),
@@ -116,6 +148,10 @@ export const playerEventSchema = z.discriminatedUnion("eventType", [
   shotEventSchema,
   provoked7meterEventSchema,
   provoked2minEventSchema,
+  travellingEventSchema,
+  dribbleFaultEventSchema,
+  forcingEventSchema,
+  lostBallEventSchema,
   // defense events
   interceptionEventSchema,
   // sanction events
