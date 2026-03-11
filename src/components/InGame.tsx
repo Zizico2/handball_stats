@@ -451,8 +451,8 @@ const PickAttackEventTypeDialog = ({
       title="Pick Attack Event Type"
       options={[
         { text: "Shot", key: "shot", value: "shot" },
-        { text: "Provoked 7m", key: "provoked7m", value: "provoked7m" },
-        { text: "Provoked 2m", key: "provoked2m", value: "provoked2m" },
+        { text: "Provoked 7meter", key: "provoked7meter", value: "provoked7meter" },
+        { text: "Provoked 2min", key: "provoked2min", value: "provoked2min" },
       ]}
       onPickOption={onPickAttackEventType}
     />
