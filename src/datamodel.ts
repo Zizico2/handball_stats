@@ -139,3 +139,17 @@ export type EventGroup = z.infer<typeof eventGroupSchema>;
 function withBase<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
   return basePlayerEventSchema.extend(schema.shape);
 }
+
+export const teamSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+});
+export type Team = z.infer<typeof teamSchema>;
+
+export const teamPlayerSchema = z.object({
+  id: z.number(),
+  teamId: z.number(),
+  name: z.string(),
+  number: z.number(),
+});
+export type TeamPlayer = z.infer<typeof teamPlayerSchema>;

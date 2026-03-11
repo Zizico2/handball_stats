@@ -52,6 +52,7 @@ export default function ResponsiveDrawer({
         {[
           { text: "Home", href: "/" },
           { text: "In Game", href: "/in-game" },
+          { text: "Create Teams", href: "/create-teams" },
           // { text: "Inbox", href: "/inbox" },
           // { text: "Starred", href: "/starred" },
           // { text: "Send email", href: "/send-email" },
