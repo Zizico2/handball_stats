@@ -1,4 +1,5 @@
 "use client";
+import CloseIcon from "@mui/icons-material/Close";
 import {
   AppBar,
   Box,
@@ -9,8 +10,6 @@ import {
   Toolbar,
   Typography,
 } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
-import { useStopwatch } from "react-timer-hook";
 import {
   createCollection,
   eq,
@@ -21,20 +20,21 @@ import {
 } from "@tanstack/react-db";
 import { useMachine } from "@xstate/react";
 import dynamic from "next/dynamic";
+import { useState } from "react";
+import { useStopwatch } from "react-timer-hook";
 import { assign } from "xstate";
+import z from "zod";
 import {
-  EventType,
+  type EventType,
   playerEventSchema,
   playerSchema,
   type ShotDirection,
+  type ShotPosition,
   shotDirectionSchema,
   shotPosition,
-  ShotPosition,
 } from "@/datamodel";
-import { eventMachine } from "@/utils";
-import z from "zod";
-import { useState } from "react";
 import { usePersistentStopwatch } from "@/usePersistentStopwatch";
+import { eventMachine } from "@/utils";
 
 const playerEventsCollection = createCollection(
   localStorageCollectionOptions({
@@ -254,6 +254,20 @@ function InGame() {
           >
             Defense
           </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              send({
+                type: "START",
+                eventGroup: "sanction",
+                ellapsed_seconds: totalSeconds,
+                game_id: 1,
+                id: nextUserId.data ? nextUserId.data.id + 1 : 1,
+              });
+            }}
+          >
+            Sanction
+          </Button>
         </Box>
         <Box>
           <h2>Player Events</h2>
@@ -350,6 +364,17 @@ function InGame() {
           }
         }}
       />
+      <PickSanctionEventTypeDialog
+        open={state.matches("startingSanction")}
+        onPickSanctionEventType={(eventType) => {
+          if (eventType) {
+            console.log("Picked sanction event type:", eventType);
+            send({ type: "PICK_SANCTION_EVENT_TYPE", eventType });
+          } else {
+            send({ type: "CANCEL" });
+          }
+        }}
+      />
     </>
   );
 }
@@ -373,8 +398,8 @@ const PickAttackEventTypeDialog = ({
       title="Pick Attack Event Type"
       options={[
         { text: "Shot", key: "shot", value: "shot" },
-        // { text: "Provoked 7m", key: "provoked7m", value: "provoked7m" },
-        // { text: "Provoked 2m", key: "provoked2m", value: "provoked2m" },
+        { text: "Provoked 7m", key: "provoked7m", value: "provoked7m" },
+        { text: "Provoked 2m", key: "provoked2m", value: "provoked2m" },
       ]}
       onPickOption={onPickAttackEventType}
     />
@@ -396,6 +421,31 @@ const PickDefenseEventTypeDialog = ({
         { text: "Interception", key: "interception", value: "interception" },
       ]}
       onPickOption={onPickDefenseEventType}
+    />
+  );
+};
+
+const PickSanctionEventTypeDialog = ({
+  open,
+  onPickSanctionEventType,
+}: {
+  open: boolean;
+  onPickSanctionEventType: (eventType: EventType | null) => void;
+}) => {
+  return (
+    <ListSelectionDialog
+      open={open}
+      title="Pick Sanction Event Type"
+      options={[
+        { text: "Red Card", key: "redCard", value: "redCard" },
+        { text: "Yellow Card", key: "yellowCard", value: "yellowCard" },
+        {
+          text: "2 Minute Suspension",
+          key: "twoMinuteSuspension",
+          value: "twoMinuteSuspension",
+        },
+      ]}
+      onPickOption={onPickSanctionEventType}
     />
   );
 };

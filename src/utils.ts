@@ -14,7 +14,8 @@ import type {
 type AllKeys<T> = T extends object ? keyof T : never;
 
 // Collects the value type for key K across all union members
-type DistributedValue<T, K extends PropertyKey> = T extends Record<K, infer V> ? V : never;
+type DistributedValue<T, K extends PropertyKey> =
+  T extends Record<K, infer V> ? V : never;
 
 // Non-distributive DeepPartial: merges all union members into a single flat partial type
 // instead of producing a union of partials (which breaks incremental object building)
@@ -25,8 +26,6 @@ export type DeepPartial<T> = [T] extends [object]
         : DistributedValue<T, K>;
     }
   : T;
-
-
 
 interface Context {
   // eventGroup?: EventGroup;
@@ -45,6 +44,7 @@ export type Event =
   //
   | { type: "PICK_ATTACK_EVENT_TYPE"; eventType: EventType }
   | { type: "PICK_DEFENSE_EVENT_TYPE"; eventType: EventType }
+  | { type: "PICK_SANCTION_EVENT_TYPE"; eventType: EventType }
   //
   | { type: "PICK_PLAYER"; player: Player }
   | { type: "PICK_SHOT_DIRECTION"; direction: ShotDirection }
@@ -122,13 +122,47 @@ export const eventMachine = setup({
         },
       ],
     },
-    startingSanction: {},
+    startingSanction: {
+      on: {
+        PICK_SANCTION_EVENT_TYPE: [
+          {
+            target: "pickingPlayer",
+            guard: ({ event }) =>
+              event.eventType === "redCard" ||
+              event.eventType === "yellowCard" ||
+              event.eventType === "twoMinuteSuspension",
+            actions: assign(({ context, event }) => {
+              return {
+                playerEvent: {
+                  ...context.playerEvent,
+                  eventType: event.eventType,
+                },
+              };
+            }),
+          },
+        ],
+      },
+    },
     startingAttack: {
       on: {
         PICK_ATTACK_EVENT_TYPE: [
           {
             target: "startingShot",
             guard: ({ event }) => event.eventType === "shot",
+            actions: assign(({ context, event }) => {
+              return {
+                playerEvent: {
+                  ...context.playerEvent,
+                  eventType: event.eventType,
+                },
+              };
+            }),
+          },
+          {
+            target: "pickingPlayer",
+            guard: ({ event }) =>
+              event.eventType === "provoked7m" ||
+              event.eventType === "provoked2m",
             actions: assign(({ context, event }) => {
               return {
                 playerEvent: {
@@ -189,7 +223,12 @@ export const eventMachine = setup({
           {
             target: "finished",
             guard: ({ context }) =>
-              context.playerEvent.eventType === "interception",
+              context.playerEvent.eventType === "interception" ||
+              context.playerEvent.eventType === "provoked7m" ||
+              context.playerEvent.eventType === "provoked2m" ||
+              context.playerEvent.eventType === "redCard" ||
+              context.playerEvent.eventType === "yellowCard" ||
+              context.playerEvent.eventType === "twoMinuteSuspension",
             actions: assign(({ context, event }) => {
               return {
                 playerEvent: { ...context.playerEvent, player: event.player },

@@ -29,7 +29,7 @@ export function usePersistentStopwatch(
   options: UsePersistentStopwatchOptions = {},
 ): PersistentStopwatchResult {
   const { storageKey = "persistentStopwatch" } = options;
-  
+
   // 1. Calculate the starting offset and state on the first render
   const [initialState] = useState<{
     autoStart: boolean;

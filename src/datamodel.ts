@@ -84,6 +84,24 @@ export const redCardEventSchema = withBase(
 );
 export type RedCardEvent = z.infer<typeof redCardEventSchema>;
 
+export const yellowCardEventSchema = withBase(
+  z.object({
+    eventType: z.literal("yellowCard"),
+    eventGroup: z.literal("sanction"),
+  }),
+);
+export type YellowCardEvent = z.infer<typeof yellowCardEventSchema>;
+
+export const twoMinuteSuspensionEventSchema = withBase(
+  z.object({
+    eventType: z.literal("twoMinuteSuspension"),
+    eventGroup: z.literal("sanction"),
+  }),
+);
+export type TwoMinuteSuspensionEvent = z.infer<
+  typeof twoMinuteSuspensionEventSchema
+>;
+
 export const shotEventSchema = withBase(
   z.object({
     eventType: z.literal("shot"),
@@ -102,6 +120,8 @@ export const playerEventSchema = z.discriminatedUnion("eventType", [
   interceptionEventSchema,
   // sanction events
   redCardEventSchema,
+  yellowCardEventSchema,
+  twoMinuteSuspensionEventSchema,
 ]);
 
 export type PlayerEvent = z.infer<typeof playerEventSchema>;
@@ -115,8 +135,6 @@ export const eventGroupSchema = z.enum(
   playerEventSchema.options.map((option) => option.shape.eventGroup.value),
 );
 export type EventGroup = z.infer<typeof eventGroupSchema>;
-
-
 
 function withBase<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
   return basePlayerEventSchema.extend(schema.shape);
