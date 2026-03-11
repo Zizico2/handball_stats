@@ -1,12 +1,15 @@
 "use client";
 import {
+  AppBar,
   Box,
   Button,
   Dialog,
   DialogContent,
-  DialogTitle,
+  IconButton,
+  Toolbar,
   Typography,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import { useStopwatch } from "react-timer-hook";
 import {
   createCollection,
@@ -288,6 +291,7 @@ function InGame() {
             console.log("Picked player:", pickedPlayer);
             send({ type: "PICK_PLAYER", player: pickedPlayer });
           } else {
+            send({ type: "CANCEL" });
           }
         }}
       />
@@ -298,6 +302,7 @@ function InGame() {
             console.log("Picked direction:", direction);
             send({ type: "PICK_SHOT_DIRECTION", direction });
           } else {
+            send({ type: "CANCEL" });
           }
         }}
       />
@@ -308,6 +313,7 @@ function InGame() {
             console.log("Picked goal or no goal:", goal);
             send({ type: "PICK_GOAL_OR_NO_GOAL", goal });
           } else {
+            send({ type: "CANCEL" });
           }
         }}
       />
@@ -318,6 +324,7 @@ function InGame() {
             console.log("Picked shot position:", position);
             send({ type: "PICK_SHOT_POSITION", position });
           } else {
+            send({ type: "CANCEL" });
           }
         }}
       />
@@ -328,6 +335,7 @@ function InGame() {
             console.log("Picked attack event type:", eventType);
             send({ type: "PICK_ATTACK_EVENT_TYPE", eventType });
           } else {
+            send({ type: "CANCEL" });
           }
         }}
       />
@@ -338,6 +346,7 @@ function InGame() {
             console.log("Picked defense event type:", eventType);
             send({ type: "PICK_DEFENSE_EVENT_TYPE", eventType });
           } else {
+            send({ type: "CANCEL" });
           }
         }}
       />
@@ -370,7 +379,7 @@ const PickAttackEventTypeDialog = ({
       onPickOption={onPickAttackEventType}
     />
   );
-}
+};
 
 const PickDefenseEventTypeDialog = ({
   open,
@@ -389,7 +398,7 @@ const PickDefenseEventTypeDialog = ({
       onPickOption={onPickDefenseEventType}
     />
   );
-}
+};
 
 const PickPlayerFullscreenDialog = ({
   players,
@@ -400,25 +409,37 @@ const PickPlayerFullscreenDialog = ({
   open: boolean;
   onPickPlayer: (pickedPlayer: number | null) => void;
 }) => {
+  // return (
+  //   <Dialog fullScreen open={open}>
+  //     {/* <DialogTitle>Pick a Player</DialogTitle> */}
+  //     <DialogContent>
+  //       <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+  //         {players.map((player) => (
+  //           <Button
+  //             key={player.number}
+  //             variant="contained"
+  //             onClick={() => {
+  //               onPickPlayer(player.number);
+  //             }}
+  //           >
+  //             Player {player.number}
+  //           </Button>
+  //         ))}
+  //       </Box>
+  //     </DialogContent>
+  //   </Dialog>
+  // );
   return (
-    <Dialog fullScreen open={open}>
-      {/* <DialogTitle>Pick a Player</DialogTitle> */}
-      <DialogContent>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {players.map((player) => (
-            <Button
-              key={player.number}
-              variant="contained"
-              onClick={() => {
-                onPickPlayer(player.number);
-              }}
-            >
-              Player {player.number}
-            </Button>
-          ))}
-        </Box>
-      </DialogContent>
-    </Dialog>
+    <ListSelectionDialog
+      open={open}
+      title="Pick a Player"
+      options={players.map((player) => ({
+        text: `Player ${player.number}`,
+        key: `${player.number}`,
+        value: player.number,
+      }))}
+      onPickOption={onPickPlayer}
+    />
   );
 };
 
@@ -458,13 +479,7 @@ const PickGoalOrNoGoalDialog = ({
         { text: "Goal", key: "goal", value: true },
         { text: "No Goal", key: "no_goal", value: false },
       ]}
-      onPickOption={(option) => {
-        if (option !== null) {
-          console.log("Picked goal or no goal:", option);
-          onPickGoalOrNoGoal(option);
-        } else {
-        }
-      }}
+      onPickOption={onPickGoalOrNoGoal}
     />
   );
 };
@@ -510,7 +525,21 @@ function ListSelectionDialog<T>({
 }) {
   return (
     <Dialog fullScreen open={open}>
-      <DialogTitle>{title}</DialogTitle>
+      <AppBar sx={{ position: "relative" }}>
+        <Toolbar>
+          <IconButton
+            edge="start"
+            color="inherit"
+            onClick={() => onPickOption(null)}
+            aria-label="close"
+          >
+            <CloseIcon />
+          </IconButton>
+          <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
+            {title}
+          </Typography>
+        </Toolbar>
+      </AppBar>
       <DialogContent>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {options.map((option) => (

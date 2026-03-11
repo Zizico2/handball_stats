@@ -46,7 +46,8 @@ export type Event =
   | { type: "PICK_PLAYER"; player: Player }
   | { type: "PICK_SHOT_DIRECTION"; direction: ShotDirection }
   | { type: "PICK_GOAL_OR_NO_GOAL"; goal: boolean }
-  | { type: "PICK_SHOT_POSITION"; position: ShotPosition };
+  | { type: "PICK_SHOT_POSITION"; position: ShotPosition }
+  | { type: "CANCEL" };
 // | { type: "SET_PLAYER"; player: string }
 // | { type: "SET_SHOT_DIRECTION"; direction: string }
 // | { type: "SET_GOAL"; goal: boolean }
@@ -67,14 +68,19 @@ export const eventMachine = setup({
     // allow for the outside to override finishEvent
     finishEvent: () => {},
   },
-  guards: {
-    isShotEvent: ({ context }) => context.playerEvent.eventType === "shot",
-  },
+  // guards: {
+  //   isShotEvent: ({ context }) => context.playerEvent.eventType === "shot",
+  // },
 }).createMachine({
   id: "eventFlow",
   initial: "idle",
   context: {
     playerEvent: {},
+  },
+  on: {
+    CANCEL: {
+      target: ".idle",
+    },
   },
   states: {
     idle: {
