@@ -52,18 +52,10 @@ export const basePlayerEventSchema = z.object({
 });
 export type BasePlayerEvent = z.infer<typeof basePlayerEventSchema>;
 
-// const shotEventTypeSchema = z.literal("shot");
-// const interceptionEventTypeSchema = z.literal("interception");
-// const eventTypeSchema = z.union([
-//   shotEventTypeSchema,
-//   interceptionEventTypeSchema,
-// ]);
-
-// type EventType = z.infer<typeof eventTypeSchema>;
-
 export const interceptionEventSchema = withBase(
   z.object({
     eventType: z.literal("interception"),
+    eventGroup: z.literal("defense"),
   }),
 );
 export type InterceptionEvent = z.infer<typeof interceptionEventSchema>;
@@ -71,6 +63,7 @@ export type InterceptionEvent = z.infer<typeof interceptionEventSchema>;
 export const provoked7mEventSchema = withBase(
   z.object({
     eventType: z.literal("provoked7m"),
+    eventGroup: z.literal("attack"),
   }),
 );
 export type Provoked7mEvent = z.infer<typeof provoked7mEventSchema>;
@@ -78,21 +71,37 @@ export type Provoked7mEvent = z.infer<typeof provoked7mEventSchema>;
 export const provoked2mEventSchema = withBase(
   z.object({
     eventType: z.literal("provoked2m"),
+    eventGroup: z.literal("attack"),
   }),
 );
 export type Provoked2mEvent = z.infer<typeof provoked2mEventSchema>;
 
+export const redCardEventSchema = withBase(
+  z.object({
+    eventType: z.literal("redCard"),
+    eventGroup: z.literal("sanction"),
+  }),
+);
+export type RedCardEvent = z.infer<typeof redCardEventSchema>;
+
 export const shotEventSchema = withBase(
   z.object({
     eventType: z.literal("shot"),
+    eventGroup: z.literal("attack"),
     event: shotSchema,
   }),
 );
 export type ShotEvent = z.infer<typeof shotEventSchema>;
 
 export const playerEventSchema = z.discriminatedUnion("eventType", [
+  // attack events
   shotEventSchema,
+  provoked7mEventSchema,
+  provoked2mEventSchema,
+  // defense events
   interceptionEventSchema,
+  // sanction events
+  redCardEventSchema,
 ]);
 
 export type PlayerEvent = z.infer<typeof playerEventSchema>;
@@ -100,8 +109,14 @@ export type PlayerEvent = z.infer<typeof playerEventSchema>;
 export const eventTypeSchema = z.enum(
   playerEventSchema.options.map((option) => option.shape.eventType.value),
 );
-
 export type EventType = z.infer<typeof eventTypeSchema>;
+
+export const eventGroupSchema = z.enum(
+  playerEventSchema.options.map((option) => option.shape.eventGroup.value),
+);
+export type EventGroup = z.infer<typeof eventGroupSchema>;
+
+
 
 function withBase<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
   return basePlayerEventSchema.extend(schema.shape);

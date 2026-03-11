@@ -2,6 +2,7 @@ import { finished } from "stream";
 import { assign, setup } from "xstate";
 import { set } from "zod";
 import type {
+  EventGroup,
   EventType,
   Player,
   PlayerEvent,
@@ -9,26 +10,28 @@ import type {
   ShotPosition,
 } from "./datamodel";
 
-export type DeepPartial<T> = T extends object
+// Collects all keys across all union members (distributive)
+type AllKeys<T> = T extends object ? keyof T : never;
+
+// Collects the value type for key K across all union members
+type DistributedValue<T, K extends PropertyKey> = T extends Record<K, infer V> ? V : never;
+
+// Non-distributive DeepPartial: merges all union members into a single flat partial type
+// instead of producing a union of partials (which breaks incremental object building)
+export type DeepPartial<T> = [T] extends [object]
   ? {
-      [P in keyof T]?: DeepPartial<T[P]>;
+      [K in AllKeys<T>]?: DistributedValue<T, K> extends object
+        ? DeepPartial<DistributedValue<T, K>>
+        : DistributedValue<T, K>;
     }
   : T;
 
-// export type PlayerEventPayload = {
-//   eventType?: "shot" | "interception";
-//   player?: string;
-//   shotDirection?: string;
-//   goal?: boolean;
-// };
+
 
 interface Context {
-  eventGroup?: EventGroup;
+  // eventGroup?: EventGroup;
   playerEvent: DeepPartial<PlayerEvent>;
 }
-
-// TODO: shouldn't be here I don't think
-export type EventGroup = "attack" | "defense" | "sanction";
 
 export type Event =
   | {
@@ -88,13 +91,12 @@ export const eventMachine = setup({
       on: {
         START: {
           target: "startingRouting",
-
           actions: assign(({ context, event }) => {
             return {
-              eventGroup: event.eventGroup,
               playerEvent: {
                 ...context.playerEvent,
                 // eventType: event.eventType,
+                eventGroup: event.eventGroup,
                 ellapsed_seconds: event.ellapsed_seconds,
                 game_id: event.game_id,
                 id: event.id,
@@ -108,15 +110,15 @@ export const eventMachine = setup({
       always: [
         {
           target: "startingAttack",
-          guard: ({ context }) => context.eventGroup === "attack",
+          guard: ({ context }) => context.playerEvent.eventGroup === "attack",
         },
         {
           target: "startingDefense",
-          guard: ({ context }) => context.eventGroup === "defense",
+          guard: ({ context }) => context.playerEvent.eventGroup === "defense",
         },
         {
           target: "startingSanction",
-          guard: ({ context }) => context.eventGroup === "sanction",
+          guard: ({ context }) => context.playerEvent.eventGroup === "sanction",
         },
       ],
     },
