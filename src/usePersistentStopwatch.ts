@@ -76,7 +76,7 @@ export function usePersistentStopwatch(
       if (saved) {
         try {
           return JSON.parse(saved);
-        } catch (e) {
+        } catch {
           /* ignore */
         }
       }

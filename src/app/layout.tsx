@@ -1,7 +1,4 @@
-import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import "./globals.css";
-import AppBar from "@mui/material/AppBar";
 import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider } from "@mui/material/styles";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";

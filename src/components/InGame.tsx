@@ -12,22 +12,19 @@ import {
 } from "@mui/material";
 import {
   createCollection,
-  eq,
   localStorageCollectionOptions,
-  not,
-  useLiveQuery,
   useLiveSuspenseQuery,
 } from "@tanstack/react-db";
 import { useMachine } from "@xstate/react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
-import { useStopwatch } from "react-timer-hook";
 import { assign } from "xstate";
 import z from "zod";
 import {
+  type EventGroup,
   type EventType,
+  type PlayerEvent,
   playerEventSchema,
-  playerSchema,
   type ShotDirection,
   type ShotPosition,
   shotDirectionSchema,
@@ -45,102 +42,69 @@ const playerEventsCollection = createCollection(
   }),
 );
 
-const playersCollection = createCollection(
-  localStorageCollectionOptions({
-    id: "players",
-    storageKey: "players",
-    schema: playerSchema,
-    getKey: (item) => `${item}`,
-  }),
-);
+type MatchStatus = "firstHalf" | "halftime" | "secondHalf";
+
+function insertPlayerEvent(partialEvent: unknown): void {
+  try {
+    const parsedEvent = playerEventSchema.parse(partialEvent);
+    playerEventsCollection.insert(parsedEvent);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      console.error("Validation error:", error.issues);
+    } else {
+      console.error("Failed to insert player event:", error);
+    }
+  }
+}
 
 function InGame() {
-  // const shots = useLiveSuspenseQuery((q) =>
-  //   q
-  //     .from({ shot: playerEventsCollection })
-  //     .orderBy(({ shot }) => shot.id, "desc")
-  //     .where(({ shot }) => not(eq(shot.eventType, "interception"))),
-  // );
-
-  // const interceptions = useLiveSuspenseQuery((q) =>
-  //   q
-  //     .from({ shot: playerEventsCollection })
-  //     .orderBy(({ shot }) => shot.id, "desc")
-  //     .where(({ shot }) => eq(shot.eventType, "interception")),
-  // );
-
   const playerEvents = useLiveSuspenseQuery((q) =>
-    q.from({ shot: playerEventsCollection }),
+    q.from({ event: playerEventsCollection }),
   );
 
-  const nextUserId = useLiveSuspenseQuery((q) =>
+  const lastEvent = useLiveSuspenseQuery((q) =>
     q
-      .from({ user: playerEventsCollection })
-      .orderBy(({ user }) => user.id, "desc")
-      // .limit(1)
+      .from({ event: playerEventsCollection })
+      .orderBy(({ event }) => event.id, "desc")
       .findOne(),
   );
 
-  const players = useLiveSuspenseQuery((q) =>
-    q.from({ player: playersCollection }),
-  );
+  const { totalSeconds, minutes, seconds, isRunning, start, pause, reset } =
+    usePersistentStopwatch({ autoStart: false });
 
-  // const {
-  //   totalSeconds,
-  //   milliseconds,
-  //   seconds,
-  //   minutes,
-  //   hours,
-  //   days,
-  //   isRunning,
-  //   start,
-  //   pause,
-  //   reset,
-  // } = useStopwatch({ autoStart: false });
-  const {
-    totalSeconds,
-    milliseconds,
-    seconds,
-    minutes,
-    hours,
-    days,
-    isRunning,
-    start,
-    pause,
-    reset,
-  } = usePersistentStopwatch({ autoStart: false });
-
-  type MatchStatus = "firstHalf" | "halftime" | "secondHalf";
   const [matchStatus, setMatchStatus] = useState<MatchStatus | null>(null);
-  const [matchPaused, setMatchPaused] = useState(false);
 
-  const [state, send, machineRef] = useMachine(
+  const [state, send] = useMachine(
     eventMachine.provide({
       actions: {
         finishEvent: assign(({ context }) => {
-          const eventToInsert = context.playerEvent;
-          console.log("Event to insert:", eventToInsert);
-          try {
-            const parsedEvent = playerEventSchema.parse(eventToInsert);
-            try {
-              playerEventsCollection.insert(parsedEvent);
-              console.log("Inserted event:", parsedEvent);
-            } catch (error) {
-              console.error("Failed to insert event into collection:", error);
-            }
-          } catch (error) {
-            if (error instanceof z.ZodError) {
-              console.error("Validation error:", error.issues);
-            } else {
-              console.error("Unexpected error during event parsing:", error);
-            }
-            return context; // Return the original context if parsing fails
-          }
+          insertPlayerEvent(context.playerEvent);
           return {};
         }),
       },
     }),
   );
+
+  const nextEventId = (lastEvent.data?.id ?? 0) + 1;
+
+  const handleClearGame = () => {
+    for (const event of playerEvents.data) {
+      playerEventsCollection.delete(event.id);
+    }
+    localStorage.removeItem("persistentStopwatch");
+    setMatchStatus(null);
+    reset(new Date(), false);
+  };
+
+  const handleStartEvent = (eventGroup: EventGroup) => {
+    send({
+      type: "START",
+      eventGroup,
+      ellapsed_seconds: totalSeconds,
+      game_id: 1,
+      id: nextEventId,
+    });
+  };
 
   return (
     <>
@@ -154,145 +118,40 @@ function InGame() {
             width: "fit-content",
           }}
         >
-          <Box>
-            <Typography variant="h4">Match Clock</Typography>
-            <Typography>
-              {String(minutes).padStart(2, "0")}:
-              {String(seconds).padStart(2, "0")}
-            </Typography>
-          </Box>
-          <Button
-            color="error"
-            variant="outlined"
-            onClick={() => {
-              const allItems = playerEvents.data;
-              for (const item of allItems) {
-                console.log("Deleting item:", item);
-                playerEventsCollection.delete(item.id);
-              }
-              localStorage.removeItem("persistentStopwatch");
-              setMatchPaused(false);
-              setMatchStatus(null);
-              reset(new Date(), false);
-            }}
-          >
-            Clear Game
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() => {
+          <MatchClock minutes={minutes} seconds={seconds} />
+          <MatchControls
+            matchStatus={matchStatus}
+            isRunning={isRunning}
+            onClearGame={handleClearGame}
+            onStartFirstHalf={() => {
               start();
               setMatchStatus("firstHalf");
             }}
-            disabled={matchStatus !== null}
-          >
-            Start First Half
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() => {
+            onStartSecondHalf={() => {
               start();
               setMatchStatus("secondHalf");
             }}
-            disabled={matchStatus !== "halftime"}
-          >
-            Start Second Half
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() => {
+            onStartHalftime={() => {
               const offset = new Date();
               offset.setSeconds(offset.getSeconds() + 60 * 30);
               reset(offset, false);
               setMatchStatus("halftime");
             }}
-            disabled={matchStatus !== "firstHalf"}
-          >
-            Start Halftime
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() => {
-              if (matchPaused) {
-                start();
-                setMatchPaused(false);
-              } else {
+            onTogglePause={() => {
+              if (isRunning) {
                 pause();
-                setMatchPaused(true);
+              } else {
+                start();
               }
             }}
-            disabled={matchStatus === null || matchStatus === "halftime"}
-          >
-            {matchPaused ? "Resume Match" : "Pause Match"}
-          </Button>
-
-          <Button
-            variant="contained"
-            onClick={() => {
-              send({
-                type: "START",
-                eventGroup: "attack",
-                ellapsed_seconds: totalSeconds,
-                game_id: 1,
-                id: nextUserId.data ? nextUserId.data.id + 1 : 1,
-              });
-            }}
-          >
-            Attack
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => {
-              send({
-                type: "START",
-                eventGroup: "defense",
-                ellapsed_seconds: totalSeconds,
-                game_id: 1,
-                id: nextUserId.data ? nextUserId.data.id + 1 : 1,
-              });
-            }}
-          >
-            Defense
-          </Button>
-          <Button
-            variant="contained"
-            onClick={() => {
-              send({
-                type: "START",
-                eventGroup: "sanction",
-                ellapsed_seconds: totalSeconds,
-                game_id: 1,
-                id: nextUserId.data ? nextUserId.data.id + 1 : 1,
-              });
-            }}
-          >
-            Sanction
-          </Button>
+          />
+          <EventGroupButtons onRecordEvent={handleStartEvent} />
         </Box>
-        <Box>
-          <h2>Player Events</h2>
-          {playerEvents.data.map((event) => (
-            <Box key={event.id} sx={{ border: "1px solid black", padding: 1 }}>
-              <div>Event ID: {event.id}</div>
-              <div>Player: {event.player}</div>
-              <div>Game ID: {event.game_id}</div>
-              <div>Ellapsed Seconds: {event.ellapsed_seconds}</div>
-              <div>Event Type: {event.eventType}</div>
-              {"event" in event && event.eventType === "shot" && (
-                <>
-                  <div>Goal: {event.event.goal ? "Yes" : "No"}</div>
-                  <div>
-                    Direction: {event.event.direction ?? "Not specified"}
-                  </div>
-                </>
-              )}
-            </Box>
-          ))}
-        </Box>
+        <EventLog events={playerEvents.data} />
       </Box>
       <PickPlayerFullscreenDialog
         open={state.matches("pickingPlayer")}
-        // TODO: players={players}
+        // TODO: replace with players from a playersCollection (localStorageCollectionOptions)
         players={[
           { number: 1 },
           { number: 2 },
@@ -385,6 +244,122 @@ export default dynamic(() => Promise.resolve(InGame), {
   ssr: false,
 });
 
+function MatchClock({
+  minutes,
+  seconds,
+}: {
+  minutes: number;
+  seconds: number;
+}) {
+  return (
+    <Box>
+      <Typography variant="h4">Match Clock</Typography>
+      <Typography>
+        {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
+      </Typography>
+    </Box>
+  );
+}
+
+interface MatchControlsProps {
+  matchStatus: MatchStatus | null;
+  isRunning: boolean;
+  onClearGame: () => void;
+  onStartFirstHalf: () => void;
+  onStartSecondHalf: () => void;
+  onStartHalftime: () => void;
+  onTogglePause: () => void;
+}
+
+function MatchControls({
+  matchStatus,
+  isRunning,
+  onClearGame,
+  onStartFirstHalf,
+  onStartSecondHalf,
+  onStartHalftime,
+  onTogglePause,
+}: MatchControlsProps) {
+  return (
+    <>
+      <Button color="error" variant="outlined" onClick={onClearGame}>
+        Clear Game
+      </Button>
+      <Button
+        variant="outlined"
+        onClick={onStartFirstHalf}
+        disabled={matchStatus !== null}
+      >
+        Start First Half
+      </Button>
+      <Button
+        variant="outlined"
+        onClick={onStartSecondHalf}
+        disabled={matchStatus !== "halftime"}
+      >
+        Start Second Half
+      </Button>
+      <Button
+        variant="outlined"
+        onClick={onStartHalftime}
+        disabled={matchStatus !== "firstHalf"}
+      >
+        Start Halftime
+      </Button>
+      <Button
+        variant="outlined"
+        onClick={onTogglePause}
+        disabled={matchStatus === null || matchStatus === "halftime"}
+      >
+        {isRunning ? "Pause Match" : "Resume Match"}
+      </Button>
+    </>
+  );
+}
+
+function EventGroupButtons({
+  onRecordEvent,
+}: {
+  onRecordEvent: (group: EventGroup) => void;
+}) {
+  return (
+    <>
+      <Button variant="contained" onClick={() => onRecordEvent("attack")}>
+        Attack
+      </Button>
+      <Button variant="contained" onClick={() => onRecordEvent("defense")}>
+        Defense
+      </Button>
+      <Button variant="contained" onClick={() => onRecordEvent("sanction")}>
+        Sanction
+      </Button>
+    </>
+  );
+}
+
+function EventLog({ events }: { events: PlayerEvent[] }) {
+  return (
+    <Box>
+      <Typography variant="h5">Player Events</Typography>
+      {events.map((event) => (
+        <Box key={event.id} sx={{ border: "1px solid black", padding: 1 }}>
+          <div>Event ID: {event.id}</div>
+          <div>Player: {event.player}</div>
+          <div>Game ID: {event.game_id}</div>
+          <div>Elapsed Seconds: {event.ellapsed_seconds}</div>
+          <div>Event Type: {event.eventType}</div>
+          {"event" in event && event.eventType === "shot" && (
+            <>
+              <div>Goal: {event.event.goal ? "Yes" : "No"}</div>
+              <div>Direction: {event.event.direction ?? "Not specified"}</div>
+            </>
+          )}
+        </Box>
+      ))}
+    </Box>
+  );
+}
+
 const PickAttackEventTypeDialog = ({
   open,
   onPickAttackEventType,
@@ -459,26 +434,6 @@ const PickPlayerFullscreenDialog = ({
   open: boolean;
   onPickPlayer: (pickedPlayer: number | null) => void;
 }) => {
-  // return (
-  //   <Dialog fullScreen open={open}>
-  //     {/* <DialogTitle>Pick a Player</DialogTitle> */}
-  //     <DialogContent>
-  //       <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-  //         {players.map((player) => (
-  //           <Button
-  //             key={player.number}
-  //             variant="contained"
-  //             onClick={() => {
-  //               onPickPlayer(player.number);
-  //             }}
-  //           >
-  //             Player {player.number}
-  //           </Button>
-  //         ))}
-  //       </Box>
-  //     </DialogContent>
-  //   </Dialog>
-  // );
   return (
     <ListSelectionDialog
       open={open}

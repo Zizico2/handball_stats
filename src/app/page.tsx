@@ -1,5 +1,4 @@
 import { Typography } from "@mui/material";
-import TableApp from "../components/TableApp";
 
 export default async function Home() {
   return (
