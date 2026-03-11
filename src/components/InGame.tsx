@@ -476,6 +476,10 @@ const PickDefenseEventTypeDialog = ({
       title="Pick Defense Event Type"
       options={[
         { text: "Interception", key: "interception", value: "interception" },
+        { text: "7 Meter Conceded", key: "sevenMeterConceded", value: "sevenMeterConceded" },
+        { text: "1-on-1 Lost", key: "oneOnOneLost", value: "oneOnOneLost" },
+        { text: "Blocked Shot", key: "blockedShot", value: "blockedShot" },
+        { text: "Offensive Foul", key: "offensiveFoul", value: "offensiveFoul" },
       ]}
       onPickOption={onPickDefenseEventType}
     />

@@ -60,6 +60,38 @@ export const interceptionEventSchema = withBase(
 );
 export type InterceptionEvent = z.infer<typeof interceptionEventSchema>;
 
+export const sevenMeterConcededEventSchema = withBase(
+  z.object({
+    eventType: z.literal("sevenMeterConceded"),
+    eventGroup: z.literal("defense"),
+  }),
+);
+export type SevenMeterConcededEvent = z.infer<typeof sevenMeterConcededEventSchema>;
+
+export const oneOnOneLostEventSchema = withBase(
+  z.object({
+    eventType: z.literal("oneOnOneLost"),
+    eventGroup: z.literal("defense"),
+  }),
+);
+export type OneOnOneLostEvent = z.infer<typeof oneOnOneLostEventSchema>;
+
+export const blockedShotEventSchema = withBase(
+  z.object({
+    eventType: z.literal("blockedShot"),
+    eventGroup: z.literal("defense"),
+  }),
+);
+export type BlockedShotEvent = z.infer<typeof blockedShotEventSchema>;
+
+export const offensiveFoulEventSchema = withBase(
+  z.object({
+    eventType: z.literal("offensiveFoul"),
+    eventGroup: z.literal("defense"),
+  }),
+);
+export type OffensiveFoulEvent = z.infer<typeof offensiveFoulEventSchema>;
+
 export const provoked7meterEventSchema = withBase(
   z.object({
     eventType: z.literal("provoked7meter"),
@@ -154,6 +186,10 @@ export const playerEventSchema = z.discriminatedUnion("eventType", [
   lostBallEventSchema,
   // defense events
   interceptionEventSchema,
+  sevenMeterConcededEventSchema,
+  oneOnOneLostEventSchema,
+  blockedShotEventSchema,
+  offensiveFoulEventSchema,
   // sanction events
   redCardEventSchema,
   yellowCardEventSchema,

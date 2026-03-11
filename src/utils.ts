@@ -182,9 +182,26 @@ export const eventMachine = setup({
     startingDefense: {
       on: {
         PICK_DEFENSE_EVENT_TYPE: [
+          // {
+          //   target: "startingInterception",
+          //   guard: ({ event }) => event.eventType === "interception",
+          //   actions: assign(({ context, event }) => {
+          //     return {
+          //       playerEvent: {
+          //         ...context.playerEvent,
+          //         eventType: event.eventType,
+          //       },
+          //     };
+          //   }),
+          // },
           {
-            target: "startingInterception",
-            guard: ({ event }) => event.eventType === "interception",
+            target: "pickingPlayer",
+            guard: ({ event }) =>
+              event.eventType === "interception" ||
+              event.eventType === "sevenMeterConceded" ||
+              event.eventType === "oneOnOneLost" ||
+              event.eventType === "blockedShot" ||
+              event.eventType === "offensiveFoul",
             actions: assign(({ context, event }) => {
               return {
                 playerEvent: {
@@ -216,11 +233,11 @@ export const eventMachine = setup({
         target: "pickingPlayer",
       },
     },
-    startingInterception: {
-      always: {
-        target: "pickingPlayer",
-      },
-    },
+    // startingInterception: {
+    //   always: {
+    //     target: "pickingPlayer",
+    //   },
+    // },
     pickingPlayer: {
       on: {
         PICK_PLAYER: [
@@ -228,6 +245,10 @@ export const eventMachine = setup({
             target: "finished",
             guard: ({ context }) =>
               context.playerEvent.eventType === "interception" ||
+              context.playerEvent.eventType === "sevenMeterConceded" ||
+              context.playerEvent.eventType === "oneOnOneLost" ||
+              context.playerEvent.eventType === "blockedShot" ||
+              context.playerEvent.eventType === "offensiveFoul" ||
               context.playerEvent.eventType === "provoked7meter" ||
               context.playerEvent.eventType === "provoked2min" ||
               context.playerEvent.eventType === "travelling" ||
