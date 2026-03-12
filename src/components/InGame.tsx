@@ -7,17 +7,18 @@ import {
   Dialog,
   DialogContent,
   FormControl,
+  MenuItem,
   IconButton,
   InputLabel,
-  MenuItem,
   Select,
   Toolbar,
   Typography,
 } from "@mui/material";
+import { useSetAtom } from "jotai";
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
 import { useMachine } from "@xstate/react";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { assign } from "xstate";
 import z from "zod";
 import {
@@ -36,10 +37,13 @@ import {
   shotPosition,
   type TeamPlayer,
 } from "@/datamodel";
+import {
+  initialInGameControlsState,
+  inGameControlsAtom,
+  type MatchStatus,
+} from "@/inGameControlsAtoms";
 import { usePersistentStopwatch } from "@/usePersistentStopwatch";
 import { eventMachine } from "@/utils";
-
-type MatchStatus = "firstHalf" | "halftime" | "secondHalf";
 
 function insertPlayerEvent(partialEvent: unknown): void {
   try {
@@ -55,6 +59,8 @@ function insertPlayerEvent(partialEvent: unknown): void {
 }
 
 function InGame() {
+  const setInGameControls = useSetAtom(inGameControlsAtom);
+
   const playerEvents = useLiveSuspenseQuery((q) =>
     q.from({ event: playerEventsCollection }),
   );
@@ -113,14 +119,39 @@ function InGame() {
     .filter((player) => player.teamId === selectedTeamId)
     .sort((left, right) => left.number - right.number);
 
-  const handleClearGame = () => {
+  const handleClearGame = useCallback(() => {
     for (const event of playerEvents.data) {
       playerEventsCollection.delete(event.id);
     }
     localStorage.removeItem("persistentStopwatch");
     setMatchStatus(null);
     reset(new Date(), false);
-  };
+  }, [playerEvents.data, reset]);
+
+  const handleStartFirstHalf = useCallback(() => {
+    start();
+    setMatchStatus("firstHalf");
+  }, [start]);
+
+  const handleStartSecondHalf = useCallback(() => {
+    start();
+    setMatchStatus("secondHalf");
+  }, [start]);
+
+  const handleStartHalftime = useCallback(() => {
+    const offset = new Date();
+    offset.setSeconds(offset.getSeconds() + 60 * 30);
+    reset(offset, false);
+    setMatchStatus("halftime");
+  }, [reset]);
+
+  const handleTogglePause = useCallback(() => {
+    if (isRunning) {
+      pause();
+    } else {
+      start();
+    }
+  }, [isRunning, pause, start]);
 
   const handleStartEvent = (eventGroup: EventGroup) => {
     send({
@@ -131,6 +162,31 @@ function InGame() {
       id: nextEventId,
     });
   };
+
+  useEffect(() => {
+    setInGameControls({
+      matchStatus,
+      isRunning,
+      onClearGame: handleClearGame,
+      onStartFirstHalf: handleStartFirstHalf,
+      onStartSecondHalf: handleStartSecondHalf,
+      onStartHalftime: handleStartHalftime,
+      onTogglePause: handleTogglePause,
+    });
+
+    return () => {
+      setInGameControls(initialInGameControlsState);
+    };
+  }, [
+    handleClearGame,
+    handleStartFirstHalf,
+    handleStartHalftime,
+    handleStartSecondHalf,
+    handleTogglePause,
+    isRunning,
+    matchStatus,
+    setInGameControls,
+  ]);
 
   return (
     <>
@@ -149,32 +205,6 @@ function InGame() {
             selectedTeamId={selectedTeamId}
             teams={teams.data}
             onChange={setSelectedTeamId}
-          />
-          <MatchControls
-            matchStatus={matchStatus}
-            isRunning={isRunning}
-            onClearGame={handleClearGame}
-            onStartFirstHalf={() => {
-              start();
-              setMatchStatus("firstHalf");
-            }}
-            onStartSecondHalf={() => {
-              start();
-              setMatchStatus("secondHalf");
-            }}
-            onStartHalftime={() => {
-              const offset = new Date();
-              offset.setSeconds(offset.getSeconds() + 60 * 30);
-              reset(offset, false);
-              setMatchStatus("halftime");
-            }}
-            onTogglePause={() => {
-              if (isRunning) {
-                pause();
-              } else {
-                start();
-              }
-            }}
           />
           <EventGroupButtons
             onRecordEvent={handleStartEvent}
@@ -322,62 +352,6 @@ function TeamSelection({
         )}
       </Select>
     </FormControl>
-  );
-}
-
-interface MatchControlsProps {
-  matchStatus: MatchStatus | null;
-  isRunning: boolean;
-  onClearGame: () => void;
-  onStartFirstHalf: () => void;
-  onStartSecondHalf: () => void;
-  onStartHalftime: () => void;
-  onTogglePause: () => void;
-}
-
-function MatchControls({
-  matchStatus,
-  isRunning,
-  onClearGame,
-  onStartFirstHalf,
-  onStartSecondHalf,
-  onStartHalftime,
-  onTogglePause,
-}: MatchControlsProps) {
-  return (
-    <>
-      <Button color="error" variant="outlined" onClick={onClearGame}>
-        Clear Game
-      </Button>
-      <Button
-        variant="outlined"
-        onClick={onStartFirstHalf}
-        disabled={matchStatus !== null}
-      >
-        Start First Half
-      </Button>
-      <Button
-        variant="outlined"
-        onClick={onStartSecondHalf}
-        disabled={matchStatus !== "halftime"}
-      >
-        Start Second Half
-      </Button>
-      <Button
-        variant="outlined"
-        onClick={onStartHalftime}
-        disabled={matchStatus !== "firstHalf"}
-      >
-        Start Halftime
-      </Button>
-      <Button
-        variant="outlined"
-        onClick={onTogglePause}
-        disabled={matchStatus === null || matchStatus === "halftime"}
-      >
-        {isRunning ? "Pause Match" : "Resume Match"}
-      </Button>
-    </>
   );
 }
 
