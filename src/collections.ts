@@ -1,9 +1,8 @@
-import { createCollection, localStorageCollectionOptions } from "@tanstack/react-db";
 import {
-  playerEventSchema,
-  teamPlayerSchema,
-  teamSchema,
-} from "@/datamodel";
+  createCollection,
+  localStorageCollectionOptions,
+} from "@tanstack/react-db";
+import { playerEventSchema, teamPlayerSchema, teamSchema } from "@/datamodel";
 
 export const playerEventsCollection = createCollection(
   localStorageCollectionOptions({

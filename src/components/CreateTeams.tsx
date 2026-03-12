@@ -11,18 +11,14 @@ import {
   Toolbar,
   Typography,
 } from "@mui/material";
-import {
-  useLiveSuspenseQuery,
-} from "@tanstack/react-db";
+import { useLiveSuspenseQuery } from "@tanstack/react-db";
 import dynamic from "next/dynamic";
 import { useState } from "react";
-import { teamsCollection, teamPlayersCollection } from "@/collections";
+import { teamPlayersCollection, teamsCollection } from "@/collections";
 import type { Team, TeamPlayer } from "@/datamodel";
 
 function CreateTeams() {
-  const teams = useLiveSuspenseQuery((q) =>
-    q.from({ team: teamsCollection }),
-  );
+  const teams = useLiveSuspenseQuery((q) => q.from({ team: teamsCollection }));
 
   const teamPlayers = useLiveSuspenseQuery((q) =>
     q.from({ player: teamPlayersCollection }),
@@ -234,7 +230,9 @@ function CreateTeamDialog({
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
             error={hasDuplicateName}
-            helperText={hasDuplicateName ? "Team name already exists" : undefined}
+            helperText={
+              hasDuplicateName ? "Team name already exists" : undefined
+            }
             autoFocus
           />
           <Button
@@ -285,9 +283,7 @@ function AddPlayerDialog({
   };
 
   const isValid =
-    trimmedName !== "" &&
-    !Number.isNaN(parsedNumber) &&
-    !hasDuplicateNumber;
+    trimmedName !== "" && !Number.isNaN(parsedNumber) && !hasDuplicateNumber;
 
   return (
     <Dialog fullScreen open={open}>
@@ -322,10 +318,16 @@ function AddPlayerDialog({
             onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
             error={hasDuplicateNumber}
             helperText={
-              hasDuplicateNumber ? "Player number already exists on this team" : undefined
+              hasDuplicateNumber
+                ? "Player number already exists on this team"
+                : undefined
             }
           />
-          <Button variant="contained" onClick={handleSubmit} disabled={!isValid}>
+          <Button
+            variant="contained"
+            onClick={handleSubmit}
+            disabled={!isValid}
+          >
             Add Player
           </Button>
         </Box>

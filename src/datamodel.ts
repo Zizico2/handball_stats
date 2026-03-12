@@ -66,7 +66,9 @@ export const sevenMeterConcededEventSchema = withBase(
     eventGroup: z.literal("defense"),
   }),
 );
-export type SevenMeterConcededEvent = z.infer<typeof sevenMeterConcededEventSchema>;
+export type SevenMeterConcededEvent = z.infer<
+  typeof sevenMeterConcededEventSchema
+>;
 
 export const oneOnOneLostEventSchema = withBase(
   z.object({

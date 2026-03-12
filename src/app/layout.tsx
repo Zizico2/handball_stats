@@ -34,9 +34,19 @@ export default async function RootLayout({
                 width: "100dvw",
                 display: "flex",
                 flexDirection: "column",
+                overflowY: "hidden",
+                // TODO: what should this be?
               }}
             >
-              <ResponsiveDrawer>{children}</ResponsiveDrawer>
+              <ResponsiveDrawer>
+                <Box
+                  sx={{
+                    overflowY: "auto",
+                  }}
+                >
+                  {children}
+                </Box>
+              </ResponsiveDrawer>
             </Box>
           </ThemeProvider>
         </AppRouterCacheProvider>

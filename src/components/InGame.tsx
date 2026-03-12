@@ -14,13 +14,17 @@ import {
   Toolbar,
   Typography,
 } from "@mui/material";
-import {
-  useLiveSuspenseQuery,
-} from "@tanstack/react-db";
+import { useLiveSuspenseQuery } from "@tanstack/react-db";
 import { useMachine } from "@xstate/react";
 import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 import { assign } from "xstate";
 import z from "zod";
+import {
+  playerEventsCollection,
+  teamPlayersCollection,
+  teamsCollection,
+} from "@/collections";
 import {
   type EventGroup,
   type EventType,
@@ -32,14 +36,8 @@ import {
   shotPosition,
   type TeamPlayer,
 } from "@/datamodel";
-import {
-  playerEventsCollection,
-  teamPlayersCollection,
-  teamsCollection,
-} from "@/collections";
 import { usePersistentStopwatch } from "@/usePersistentStopwatch";
 import { eventMachine } from "@/utils";
-import { useEffect, useState } from "react";
 
 type MatchStatus = "firstHalf" | "halftime" | "secondHalf";
 
@@ -180,7 +178,9 @@ function InGame() {
           />
           <EventGroupButtons
             onRecordEvent={handleStartEvent}
-            disabled={selectedTeamId === null || selectedTeamPlayers.length === 0}
+            disabled={
+              selectedTeamId === null || selectedTeamPlayers.length === 0
+            }
           />
         </Box>
         <EventLog events={playerEvents.data} />
@@ -451,7 +451,11 @@ const PickAttackEventTypeDialog = ({
       title="Pick Attack Event Type"
       options={[
         { text: "Shot", key: "shot", value: "shot" },
-        { text: "Provoked 7meter", key: "provoked7meter", value: "provoked7meter" },
+        {
+          text: "Provoked 7meter",
+          key: "provoked7meter",
+          value: "provoked7meter",
+        },
         { text: "Provoked 2min", key: "provoked2min", value: "provoked2min" },
         { text: "Travelling", key: "travelling", value: "travelling" },
         { text: "Dribble Fault", key: "dribbleFault", value: "dribbleFault" },
@@ -476,10 +480,18 @@ const PickDefenseEventTypeDialog = ({
       title="Pick Defense Event Type"
       options={[
         { text: "Interception", key: "interception", value: "interception" },
-        { text: "7 Meter Conceded", key: "sevenMeterConceded", value: "sevenMeterConceded" },
+        {
+          text: "7 Meter Conceded",
+          key: "sevenMeterConceded",
+          value: "sevenMeterConceded",
+        },
         { text: "1-on-1 Lost", key: "oneOnOneLost", value: "oneOnOneLost" },
         { text: "Blocked Shot", key: "blockedShot", value: "blockedShot" },
-        { text: "Offensive Foul", key: "offensiveFoul", value: "offensiveFoul" },
+        {
+          text: "Offensive Foul",
+          key: "offensiveFoul",
+          value: "offensiveFoul",
+        },
       ]}
       onPickOption={onPickDefenseEventType}
     />

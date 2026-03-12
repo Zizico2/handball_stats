@@ -93,28 +93,6 @@ export default function ResponsiveDrawer({
         height: "100%",
       }}
     >
-      <AppBar
-        position="absolute"
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-        }}
-      >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: "none" } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div">
-            Arcazzi
-          </Typography>
-        </Toolbar>
-      </AppBar>
       <Box
         component="nav"
         sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
@@ -166,17 +144,49 @@ export default function ResponsiveDrawer({
         </Drawer>
       </Box>
       <Box
-        component="main"
         sx={{
-          flexGrow: 1,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
           display: "flex",
           flexDirection: "column",
+          width: "100%",
         }}
       >
-        <Toolbar />
+        <AppBar
+          // position="fixed"
+          //position="absolute"
+          position="static"
+          sx={{
+            // width: { sm: `calc(100% - ${drawerWidth}px)` },
+            // ml: { sm: `${drawerWidth}px` },
+            height: "min-content",
+          }}
+        >
+          <Toolbar>
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{ mr: 2, display: { sm: "none" } }}
+            >
+              <MenuIcon />
+            </IconButton>
+            <Typography variant="h6" noWrap component="div">
+              Arcazzi
+            </Typography>
+          </Toolbar>
+        </AppBar>
 
-        {children}
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            width: { sm: `calc(100% - ${drawerWidth}px)` },
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          {children}
+        </Box>
       </Box>
     </Box>
   );
