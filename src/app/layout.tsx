@@ -18,8 +18,10 @@ import InitColorSchemeScript from "@mui/material/InitColorSchemeScript";
 
 export default async function RootLayout({
   children,
+  matchControls,
 }: Readonly<{
   children: React.ReactNode;
+  matchControls: React.ReactNode;
 }>) {
   return (
     <html lang="en" className={roboto.variable} suppressHydrationWarning>
@@ -38,7 +40,7 @@ export default async function RootLayout({
                 // TODO: what should this be?
               }}
             >
-              <ResponsiveDrawer>
+              <ResponsiveDrawer appBarActions={matchControls}>
                 <Box
                   sx={{
                     overflowY: "auto",

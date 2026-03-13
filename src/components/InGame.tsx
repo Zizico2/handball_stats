@@ -7,16 +7,16 @@ import {
   Dialog,
   DialogContent,
   FormControl,
-  MenuItem,
   IconButton,
   InputLabel,
+  MenuItem,
   Select,
   Toolbar,
   Typography,
 } from "@mui/material";
-import { useSetAtom } from "jotai";
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
 import { useMachine } from "@xstate/react";
+import { useSetAtom } from "jotai";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import { assign } from "xstate";
@@ -38,8 +38,8 @@ import {
   type TeamPlayer,
 } from "@/datamodel";
 import {
-  initialInGameControlsState,
   inGameControlsAtom,
+  initialInGameControlsState,
   type MatchStatus,
 } from "@/inGameControlsAtoms";
 import { usePersistentStopwatch } from "@/usePersistentStopwatch";

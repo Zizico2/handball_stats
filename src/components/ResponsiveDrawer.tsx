@@ -2,7 +2,6 @@
 
 import MailIcon from "@mui/icons-material/Mail";
 import MenuIcon from "@mui/icons-material/Menu";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
 import InboxIcon from "@mui/icons-material/MoveToInbox";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
@@ -14,35 +13,23 @@ import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
-import { useAtomValue } from "jotai";
 import NextLink from "next/link";
-import { usePathname } from "next/navigation";
 import type * as React from "react";
 import { useState } from "react";
-import { inGameControlsAtom } from "@/inGameControlsAtoms";
 
 const drawerWidth = 240;
 
 export default function ResponsiveDrawer({
   children,
+  appBarActions,
 }: {
   children: React.ReactNode;
+  appBarActions?: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const inGameControls = useAtomValue(inGameControlsAtom);
-
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const [controlsAnchorEl, setControlsAnchorEl] = useState<HTMLElement | null>(
-    null,
-  );
-
-  const isInGamePage = pathname === "/in-game";
-  const isControlsMenuOpen = controlsAnchorEl !== null;
 
   const handleDrawerClose = () => {
     setIsClosing(true);
@@ -57,19 +44,6 @@ export default function ResponsiveDrawer({
     if (!isClosing) {
       setMobileOpen(!mobileOpen);
     }
-  };
-
-  const handleOpenControlsMenu = (event: React.MouseEvent<HTMLElement>) => {
-    setControlsAnchorEl(event.currentTarget);
-  };
-
-  const handleCloseControlsMenu = () => {
-    setControlsAnchorEl(null);
-  };
-
-  const runActionAndCloseMenu = (action: () => void) => {
-    action();
-    handleCloseControlsMenu();
   };
 
   const drawer = (
@@ -206,72 +180,7 @@ export default function ResponsiveDrawer({
             >
               Arcazzi
             </Typography>
-            {isInGamePage && (
-              <>
-                <IconButton
-                  color="inherit"
-                  aria-label="match controls"
-                  aria-controls={
-                    isControlsMenuOpen ? "match-controls-menu" : undefined
-                  }
-                  aria-haspopup="true"
-                  aria-expanded={isControlsMenuOpen ? "true" : undefined}
-                  onClick={handleOpenControlsMenu}
-                >
-                  <MoreVertIcon />
-                </IconButton>
-                <Menu
-                  id="match-controls-menu"
-                  anchorEl={controlsAnchorEl}
-                  open={isControlsMenuOpen}
-                  onClose={handleCloseControlsMenu}
-                  keepMounted
-                >
-                  <MenuItem
-                    onClick={() =>
-                      runActionAndCloseMenu(inGameControls.onStartFirstHalf)
-                    }
-                    disabled={inGameControls.matchStatus !== null}
-                  >
-                    Start First Half
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() =>
-                      runActionAndCloseMenu(inGameControls.onStartHalftime)
-                    }
-                    disabled={inGameControls.matchStatus !== "firstHalf"}
-                  >
-                    Start Halftime
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() =>
-                      runActionAndCloseMenu(inGameControls.onStartSecondHalf)
-                    }
-                    disabled={inGameControls.matchStatus !== "halftime"}
-                  >
-                    Start Second Half
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() =>
-                      runActionAndCloseMenu(inGameControls.onTogglePause)
-                    }
-                    disabled={
-                      inGameControls.matchStatus === null ||
-                      inGameControls.matchStatus === "halftime"
-                    }
-                  >
-                    {inGameControls.isRunning ? "Pause Match" : "Resume Match"}
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() =>
-                      runActionAndCloseMenu(inGameControls.onClearGame)
-                    }
-                  >
-                    Clear Game
-                  </MenuItem>
-                </Menu>
-              </>
-            )}
+            {appBarActions}
           </Toolbar>
         </AppBar>
 
