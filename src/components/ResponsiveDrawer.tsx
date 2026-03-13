@@ -23,10 +23,10 @@ const drawerWidth = 240;
 
 export default function ResponsiveDrawer({
   children,
-  appBarActions,
+  trailingActions,
 }: {
   children: React.ReactNode;
-  appBarActions?: React.ReactNode;
+  trailingActions?: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -180,7 +180,7 @@ export default function ResponsiveDrawer({
             >
               Arcazzi
             </Typography>
-            {appBarActions}
+            {trailingActions}
           </Toolbar>
         </AppBar>
 
