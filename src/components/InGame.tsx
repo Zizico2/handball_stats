@@ -6,11 +6,7 @@ import {
   Button,
   Dialog,
   DialogContent,
-  FormControl,
   IconButton,
-  InputLabel,
-  MenuItem,
-  Select,
   Toolbar,
   Typography,
 } from "@mui/material";
@@ -18,13 +14,14 @@ import { useLiveSuspenseQuery } from "@tanstack/react-db";
 import { useMachine } from "@xstate/react";
 import { useSetAtom } from "jotai";
 import dynamic from "next/dynamic";
+import NextLink from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { assign } from "xstate";
 import z from "zod";
 import {
+  activeGameCollection,
   playerEventsCollection,
   teamPlayersCollection,
-  teamsCollection,
 } from "@/collections";
 import {
   type EventGroup,
@@ -65,7 +62,9 @@ function InGame() {
     q.from({ event: playerEventsCollection }),
   );
 
-  const teams = useLiveSuspenseQuery((q) => q.from({ team: teamsCollection }));
+  const activeGame = useLiveSuspenseQuery((q) =>
+    q.from({ activeGame: activeGameCollection }).findOne(),
+  );
 
   const teamPlayers = useLiveSuspenseQuery((q) =>
     q.from({ player: teamPlayersCollection }),
@@ -82,7 +81,6 @@ function InGame() {
     usePersistentStopwatch({ autoStart: false });
 
   const [matchStatus, setMatchStatus] = useState<MatchStatus | null>(null);
-  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
 
   const [state, send] = useMachine(
     eventMachine.provide({
@@ -97,36 +95,27 @@ function InGame() {
 
   const nextEventId = (lastEvent.data?.id ?? 0) + 1;
 
-  useEffect(() => {
-    if (teams.data.length === 0) {
-      if (selectedTeamId !== null) {
-        setSelectedTeamId(null);
-      }
-
-      return;
-    }
-
-    const selectedTeamStillExists = teams.data.some(
-      (team) => team.id === selectedTeamId,
-    );
-
-    if (!selectedTeamStillExists) {
-      setSelectedTeamId(teams.data[0].id);
-    }
-  }, [selectedTeamId, teams.data]);
-
   const selectedTeamPlayers = teamPlayers.data
-    .filter((player) => player.teamId === selectedTeamId)
+    .filter((player) => player.teamId === activeGame.data?.homeTeamId)
     .sort((left, right) => left.number - right.number);
 
   const handleClearGame = useCallback(() => {
-    for (const event of playerEvents.data) {
-      playerEventsCollection.delete(event.id);
+    const activeGameData = activeGame.data;
+
+    if (activeGameData) {
+      for (const event of playerEvents.data.filter(
+        (item) => item.game_id === activeGameData.gameId,
+      )) {
+        playerEventsCollection.delete(event.id);
+      }
+
+      activeGameCollection.delete(activeGameData.id);
     }
+
     localStorage.removeItem("persistentStopwatch");
     setMatchStatus(null);
     reset(new Date(), false);
-  }, [playerEvents.data, reset]);
+  }, [activeGame.data, playerEvents.data, reset]);
 
   const handleStartFirstHalf = useCallback(() => {
     start();
@@ -154,14 +143,26 @@ function InGame() {
   }, [isRunning, pause, start]);
 
   const handleStartEvent = (eventGroup: EventGroup) => {
+    if (!activeGame.data) {
+      return;
+    }
+
     send({
       type: "START",
       eventGroup,
       ellapsed_seconds: totalSeconds,
-      game_id: 1,
+      game_id: activeGame.data.gameId,
       id: nextEventId,
     });
   };
+
+  const activeGameData = activeGame.data;
+
+  const activeGameEvents = activeGameData
+    ? playerEvents.data.filter(
+        (event) => event.game_id === activeGameData.gameId,
+      )
+    : [];
 
   useEffect(() => {
     setInGameControls({
@@ -201,19 +202,22 @@ function InGame() {
           }}
         >
           <MatchClock minutes={minutes} seconds={seconds} />
-          <TeamSelection
-            selectedTeamId={selectedTeamId}
-            teams={teams.data}
-            onChange={setSelectedTeamId}
-          />
+          {!activeGame.data ? (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              <Typography color="text.secondary">
+                No active game. Choose a home team first.
+              </Typography>
+              <Button component={NextLink} href="/new-game" variant="outlined">
+                Go to New Game
+              </Button>
+            </Box>
+          ) : null}
           <EventGroupButtons
             onRecordEvent={handleStartEvent}
-            disabled={
-              selectedTeamId === null || selectedTeamPlayers.length === 0
-            }
+            disabled={!activeGame.data || selectedTeamPlayers.length === 0}
           />
         </Box>
-        <EventLog events={playerEvents.data} />
+        <EventLog events={activeGameEvents} />
       </Box>
       <PickPlayerFullscreenDialog
         open={state.matches("pickingPlayer")}
@@ -317,41 +321,6 @@ function MatchClock({
         {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
       </Typography>
     </Box>
-  );
-}
-
-function TeamSelection({
-  selectedTeamId,
-  teams,
-  onChange,
-}: {
-  selectedTeamId: number | null;
-  teams: Array<{ id: number; name: string }>;
-  onChange: (teamId: number | null) => void;
-}) {
-  return (
-    <FormControl fullWidth>
-      <InputLabel id="team-select-label">Team</InputLabel>
-      <Select
-        labelId="team-select-label"
-        label="Team"
-        value={selectedTeamId?.toString() ?? ""}
-        onChange={(event) => {
-          const value = event.target.value;
-          onChange(value === "" ? null : Number(value));
-        }}
-      >
-        {teams.length === 0 ? (
-          <MenuItem value="">No teams available</MenuItem>
-        ) : (
-          teams.map((team) => (
-            <MenuItem key={team.id} value={team.id.toString()}>
-              {team.name}
-            </MenuItem>
-          ))
-        )}
-      </Select>
-    </FormControl>
   );
 }
 

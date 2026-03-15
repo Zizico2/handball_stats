@@ -2,7 +2,13 @@ import {
   createCollection,
   localStorageCollectionOptions,
 } from "@tanstack/react-db";
-import { playerEventSchema, teamPlayerSchema, teamSchema } from "@/datamodel";
+import {
+  activeGameSchema,
+  gameSchema,
+  playerEventSchema,
+  teamPlayerSchema,
+  teamSchema,
+} from "@/datamodel";
 
 export const playerEventsCollection = createCollection(
   localStorageCollectionOptions({
@@ -27,6 +33,24 @@ export const teamPlayersCollection = createCollection(
     id: "team-players",
     storageKey: "team-players",
     schema: teamPlayerSchema,
+    getKey: (item) => item.id,
+  }),
+);
+
+export const gamesCollection = createCollection(
+  localStorageCollectionOptions({
+    id: "games",
+    storageKey: "games",
+    schema: gameSchema,
+    getKey: (item) => item.id,
+  }),
+);
+
+export const activeGameCollection = createCollection(
+  localStorageCollectionOptions({
+    id: "active-game",
+    storageKey: "active-game",
+    schema: activeGameSchema,
     getKey: (item) => item.id,
   }),
 );

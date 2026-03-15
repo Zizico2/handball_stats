@@ -53,6 +53,7 @@ export default function ResponsiveDrawer({
       <List>
         {[
           { text: "Home", href: "/" },
+          { text: "New Game", href: "/new-game" },
           { text: "In Game", href: "/in-game" },
           { text: "Create Teams", href: "/create-teams" },
           // { text: "Inbox", href: "/inbox" },

@@ -227,3 +227,17 @@ export const teamPlayerSchema = z.object({
   number: z.number(),
 });
 export type TeamPlayer = z.infer<typeof teamPlayerSchema>;
+
+export const gameSchema = z.object({
+  id: z.number(),
+  homeTeamId: z.number(),
+  createdAt: z.iso.datetime(),
+});
+export type Game = z.infer<typeof gameSchema>;
+
+export const activeGameSchema = z.object({
+  id: z.literal(1),
+  gameId: z.number(),
+  homeTeamId: z.number(),
+});
+export type ActiveGame = z.infer<typeof activeGameSchema>;
