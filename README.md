@@ -1,15 +1,15 @@
-# Simple Cropper
+## Handball Stats
 
-A lightweight, client-side image cropping tool built with modern web technologies. Upload an image via drag-and-drop or file picker, visually select a crop region, and download the result — all processed in the browser with no server round-trips.
+A local-first handball match tracking app built with Next.js App Router.
 
-[https://simple-image-cropper.bernardobordadagua.com](https://simple-image-cropper.bernardobordadagua.com)
+The app is focused on three flows:
 
-## Features
+1. Create teams and players.
+2. Start a new game by selecting the home team.
+3. Record in-game events (attack, defense, sanction) with a running match clock.
 
-- **Drag & drop / click-to-upload** image selection via `react-dropzone`
-- **Interactive crop UI** powered by `react-image-crop`
-- **Client-side processing** — images are cropped on a `<canvas>` at full resolution, preserving the original format and quality
-- **Responsive layout** with dark mode support (`prefers-color-scheme`)
+Today, data is stored in browser local storage through TanStack DB collections to speed up onboarding and product iteration.
+This is a temporary development setup: the alpha version will use server-backed collections.
 
 ## Tech Stack
 
@@ -19,46 +19,94 @@ A lightweight, client-side image cropping tool built with modern web technologie
 | Language | TypeScript (strict mode) |
 | Runtime | [Cloudflare Workers](https://workers.cloudflare.com/) (edge) |
 | Package Manager | [Bun](https://bun.sh/) |
-| Styling | [Tailwind CSS v4](https://tailwindcss.com/) + [class-variance-authority](https://cva.style/) |
-| UI Components | [Kumo](https://github.com/cloudflare/kumo) |
 | Linting & Formatting | [Biome](https://biomejs.dev/) |
 | Deployment | [Cloudflare Workers](https://workers.cloudflare.com/) via [OpenNext](https://opennext.js.org/) |
 | CI/CD | GitHub Actions |
+| Component Library | [MUI](https://mui.com/) |
 
-## Best Practices
+## Onboarding: Bun Commands
 
-### Code Quality
+### Prerequisites
 
-- **TypeScript strict mode** — `strict: true` in `tsconfig.json` for maximum type safety
-- **React Compiler** enabled (`reactCompiler: true`) for automatic memoization and optimized re-renders
-- **Biome** for unified linting and formatting with zero-config recommended rules, including React and Next.js domain rules
-- **Tailwind CSS v4** for utility-first styling with zero runtime overhead, combined with **class-variance-authority (CVA)** for type-safe, variant-based component styles
-- **Clean component architecture** — small, focused components (`ImageUpload`, `CropperApp`) with clear separation of concerns; utility logic (`downloadCrop`) isolated from UI
+1. Install Bun: https://bun.sh/docs/installation
+2. Use a recent Node-compatible runtime environment (already handled by Bun in normal setup).
 
-### Deployment & CI/CD
-
-- **Edge deployment** on Cloudflare Workers via OpenNext, delivering low-latency responses globally
-- **Automated CI/CD pipeline** — every push runs linting, format checks, and build validation; deployments to Cloudflare only trigger on GitHub releases, ensuring production stability while maintaining fast feedback on code quality
-- **Infrastructure as code** — `wrangler.toml` and `open-next.config.ts` version the full deployment configuration alongside the application code
-
-## Getting Started
+### Install dependencies
 
 ```bash
-# Install dependencies
 bun install
+```
 
-# Start the dev server
-bun dev
+### Run the app locally
 
-# Build & preview the Cloudflare Workers build locally
+```bash
+bun run dev
+```
+
+### Quality checks
+
+```bash
+bun run lint
+bun run format-check
+```
+
+### Auto-format code
+
+```bash
+bun run format
+```
+
+### Production build
+
+```bash
+bun run build
+```
+
+### Cloudflare/OpenNext workflow
+
+```bash
+bun run build:cf
 bun run preview
+bun run deploy:cf
 ```
 
-## Project Structure
+### Generate Cloudflare environment types
 
+```bash
+bun run cf-typegen
 ```
-src/
-├── app/                  # Next.js App Router pages & global styles
-├── components/           # React components
-└── utils/                # Pure utility functions
-```
+
+## Zod Schemas (Data Model)
+
+The app uses Zod in `src/datamodel.ts` to define and validate all domain data.
+
+Key points:
+
+1. `playerEventSchema` is a discriminated union by `eventType`, covering attack, defense, and sanction events.
+2. Every player event extends a shared base shape (`id`, `player`, `game_id`, `ellapsed_seconds`).
+3. `shotSchema` validates shot payloads and includes a domain rule: an `OffTarget` shot cannot be marked as goal.
+4. Team/game entities (`teamSchema`, `teamPlayerSchema`, `gameSchema`, `activeGameSchema`) define the rest of the app state with typed inference used across the UI.
+
+This gives runtime validation plus strong TypeScript types from a single source of truth.
+
+## TanStack DB Collections
+
+Collections are defined in `src/collections.ts` with `createCollection` + `localStorageCollectionOptions`.
+
+Each collection has:
+
+1. A storage key in local storage.
+2. A Zod schema for runtime validation.
+3. A key selector (`getKey`) for item identity.
+
+Current collections:
+
+1. `playerEventsCollection` (`game-events`) for recorded match events.
+2. `teamsCollection` (`teams`) for teams.
+3. `teamPlayersCollection` (`team-players`) for roster players.
+4. `gamesCollection` (`games`) for historical games.
+5. `activeGameCollection` (`active-game`) for the currently active game pointer.
+
+Current state: local storage is used only for development and iteration speed.
+Planned alpha state: collections will be server-backed, while keeping the same schema-driven validation approach.
+
