@@ -40,7 +40,7 @@ import {
   type MatchStatus,
 } from "@/inGameControlsAtoms";
 import { usePersistentStopwatch } from "@/usePersistentStopwatch";
-import { eventMachine } from "@/utils";
+import { eventMachine } from "@/event_form_fsm";
 
 function insertPlayerEvent(partialEvent: unknown): void {
   try {
