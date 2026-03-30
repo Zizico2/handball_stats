@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
 import { getDb } from "@/app/api/db";
 import * as schema from "@/db/schema";
 
@@ -24,9 +24,7 @@ export async function DELETE(request: Request) {
   const db = await getDb();
   const { ids } = (await request.json()) as { ids: number[] };
   for (const id of ids) {
-    await db
-      .delete(schema.teamPlayers)
-      .where(eq(schema.teamPlayers.id, id));
+    await db.delete(schema.teamPlayers).where(eq(schema.teamPlayers.id, id));
   }
   return NextResponse.json({ ok: true });
 }

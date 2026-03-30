@@ -1,19 +1,19 @@
-import { createCollection } from "@tanstack/react-db";
-import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import { QueryClient } from "@tanstack/query-core";
-import {
-  activeGameSchema,
-  gameSchema,
-  playerEventSchema,
-  teamPlayerSchema,
-  teamSchema,
-} from "@/datamodel";
+import { queryCollectionOptions } from "@tanstack/query-db-collection";
+import { createCollection } from "@tanstack/react-db";
 import type {
   ActiveGame,
   Game,
   PlayerEvent,
   Team,
   TeamPlayer,
+} from "@/datamodel";
+import {
+  activeGameSchema,
+  gameSchema,
+  playerEventSchema,
+  teamPlayerSchema,
+  teamSchema,
 } from "@/datamodel";
 
 const queryClient = new QueryClient();

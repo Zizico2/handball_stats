@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
 import { getDb } from "@/app/api/db";
 import * as schema from "@/db/schema";
 

@@ -34,13 +34,13 @@ import {
   shotPosition,
   type TeamPlayer,
 } from "@/datamodel";
+import { eventMachine } from "@/event_form_fsm";
 import {
   inGameControlsAtom,
   initialInGameControlsState,
   type MatchStatus,
 } from "@/inGameControlsAtoms";
 import { usePersistentStopwatch } from "@/usePersistentStopwatch";
-import { eventMachine } from "@/event_form_fsm";
 
 function insertPlayerEvent(partialEvent: unknown): void {
   try {

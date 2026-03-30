@@ -1,5 +1,3 @@
-
-
 // Collects all keys across all union members (distributive)
 type AllKeys<T> = T extends object ? keyof T : never;
 
@@ -16,4 +14,3 @@ export type DeepPartial<T> = [T] extends [object]
         : DistributedValue<T, K>;
     }
   : T;
-

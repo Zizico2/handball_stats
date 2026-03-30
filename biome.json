@@ -18,7 +18,8 @@
       "!.next",
       "!dist",
       "!build",
-      "!cloudflare-env.d.ts"
+      "!cloudflare-env.d.ts",
+      "!worker-configuration.d.ts"
     ]
   },
   "formatter": {

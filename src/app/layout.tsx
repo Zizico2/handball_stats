@@ -1,16 +1,10 @@
 import "./globals.css";
+import { ClerkProvider, Show, SignInButton, SignUpButton } from "@clerk/nextjs";
 import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider } from "@mui/material/styles";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import { Roboto } from "next/font/google";
 import ResponsiveDrawer from "@/components/ResponsiveDrawer";
-import {
-  ClerkProvider,
-  Show,
-  SignInButton,
-  SignUpButton,
-  UserButton,
-} from "@clerk/nextjs";
 import theme from "../theme";
 
 const roboto = Roboto({
@@ -20,7 +14,7 @@ const roboto = Roboto({
   variable: "--font-roboto",
 });
 
-import { Box, Button } from "@mui/material";
+import { Box } from "@mui/material";
 import InitColorSchemeScript from "@mui/material/InitColorSchemeScript";
 
 export default async function RootLayout({

@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/d1";
-import * as schema from "./schema";
 import type { PlayerEvent } from "@/datamodel";
+import * as schema from "./schema";
 
 export type DbPlayerEvent = typeof schema.playerEvents.$inferSelect;
 export type DbTeam = typeof schema.teams.$inferSelect;
