@@ -1,6 +1,22 @@
 import { QueryClient } from "@tanstack/query-core";
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import { createCollection } from "@tanstack/react-db";
+import {
+  createGamesAction,
+  createPlayerEventsAction,
+  createTeamPlayersAction,
+  createTeamsAction,
+  deleteActiveGameAction,
+  deletePlayerEventsAction,
+  deleteTeamPlayersAction,
+  deleteTeamsAction,
+  listActiveGameAction,
+  listGamesAction,
+  listPlayerEventsAction,
+  listTeamPlayersAction,
+  listTeamsAction,
+  upsertActiveGameAction,
+} from "@/app/actions/collections";
 import type {
   ActiveGame,
   Game,
@@ -25,25 +41,14 @@ export const playerEventsCollection = createCollection(
     queryClient,
     schema: playerEventSchema,
     getKey: (item: PlayerEvent) => item.id,
-    queryFn: async () => {
-      const res = await fetch("/api/player-events");
-      return res.json() as Promise<Array<PlayerEvent>>;
-    },
+    queryFn: listPlayerEventsAction,
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
-      await fetch("/api/player-events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newItems),
-      });
+      await createPlayerEventsAction(newItems);
     },
     onDelete: async ({ transaction }) => {
       const ids = transaction.mutations.map((m) => m.key);
-      await fetch("/api/player-events", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids }),
-      });
+      await deletePlayerEventsAction(ids);
     },
   }),
 );
@@ -55,25 +60,14 @@ export const teamsCollection = createCollection(
     queryClient,
     schema: teamSchema,
     getKey: (item: Team) => item.id,
-    queryFn: async () => {
-      const res = await fetch("/api/teams");
-      return res.json() as Promise<Array<Team>>;
-    },
+    queryFn: listTeamsAction,
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
-      await fetch("/api/teams", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newItems),
-      });
+      await createTeamsAction(newItems);
     },
     onDelete: async ({ transaction }) => {
       const ids = transaction.mutations.map((m) => m.key);
-      await fetch("/api/teams", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids }),
-      });
+      await deleteTeamsAction(ids);
     },
   }),
 );
@@ -85,25 +79,14 @@ export const teamPlayersCollection = createCollection(
     queryClient,
     schema: teamPlayerSchema,
     getKey: (item: TeamPlayer) => item.id,
-    queryFn: async () => {
-      const res = await fetch("/api/team-players");
-      return res.json() as Promise<Array<TeamPlayer>>;
-    },
+    queryFn: listTeamPlayersAction,
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
-      await fetch("/api/team-players", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newItems),
-      });
+      await createTeamPlayersAction(newItems);
     },
     onDelete: async ({ transaction }) => {
       const ids = transaction.mutations.map((m) => m.key);
-      await fetch("/api/team-players", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids }),
-      });
+      await deleteTeamPlayersAction(ids);
     },
   }),
 );
@@ -115,17 +98,10 @@ export const gamesCollection = createCollection(
     queryClient,
     schema: gameSchema,
     getKey: (item: Game) => item.id,
-    queryFn: async () => {
-      const res = await fetch("/api/games");
-      return res.json() as Promise<Array<Game>>;
-    },
+    queryFn: listGamesAction,
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
-      await fetch("/api/games", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newItems),
-      });
+      await createGamesAction(newItems);
     },
   }),
 );
@@ -137,27 +113,14 @@ export const activeGameCollection = createCollection(
     queryClient,
     schema: activeGameSchema,
     getKey: (item: ActiveGame) => item.id,
-    queryFn: async () => {
-      const res = await fetch("/api/active-game");
-      return res.json() as Promise<Array<ActiveGame>>;
-    },
+    queryFn: listActiveGameAction,
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
-      for (const item of newItems) {
-        await fetch("/api/active-game", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(item),
-        });
-      }
+      await upsertActiveGameAction(newItems);
     },
     onDelete: async ({ transaction }) => {
       const ids = transaction.mutations.map((m) => m.key);
-      await fetch("/api/active-game", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids }),
-      });
+      await deleteActiveGameAction(ids);
     },
   }),
 );
