@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
-export default function DefaultMatchControls(): ReactNode {
+export default function DefaultMatchControls() {
   return null;
 }

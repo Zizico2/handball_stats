@@ -30,13 +30,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
-      "suspicious": {
-        "noUnknownAtRules": "off"
-      },
-      "nursery": {
-        "useExplicitType": "error"
-      }
+      "recommended": true
     },
     "domains": {
       "next": "recommended",

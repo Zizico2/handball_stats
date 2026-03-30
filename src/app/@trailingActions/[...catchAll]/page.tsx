@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
-export default function MatchControlsCatchAllPage(): ReactNode {
+export default function MatchControlsCatchAllPage() {
   return null;
 }
