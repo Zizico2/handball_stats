@@ -3,8 +3,6 @@ import { eq } from "drizzle-orm";
 import { getDb } from "@/app/api/db";
 import * as schema from "@/db/schema";
 
-export const runtime = 'edge';
-
 export async function GET() {
   const db = await getDb();
   const rows = await db.select().from(schema.teams);
