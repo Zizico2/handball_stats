@@ -1,5 +1,5 @@
 import { drizzle } from "drizzle-orm/d1";
-import type { PlayerEvent } from "@/datamodel";
+import type { ActiveGame, Game, PlayerEvent, TeamPlayer } from "@/datamodel";
 import * as schema from "./schema";
 
 export type DbPlayerEvent = typeof schema.playerEvents.$inferSelect;
@@ -43,7 +43,7 @@ export function dbRowToPlayerEvent(row: DbPlayerEvent): PlayerEvent {
   } as PlayerEvent;
 }
 
-export function playerEventToDbRow(event: PlayerEvent) {
+export function playerEventToDbRow(event: PlayerEvent): DbPlayerEvent {
   const base = {
     id: event.id,
     player: event.player,
@@ -66,7 +66,7 @@ export function playerEventToDbRow(event: PlayerEvent) {
   return base;
 }
 
-export function dbRowToTeamPlayer(row: DbTeamPlayer) {
+export function dbRowToTeamPlayer(row: DbTeamPlayer): TeamPlayer {
   return {
     id: row.id,
     teamId: row.teamId,
@@ -75,12 +75,7 @@ export function dbRowToTeamPlayer(row: DbTeamPlayer) {
   };
 }
 
-export function teamPlayerToDbRow(player: {
-  id: number;
-  teamId: number;
-  name: string;
-  number: number;
-}) {
+export function teamPlayerToDbRow(player: TeamPlayer): DbTeamPlayer {
   return {
     id: player.id,
     teamId: player.teamId,
@@ -89,7 +84,7 @@ export function teamPlayerToDbRow(player: {
   };
 }
 
-export function dbRowToGame(row: DbGame) {
+export function dbRowToGame(row: DbGame): Game {
   return {
     id: row.id,
     homeTeamId: row.homeTeamId,
@@ -97,11 +92,7 @@ export function dbRowToGame(row: DbGame) {
   };
 }
 
-export function gameToDbRow(game: {
-  id: number;
-  homeTeamId: number;
-  createdAt: string;
-}) {
+export function gameToDbRow(game: Game): DbGame {
   return {
     id: game.id,
     homeTeamId: game.homeTeamId,
@@ -109,7 +100,7 @@ export function gameToDbRow(game: {
   };
 }
 
-export function dbRowToActiveGame(row: DbActiveGame) {
+export function dbRowToActiveGame(row: DbActiveGame): ActiveGame {
   return {
     id: row.id as 1,
     gameId: row.gameId,
@@ -117,11 +108,7 @@ export function dbRowToActiveGame(row: DbActiveGame) {
   };
 }
 
-export function activeGameToDbRow(activeGame: {
-  id: 1;
-  gameId: number;
-  homeTeamId: number;
-}) {
+export function activeGameToDbRow(activeGame: ActiveGame): DbActiveGame {
   return {
     id: activeGame.id,
     gameId: activeGame.gameId,
