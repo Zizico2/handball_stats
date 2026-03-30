@@ -12,7 +12,6 @@ import {
   Typography,
 } from "@mui/material";
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
-import dynamic from "next/dynamic";
 import { useState } from "react";
 import { teamPlayersCollection, teamsCollection } from "@/collections";
 import type { Team, TeamPlayer } from "@/datamodel";
@@ -174,9 +173,7 @@ function CreateTeams() {
   );
 }
 
-export default dynamic(() => Promise.resolve(CreateTeams), {
-  ssr: false,
-});
+export default CreateTeams;
 
 function CreateTeamDialog({
   open,

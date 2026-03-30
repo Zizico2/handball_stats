@@ -1,22 +1,48 @@
 import { drizzle } from "drizzle-orm/d1";
-import type { ActiveGame, Game, PlayerEvent, TeamPlayer } from "@/datamodel";
+import type {
+  ActiveGame,
+  Game,
+  PlayerEvent,
+  Team,
+  TeamPlayer,
+} from "@/datamodel";
 import * as schema from "./schema";
 
 export type DbPlayerEvent = typeof schema.playerEvents.$inferSelect;
+export type DbPlayerEventInsert = typeof schema.playerEvents.$inferInsert;
 export type DbTeam = typeof schema.teams.$inferSelect;
+export type DbTeamInsert = typeof schema.teams.$inferInsert;
 export type DbTeamPlayer = typeof schema.teamPlayers.$inferSelect;
+export type DbTeamPlayerInsert = typeof schema.teamPlayers.$inferInsert;
 export type DbGame = typeof schema.games.$inferSelect;
+export type DbGameInsert = typeof schema.games.$inferInsert;
 export type DbActiveGame = typeof schema.activeGame.$inferSelect;
+export type DbActiveGameInsert = typeof schema.activeGame.$inferInsert;
 
 export function createDb(d1: D1Database) {
   return drizzle(d1, { schema });
 }
 
+export function dbRowToTeam(row: DbTeam): Team {
+  return {
+    id: row.localId,
+    name: row.name,
+  };
+}
+
+export function teamToDbRow(team: Team, userId: string): DbTeamInsert {
+  return {
+    userId,
+    localId: team.id,
+    name: team.name,
+  };
+}
+
 export function dbRowToPlayerEvent(row: DbPlayerEvent): PlayerEvent {
   const base = {
-    id: row.id,
+    id: row.localId,
     player: row.player,
-    game_id: row.gameId,
+    game_id: row.gameLocalId,
     ellapsed_seconds: row.ellapsedSeconds,
   };
 
@@ -43,11 +69,15 @@ export function dbRowToPlayerEvent(row: DbPlayerEvent): PlayerEvent {
   } as PlayerEvent;
 }
 
-export function playerEventToDbRow(event: PlayerEvent): DbPlayerEvent {
+export function playerEventToDbRow(
+  event: PlayerEvent,
+  userId: string,
+): DbPlayerEventInsert {
   const base = {
-    id: event.id,
+    userId,
+    localId: event.id,
     player: event.player,
-    gameId: event.game_id,
+    gameLocalId: event.game_id,
     ellapsedSeconds: event.ellapsed_seconds,
     eventType: event.eventType,
     eventGroup: event.eventGroup,
@@ -68,17 +98,21 @@ export function playerEventToDbRow(event: PlayerEvent): DbPlayerEvent {
 
 export function dbRowToTeamPlayer(row: DbTeamPlayer): TeamPlayer {
   return {
-    id: row.id,
-    teamId: row.teamId,
+    id: row.localId,
+    teamId: row.teamLocalId,
     name: row.name,
     number: row.number,
   };
 }
 
-export function teamPlayerToDbRow(player: TeamPlayer): DbTeamPlayer {
+export function teamPlayerToDbRow(
+  player: TeamPlayer,
+  userId: string,
+): DbTeamPlayerInsert {
   return {
-    id: player.id,
-    teamId: player.teamId,
+    userId,
+    localId: player.id,
+    teamLocalId: player.teamId,
     name: player.name,
     number: player.number,
   };
@@ -86,32 +120,37 @@ export function teamPlayerToDbRow(player: TeamPlayer): DbTeamPlayer {
 
 export function dbRowToGame(row: DbGame): Game {
   return {
-    id: row.id,
-    homeTeamId: row.homeTeamId,
+    id: row.localId,
+    homeTeamId: row.homeTeamLocalId,
     createdAt: row.createdAt,
   };
 }
 
-export function gameToDbRow(game: Game): DbGame {
+export function gameToDbRow(game: Game, userId: string): DbGameInsert {
   return {
-    id: game.id,
-    homeTeamId: game.homeTeamId,
+    userId,
+    localId: game.id,
+    homeTeamLocalId: game.homeTeamId,
     createdAt: game.createdAt,
   };
 }
 
 export function dbRowToActiveGame(row: DbActiveGame): ActiveGame {
   return {
-    id: row.id as 1,
-    gameId: row.gameId,
-    homeTeamId: row.homeTeamId,
+    id: row.localId as 1,
+    gameId: row.gameLocalId,
+    homeTeamId: row.homeTeamLocalId,
   };
 }
 
-export function activeGameToDbRow(activeGame: ActiveGame): DbActiveGame {
+export function activeGameToDbRow(
+  activeGame: ActiveGame,
+  userId: string,
+): DbActiveGameInsert {
   return {
-    id: activeGame.id,
-    gameId: activeGame.gameId,
-    homeTeamId: activeGame.homeTeamId,
+    userId,
+    localId: activeGame.id,
+    gameLocalId: activeGame.gameId,
+    homeTeamLocalId: activeGame.homeTeamId,
   };
 }

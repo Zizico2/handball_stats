@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "bc4316c3-4e85-4fc4-9682-fb70d5ecf527",
+  "id": "c51687f1-ff45-4c5b-b2a6-a07742555fe1",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "active_game": {
@@ -14,38 +14,73 @@
           "notNull": true,
           "autoincrement": false
         },
-        "game_id": {
-          "name": "game_id",
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "local_id": {
+          "name": "local_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "home_team_id": {
-          "name": "home_team_id",
+        "game_local_id": {
+          "name": "game_local_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "home_team_local_id": {
+          "name": "home_team_local_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "active_game_user_id_local_id_uq": {
+          "name": "active_game_user_id_local_id_uq",
+          "columns": [
+            "user_id",
+            "local_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
-        "active_game_game_id_games_id_fk": {
-          "name": "active_game_game_id_games_id_fk",
+        "active_game_user_id_game_local_id_games_user_id_local_id_fk": {
+          "name": "active_game_user_id_game_local_id_games_user_id_local_id_fk",
           "tableFrom": "active_game",
           "tableTo": "games",
-          "columnsFrom": ["game_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id",
+            "game_local_id"
+          ],
+          "columnsTo": [
+            "user_id",
+            "local_id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "active_game_home_team_id_teams_id_fk": {
-          "name": "active_game_home_team_id_teams_id_fk",
+        "active_game_user_id_home_team_local_id_teams_user_id_local_id_fk": {
+          "name": "active_game_user_id_home_team_local_id_teams_user_id_local_id_fk",
           "tableFrom": "active_game",
           "tableTo": "teams",
-          "columnsFrom": ["home_team_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id",
+            "home_team_local_id"
+          ],
+          "columnsTo": [
+            "user_id",
+            "local_id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -64,8 +99,22 @@
           "notNull": true,
           "autoincrement": false
         },
-        "home_team_id": {
-          "name": "home_team_id",
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "local_id": {
+          "name": "local_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "home_team_local_id": {
+          "name": "home_team_local_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -79,14 +128,29 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "games_user_id_local_id_uq": {
+          "name": "games_user_id_local_id_uq",
+          "columns": [
+            "user_id",
+            "local_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
-        "games_home_team_id_teams_id_fk": {
-          "name": "games_home_team_id_teams_id_fk",
+        "games_user_id_home_team_local_id_teams_user_id_local_id_fk": {
+          "name": "games_user_id_home_team_local_id_teams_user_id_local_id_fk",
           "tableFrom": "games",
           "tableTo": "teams",
-          "columnsFrom": ["home_team_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id",
+            "home_team_local_id"
+          ],
+          "columnsTo": [
+            "user_id",
+            "local_id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -105,6 +169,20 @@
           "notNull": true,
           "autoincrement": false
         },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "local_id": {
+          "name": "local_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "player": {
           "name": "player",
           "type": "integer",
@@ -112,8 +190,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "game_id": {
-          "name": "game_id",
+        "game_local_id": {
+          "name": "game_local_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -155,14 +233,29 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "player_events_user_id_local_id_uq": {
+          "name": "player_events_user_id_local_id_uq",
+          "columns": [
+            "user_id",
+            "local_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
-        "player_events_game_id_games_id_fk": {
-          "name": "player_events_game_id_games_id_fk",
+        "player_events_user_id_game_local_id_games_user_id_local_id_fk": {
+          "name": "player_events_user_id_game_local_id_games_user_id_local_id_fk",
           "tableFrom": "player_events",
           "tableTo": "games",
-          "columnsFrom": ["game_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id",
+            "game_local_id"
+          ],
+          "columnsTo": [
+            "user_id",
+            "local_id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -181,8 +274,22 @@
           "notNull": true,
           "autoincrement": false
         },
-        "team_id": {
-          "name": "team_id",
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "local_id": {
+          "name": "local_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "team_local_id": {
+          "name": "team_local_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -203,14 +310,29 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "team_players_user_id_local_id_uq": {
+          "name": "team_players_user_id_local_id_uq",
+          "columns": [
+            "user_id",
+            "local_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
-        "team_players_team_id_teams_id_fk": {
-          "name": "team_players_team_id_teams_id_fk",
+        "team_players_user_id_team_local_id_teams_user_id_local_id_fk": {
+          "name": "team_players_user_id_team_local_id_teams_user_id_local_id_fk",
           "tableFrom": "team_players",
           "tableTo": "teams",
-          "columnsFrom": ["team_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id",
+            "team_local_id"
+          ],
+          "columnsTo": [
+            "user_id",
+            "local_id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -229,6 +351,20 @@
           "notNull": true,
           "autoincrement": false
         },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "local_id": {
+          "name": "local_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "name": {
           "name": "name",
           "type": "text",
@@ -237,7 +373,16 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "teams_user_id_local_id_uq": {
+          "name": "teams_user_id_local_id_uq",
+          "columns": [
+            "user_id",
+            "local_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

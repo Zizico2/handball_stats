@@ -13,7 +13,6 @@ import {
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
 import { useMachine } from "@xstate/react";
 import { useSetAtom } from "jotai";
-import dynamic from "next/dynamic";
 import NextLink from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { assign } from "xstate";
@@ -301,11 +300,7 @@ function InGame() {
   );
 }
 
-// TODO: only keep this for testing, while InGame is using localStorageCollection, which is not SSR compatible.
-// Once we have a proper collection setup, we can remove this and use InGame directly in the page.
-export default dynamic(() => Promise.resolve(InGame), {
-  ssr: false,
-});
+export default InGame;
 
 function MatchClock({
   minutes,

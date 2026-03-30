@@ -10,7 +10,6 @@ import {
   Typography,
 } from "@mui/material";
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
-import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -144,6 +143,4 @@ function NewGame() {
   );
 }
 
-export default dynamic(() => Promise.resolve(NewGame), {
-  ssr: false,
-});
+export default NewGame;
