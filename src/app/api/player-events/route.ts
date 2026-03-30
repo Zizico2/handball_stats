@@ -1,7 +1,9 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getDb } from "@/app/api/db";
 import { dbRowToPlayerEvent, playerEventToDbRow } from "@/db";
+import { playerEventSchema } from "@/datamodel";
 import * as schema from "@/db/schema";
 
 export async function GET() {
@@ -10,10 +12,12 @@ export async function GET() {
   return NextResponse.json(rows.map(dbRowToPlayerEvent));
 }
 
+const postBodySchema = z
+  .union([playerEventSchema, z.array(playerEventSchema)])
+  .transform((v) => (Array.isArray(v) ? v : [v]));
 export async function POST(request: Request) {
   const db = await getDb();
-  const body = await request.json();
-  const items = Array.isArray(body) ? body : [body];
+  const items = postBodySchema.parse(await request.json());
   const dbRows = items.map(playerEventToDbRow);
   const inserted = await db
     .insert(schema.playerEvents)
@@ -22,9 +26,10 @@ export async function POST(request: Request) {
   return NextResponse.json(inserted.map(dbRowToPlayerEvent));
 }
 
+const deleteBodySchema = z.object({ ids: z.array(z.number()) });
 export async function DELETE(request: Request) {
   const db = await getDb();
-  const { ids } = (await request.json()) as { ids: number[] };
+  const { ids } = deleteBodySchema.parse(await request.json());
   for (const id of ids) {
     await db.delete(schema.playerEvents).where(eq(schema.playerEvents.id, id));
   }

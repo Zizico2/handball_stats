@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getDb } from "@/app/api/db";
 import * as schema from "@/db/schema";
+import { z } from "zod";
 
 export async function GET() {
   const db = await getDb();
@@ -9,13 +10,14 @@ export async function GET() {
   return NextResponse.json(rows);
 }
 
+const postBodySchema = z.object({
+  id: z.number().optional(),
+  gameId: z.number(),
+  homeTeamId: z.number(),
+});
 export async function POST(request: Request) {
   const db = await getDb();
-  const body = (await request.json()) as {
-    id?: number;
-    gameId: number;
-    homeTeamId: number;
-  };
+  const body = postBodySchema.parse(await request.json());
   const inserted = await db
     .insert(schema.activeGame)
     .values(body)
@@ -27,9 +29,10 @@ export async function POST(request: Request) {
   return NextResponse.json(inserted);
 }
 
+const deleteBodySchema = z.object({ ids: z.array(z.number()) });
 export async function DELETE(request: Request) {
   const db = await getDb();
-  const { ids } = (await request.json()) as { ids: number[] };
+  const { ids } = deleteBodySchema.parse(await request.json());
   for (const id of ids) {
     await db.delete(schema.activeGame).where(eq(schema.activeGame.id, id));
   }
