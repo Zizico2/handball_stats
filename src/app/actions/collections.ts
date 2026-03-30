@@ -19,8 +19,8 @@ import {
   dbRowToTeamPlayer,
   gameToDbRow,
   playerEventToDbRow,
-  teamToDbRow,
   teamPlayerToDbRow,
+  teamToDbRow,
 } from "@/db";
 import * as schema from "@/db/schema";
 import { getDb } from "@/server/db";

@@ -1,10 +1,11 @@
 import "./globals.css";
-import { ClerkProvider, Show, SignInButton, SignUpButton } from "@clerk/nextjs";
+import { ClerkProvider, Show } from "@clerk/nextjs";
 import CssBaseline from "@mui/material/CssBaseline";
 import { ThemeProvider } from "@mui/material/styles";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import { Roboto } from "next/font/google";
 import ResponsiveDrawer from "@/components/ResponsiveDrawer";
+import SignedOutEntry from "../components/SignedOutEntry";
 import theme from "../theme";
 
 const roboto = Roboto({
@@ -55,8 +56,7 @@ export default async function RootLayout({
                 </Box>
               </Show>
               <Show when="signed-out">
-                <SignInButton />
-                <SignUpButton />
+                <SignedOutEntry />
               </Show>
             </ClerkProvider>
           </ThemeProvider>
