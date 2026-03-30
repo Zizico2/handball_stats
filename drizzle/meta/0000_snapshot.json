@@ -46,10 +46,7 @@
       "indexes": {
         "active_game_user_id_local_id_uq": {
           "name": "active_game_user_id_local_id_uq",
-          "columns": [
-            "user_id",
-            "local_id"
-          ],
+          "columns": ["user_id", "local_id"],
           "isUnique": true
         }
       },
@@ -58,14 +55,8 @@
           "name": "active_game_user_id_game_local_id_games_user_id_local_id_fk",
           "tableFrom": "active_game",
           "tableTo": "games",
-          "columnsFrom": [
-            "user_id",
-            "game_local_id"
-          ],
-          "columnsTo": [
-            "user_id",
-            "local_id"
-          ],
+          "columnsFrom": ["user_id", "game_local_id"],
+          "columnsTo": ["user_id", "local_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -73,14 +64,8 @@
           "name": "active_game_user_id_home_team_local_id_teams_user_id_local_id_fk",
           "tableFrom": "active_game",
           "tableTo": "teams",
-          "columnsFrom": [
-            "user_id",
-            "home_team_local_id"
-          ],
-          "columnsTo": [
-            "user_id",
-            "local_id"
-          ],
+          "columnsFrom": ["user_id", "home_team_local_id"],
+          "columnsTo": ["user_id", "local_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -131,10 +116,7 @@
       "indexes": {
         "games_user_id_local_id_uq": {
           "name": "games_user_id_local_id_uq",
-          "columns": [
-            "user_id",
-            "local_id"
-          ],
+          "columns": ["user_id", "local_id"],
           "isUnique": true
         }
       },
@@ -143,14 +125,8 @@
           "name": "games_user_id_home_team_local_id_teams_user_id_local_id_fk",
           "tableFrom": "games",
           "tableTo": "teams",
-          "columnsFrom": [
-            "user_id",
-            "home_team_local_id"
-          ],
-          "columnsTo": [
-            "user_id",
-            "local_id"
-          ],
+          "columnsFrom": ["user_id", "home_team_local_id"],
+          "columnsTo": ["user_id", "local_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -236,10 +212,7 @@
       "indexes": {
         "player_events_user_id_local_id_uq": {
           "name": "player_events_user_id_local_id_uq",
-          "columns": [
-            "user_id",
-            "local_id"
-          ],
+          "columns": ["user_id", "local_id"],
           "isUnique": true
         }
       },
@@ -248,14 +221,8 @@
           "name": "player_events_user_id_game_local_id_games_user_id_local_id_fk",
           "tableFrom": "player_events",
           "tableTo": "games",
-          "columnsFrom": [
-            "user_id",
-            "game_local_id"
-          ],
-          "columnsTo": [
-            "user_id",
-            "local_id"
-          ],
+          "columnsFrom": ["user_id", "game_local_id"],
+          "columnsTo": ["user_id", "local_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -313,10 +280,7 @@
       "indexes": {
         "team_players_user_id_local_id_uq": {
           "name": "team_players_user_id_local_id_uq",
-          "columns": [
-            "user_id",
-            "local_id"
-          ],
+          "columns": ["user_id", "local_id"],
           "isUnique": true
         }
       },
@@ -325,14 +289,8 @@
           "name": "team_players_user_id_team_local_id_teams_user_id_local_id_fk",
           "tableFrom": "team_players",
           "tableTo": "teams",
-          "columnsFrom": [
-            "user_id",
-            "team_local_id"
-          ],
-          "columnsTo": [
-            "user_id",
-            "local_id"
-          ],
+          "columnsFrom": ["user_id", "team_local_id"],
+          "columnsTo": ["user_id", "local_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -376,10 +334,7 @@
       "indexes": {
         "teams_user_id_local_id_uq": {
           "name": "teams_user_id_local_id_uq",
-          "columns": [
-            "user_id",
-            "local_id"
-          ],
+          "columns": ["user_id", "local_id"],
           "isUnique": true
         }
       },

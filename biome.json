@@ -33,6 +33,9 @@
       "recommended": true,
       "suspicious": {
         "noUnknownAtRules": "off"
+      },
+      "nursery": {
+        "useExplicitType": "error"
       }
     },
     "domains": {
