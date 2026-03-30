@@ -8,6 +8,14 @@ compatibility_flags = [ "nodejs_compat" ]
 directory = ".open-next/assets"
 binding = "ASSETS"
 
+[[d1_databases]]
+binding = "DB"
+database_name = "arcazzi"
+database_id = "0a754140-f2d8-4dd9-9af0-14a7c017e384"
+migrations_dir = "drizzle"
+
+
 [[routes]]
 pattern = "arcazzi.bernardobordadagua.com"
 custom_domain = true
+

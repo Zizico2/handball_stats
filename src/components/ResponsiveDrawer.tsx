@@ -1,5 +1,6 @@
 "use client";
 
+import { Show, UserButton } from "@clerk/nextjs";
 import MailIcon from "@mui/icons-material/Mail";
 import MenuIcon from "@mui/icons-material/Menu";
 import InboxIcon from "@mui/icons-material/MoveToInbox";
@@ -70,6 +71,19 @@ export default function ResponsiveDrawer({
             </ListItemButton>
           </ListItem>
         ))}
+        <ListItem disablePadding>
+          <Show when="signed-in">
+            {/* TODO */}
+            <UserButton showName>
+              {/* <ListItemButton>
+                <ListItemIcon>
+                  <InboxIcon />
+                </ListItemIcon>
+                <ListItemText primary="Profile" />
+              </ListItemButton> */}
+            </UserButton>
+          </Show>
+        </ListItem>
       </List>
       {/* <Divider />
       <List>

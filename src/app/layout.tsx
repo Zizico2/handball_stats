@@ -4,6 +4,13 @@ import { ThemeProvider } from "@mui/material/styles";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import { Roboto } from "next/font/google";
 import ResponsiveDrawer from "@/components/ResponsiveDrawer";
+import {
+  ClerkProvider,
+  Show,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+} from "@clerk/nextjs";
 import theme from "../theme";
 
 const roboto = Roboto({
@@ -13,7 +20,7 @@ const roboto = Roboto({
   variable: "--font-roboto",
 });
 
-import { Box } from "@mui/material";
+import { Box, Button } from "@mui/material";
 import InitColorSchemeScript from "@mui/material/InitColorSchemeScript";
 
 export default async function RootLayout({
@@ -30,26 +37,34 @@ export default async function RootLayout({
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme} defaultMode="dark">
             <CssBaseline />
-            <Box
-              sx={{
-                height: "100dvh",
-                width: "100dvw",
-                display: "flex",
-                flexDirection: "column",
-                overflowY: "hidden",
-                // TODO: what should this be?
-              }}
-            >
-              <ResponsiveDrawer trailingActions={trailingActions}>
+            <ClerkProvider>
+              <Show when="signed-in">
                 <Box
                   sx={{
-                    overflowY: "auto",
+                    height: "100dvh",
+                    width: "100dvw",
+                    display: "flex",
+                    flexDirection: "column",
+                    overflowY: "hidden",
+                    // TODO: what should this be?
                   }}
                 >
-                  {children}
+                  <ResponsiveDrawer trailingActions={trailingActions}>
+                    <Box
+                      sx={{
+                        overflowY: "auto",
+                      }}
+                    >
+                      {children}
+                    </Box>
+                  </ResponsiveDrawer>
                 </Box>
-              </ResponsiveDrawer>
-            </Box>
+              </Show>
+              <Show when="signed-out">
+                <SignInButton />
+                <SignUpButton />
+              </Show>
+            </ClerkProvider>
           </ThemeProvider>
         </AppRouterCacheProvider>
       </body>
