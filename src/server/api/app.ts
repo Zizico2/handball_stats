@@ -1,8 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
+import { zValidator } from "@hono/zod-validator";
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { validator } from "hono/validator";
 import {
   activeGameSchema,
   gameSchema,
@@ -32,10 +32,6 @@ const teamPlayersArraySchema = teamPlayerSchema.array();
 const gamesArraySchema = gameSchema.array();
 const activeGameArraySchema = activeGameSchema.array();
 
-function jsonValidator<T>(schema: { parse: (value: unknown) => T }) {
-  return validator("json", (value) => schema.parse(value));
-}
-
 async function requireUserId() {
   const { userId } = await auth();
 
@@ -57,18 +53,22 @@ const collectionsRoutes = new Hono()
 
     return c.json(rows.map(dbRowToPlayerEvent));
   })
-  .post("/player-events", jsonValidator(playerEventsArraySchema), async (c) => {
-    const items = c.req.valid("json");
-    const userId = await requireUserId();
-    const db = await getDb();
-    const inserted = await db
-      .insert(schema.playerEvents)
-      .values(items.map((item) => playerEventToDbRow(item, userId)))
-      .returning();
+  .post(
+    "/player-events",
+    zValidator("json", playerEventsArraySchema),
+    async (c) => {
+      const items = c.req.valid("json");
+      const userId = await requireUserId();
+      const db = await getDb();
+      const inserted = await db
+        .insert(schema.playerEvents)
+        .values(items.map((item) => playerEventToDbRow(item, userId)))
+        .returning();
 
-    return c.json(inserted.map(dbRowToPlayerEvent));
-  })
-  .delete("/player-events", jsonValidator(idsSchema), async (c) => {
+      return c.json(inserted.map(dbRowToPlayerEvent));
+    },
+  )
+  .delete("/player-events", zValidator("json", idsSchema), async (c) => {
     const ids = c.req.valid("json");
     const userId = await requireUserId();
     const db = await getDb();
@@ -98,7 +98,7 @@ const collectionsRoutes = new Hono()
 
     return c.json(rows.map(dbRowToTeam));
   })
-  .post("/teams", jsonValidator(teamsArraySchema), async (c) => {
+  .post("/teams", zValidator("json", teamsArraySchema), async (c) => {
     const items = c.req.valid("json");
     const userId = await requireUserId();
     const db = await getDb();
@@ -109,7 +109,7 @@ const collectionsRoutes = new Hono()
 
     return c.json(inserted.map(dbRowToTeam));
   })
-  .delete("/teams", jsonValidator(idsSchema), async (c) => {
+  .delete("/teams", zValidator("json", idsSchema), async (c) => {
     const ids = c.req.valid("json");
     const userId = await requireUserId();
     const db = await getDb();
@@ -136,18 +136,22 @@ const collectionsRoutes = new Hono()
 
     return c.json(rows.map(dbRowToTeamPlayer));
   })
-  .post("/team-players", jsonValidator(teamPlayersArraySchema), async (c) => {
-    const items = c.req.valid("json");
-    const userId = await requireUserId();
-    const db = await getDb();
-    const inserted = await db
-      .insert(schema.teamPlayers)
-      .values(items.map((item) => teamPlayerToDbRow(item, userId)))
-      .returning();
+  .post(
+    "/team-players",
+    zValidator("json", teamPlayersArraySchema),
+    async (c) => {
+      const items = c.req.valid("json");
+      const userId = await requireUserId();
+      const db = await getDb();
+      const inserted = await db
+        .insert(schema.teamPlayers)
+        .values(items.map((item) => teamPlayerToDbRow(item, userId)))
+        .returning();
 
-    return c.json(inserted.map(dbRowToTeamPlayer));
-  })
-  .delete("/team-players", jsonValidator(idsSchema), async (c) => {
+      return c.json(inserted.map(dbRowToTeamPlayer));
+    },
+  )
+  .delete("/team-players", zValidator("json", idsSchema), async (c) => {
     const ids = c.req.valid("json");
     const userId = await requireUserId();
     const db = await getDb();
@@ -177,7 +181,7 @@ const collectionsRoutes = new Hono()
 
     return c.json(rows.map(dbRowToGame));
   })
-  .post("/games", jsonValidator(gamesArraySchema), async (c) => {
+  .post("/games", zValidator("json", gamesArraySchema), async (c) => {
     const items = c.req.valid("json");
     const userId = await requireUserId();
     const db = await getDb();
@@ -198,7 +202,7 @@ const collectionsRoutes = new Hono()
 
     return c.json(rows.map(dbRowToActiveGame));
   })
-  .put("/active-game", jsonValidator(activeGameArraySchema), async (c) => {
+  .put("/active-game", zValidator("json", activeGameArraySchema), async (c) => {
     const items = c.req.valid("json");
     const userId = await requireUserId();
     const db = await getDb();
@@ -223,7 +227,7 @@ const collectionsRoutes = new Hono()
 
     return c.json(inserted);
   })
-  .delete("/active-game", jsonValidator(idsSchema), async (c) => {
+  .delete("/active-game", zValidator("json", idsSchema), async (c) => {
     const ids = c.req.valid("json");
     const userId = await requireUserId();
     const db = await getDb();

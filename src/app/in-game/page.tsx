@@ -9,7 +9,6 @@ const NoSSRInGame = dynamic(() => import("../../components/InGame"), {
   ssr: false,
 });
 
-
 export default function InGamePage() {
   return <NoSSRInGame />;
 }
