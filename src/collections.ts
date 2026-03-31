@@ -10,11 +10,6 @@ import {
   deletePlayerEventsAction,
   deleteTeamPlayersAction,
   deleteTeamsAction,
-  listActiveGameAction,
-  listGamesAction,
-  listPlayerEventsAction,
-  listTeamPlayersAction,
-  listTeamsAction,
   upsertActiveGameAction,
 } from "@/app/actions/collections";
 import type {
@@ -31,6 +26,13 @@ import {
   teamPlayerSchema,
   teamSchema,
 } from "@/datamodel";
+import {
+  listActiveGameQuery,
+  listGamesQuery,
+  listPlayerEventsQuery,
+  listTeamPlayersQuery,
+  listTeamsQuery,
+} from "@/server/api/client";
 
 const queryClient = new QueryClient();
 
@@ -41,7 +43,7 @@ export const playerEventsCollection = createCollection(
     queryClient,
     schema: playerEventSchema,
     getKey: (item: PlayerEvent) => item.id,
-    queryFn: listPlayerEventsAction,
+    queryFn: listPlayerEventsQuery,
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
       await createPlayerEventsAction(newItems);
@@ -60,7 +62,7 @@ export const teamsCollection = createCollection(
     queryClient,
     schema: teamSchema,
     getKey: (item: Team) => item.id,
-    queryFn: listTeamsAction,
+    queryFn: listTeamsQuery,
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
       await createTeamsAction(newItems);
@@ -79,7 +81,7 @@ export const teamPlayersCollection = createCollection(
     queryClient,
     schema: teamPlayerSchema,
     getKey: (item: TeamPlayer) => item.id,
-    queryFn: listTeamPlayersAction,
+    queryFn: listTeamPlayersQuery,
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
       await createTeamPlayersAction(newItems);
@@ -98,7 +100,7 @@ export const gamesCollection = createCollection(
     queryClient,
     schema: gameSchema,
     getKey: (item: Game) => item.id,
-    queryFn: listGamesAction,
+    queryFn: listGamesQuery,
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
       await createGamesAction(newItems);
@@ -113,7 +115,7 @@ export const activeGameCollection = createCollection(
     queryClient,
     schema: activeGameSchema,
     getKey: (item: ActiveGame) => item.id,
-    queryFn: listActiveGameAction,
+    queryFn: listActiveGameQuery,
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
       await upsertActiveGameAction(newItems);
