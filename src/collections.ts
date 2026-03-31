@@ -1,17 +1,6 @@
 import { QueryClient } from "@tanstack/query-core";
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import { createCollection } from "@tanstack/react-db";
-import {
-  createGamesAction,
-  createPlayerEventsAction,
-  createTeamPlayersAction,
-  createTeamsAction,
-  deleteActiveGameAction,
-  deletePlayerEventsAction,
-  deleteTeamPlayersAction,
-  deleteTeamsAction,
-  upsertActiveGameAction,
-} from "@/app/actions/collections";
 import type {
   ActiveGame,
   Game,
@@ -27,11 +16,20 @@ import {
   teamSchema,
 } from "@/datamodel";
 import {
+  createGamesMutation,
+  createPlayerEventsMutation,
+  createTeamPlayersMutation,
+  createTeamsMutation,
+  deleteActiveGameMutation,
+  deletePlayerEventsMutation,
+  deleteTeamPlayersMutation,
+  deleteTeamsMutation,
   listActiveGameQuery,
   listGamesQuery,
   listPlayerEventsQuery,
   listTeamPlayersQuery,
   listTeamsQuery,
+  upsertActiveGameMutation,
 } from "@/server/api/client";
 
 const queryClient = new QueryClient();
@@ -46,11 +44,11 @@ export const playerEventsCollection = createCollection(
     queryFn: listPlayerEventsQuery,
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
-      await createPlayerEventsAction(newItems);
+      await createPlayerEventsMutation(newItems);
     },
     onDelete: async ({ transaction }) => {
       const ids = transaction.mutations.map((m) => m.key);
-      await deletePlayerEventsAction(ids);
+      await deletePlayerEventsMutation(ids);
     },
   }),
 );
@@ -65,11 +63,11 @@ export const teamsCollection = createCollection(
     queryFn: listTeamsQuery,
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
-      await createTeamsAction(newItems);
+      await createTeamsMutation(newItems);
     },
     onDelete: async ({ transaction }) => {
       const ids = transaction.mutations.map((m) => m.key);
-      await deleteTeamsAction(ids);
+      await deleteTeamsMutation(ids);
     },
   }),
 );
@@ -84,11 +82,11 @@ export const teamPlayersCollection = createCollection(
     queryFn: listTeamPlayersQuery,
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
-      await createTeamPlayersAction(newItems);
+      await createTeamPlayersMutation(newItems);
     },
     onDelete: async ({ transaction }) => {
       const ids = transaction.mutations.map((m) => m.key);
-      await deleteTeamPlayersAction(ids);
+      await deleteTeamPlayersMutation(ids);
     },
   }),
 );
@@ -103,7 +101,7 @@ export const gamesCollection = createCollection(
     queryFn: listGamesQuery,
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
-      await createGamesAction(newItems);
+      await createGamesMutation(newItems);
     },
   }),
 );
@@ -118,11 +116,11 @@ export const activeGameCollection = createCollection(
     queryFn: listActiveGameQuery,
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
-      await upsertActiveGameAction(newItems);
+      await upsertActiveGameMutation(newItems);
     },
     onDelete: async ({ transaction }) => {
       const ids = transaction.mutations.map((m) => m.key);
-      await deleteActiveGameAction(ids);
+      await deleteActiveGameMutation(ids);
     },
   }),
 );

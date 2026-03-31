@@ -24,6 +24,14 @@ async function parseJsonResponse<T>(response: JsonResponseLike<T>) {
   return response.json();
 }
 
+async function assertSuccessfulResponse(
+  response: Pick<JsonResponseLike<unknown>, "ok" | "status">,
+) {
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}`);
+  }
+}
+
 export async function listPlayerEventsQuery() {
   const response = await apiClient.api.collections["player-events"].$get();
 
@@ -52,4 +60,76 @@ export async function listActiveGameQuery() {
   const response = await apiClient.api.collections["active-game"].$get();
 
   return parseJsonResponse<ActiveGame[]>(response);
+}
+
+export async function createPlayerEventsMutation(items: PlayerEvent[]) {
+  const response = await apiClient.api.collections["player-events"].$post({
+    json: items,
+  });
+
+  return parseJsonResponse<PlayerEvent[]>(response);
+}
+
+export async function deletePlayerEventsMutation(ids: number[]) {
+  const response = await apiClient.api.collections["player-events"].$delete({
+    json: ids,
+  });
+
+  await assertSuccessfulResponse(response);
+}
+
+export async function createTeamsMutation(items: Team[]) {
+  const response = await apiClient.api.collections.teams.$post({
+    json: items,
+  });
+
+  return parseJsonResponse<Team[]>(response);
+}
+
+export async function deleteTeamsMutation(ids: number[]) {
+  const response = await apiClient.api.collections.teams.$delete({
+    json: ids,
+  });
+
+  await assertSuccessfulResponse(response);
+}
+
+export async function createTeamPlayersMutation(items: TeamPlayer[]) {
+  const response = await apiClient.api.collections["team-players"].$post({
+    json: items,
+  });
+
+  return parseJsonResponse<TeamPlayer[]>(response);
+}
+
+export async function deleteTeamPlayersMutation(ids: number[]) {
+  const response = await apiClient.api.collections["team-players"].$delete({
+    json: ids,
+  });
+
+  await assertSuccessfulResponse(response);
+}
+
+export async function createGamesMutation(items: Game[]) {
+  const response = await apiClient.api.collections.games.$post({
+    json: items,
+  });
+
+  return parseJsonResponse<Game[]>(response);
+}
+
+export async function upsertActiveGameMutation(items: ActiveGame[]) {
+  const response = await apiClient.api.collections["active-game"].$put({
+    json: items,
+  });
+
+  return parseJsonResponse<ActiveGame[]>(response);
+}
+
+export async function deleteActiveGameMutation(ids: number[]) {
+  const response = await apiClient.api.collections["active-game"].$delete({
+    json: ids,
+  });
+
+  await assertSuccessfulResponse(response);
 }
