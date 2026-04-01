@@ -30,14 +30,6 @@ export const activeGameRoutes = new Hono()
     }
 
     const activeGameColumns = getColumns(schema.activeGame);
-    const upsertSet = {
-      // In SQLite upserts, `excluded` is the row that was attempted to be inserted.
-      // Build refs from schema metadata so db column names are not hardcoded.
-      gameLocalId: sql.raw(`excluded.${activeGameColumns.gameLocalId.name}`),
-      homeTeamLocalId: sql.raw(
-        `excluded.${activeGameColumns.homeTeamLocalId.name}`,
-      ),
-    };
 
     const rows = items.map((item) => activeGameToDbRow(item, userId));
     const inserted = await db
@@ -45,7 +37,16 @@ export const activeGameRoutes = new Hono()
       .values(rows)
       .onConflictDoUpdate({
         target: [schema.activeGame.userId, schema.activeGame.localId],
-        set: upsertSet,
+        set: {
+          // In SQLite upserts, `excluded` is the row that was attempted to be inserted.
+          // Build refs from schema metadata so db column names are not hardcoded.
+          gameLocalId: sql.raw(
+            `excluded.${activeGameColumns.gameLocalId.name}`,
+          ),
+          homeTeamLocalId: sql.raw(
+            `excluded.${activeGameColumns.homeTeamLocalId.name}`,
+          ),
+        },
       })
       .returning();
 
