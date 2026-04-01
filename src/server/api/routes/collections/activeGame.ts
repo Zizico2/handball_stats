@@ -1,5 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, getColumns, inArray, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { activeGameToDbRow, dbRowToActiveGame } from "@/db";
 import * as schema from "@/db/schema";
@@ -17,6 +17,9 @@ export const activeGameRoutes = new Hono()
 
     return c.json(rows.map(dbRowToActiveGame));
   })
+  // TODO: I don't like that this endpoint is using raw SQL for the upsert.
+  // TODO: Maybe this should be split into 2 endpoints, one for creating and one for updating?
+  // TODO: I think the app itself shouldn't rely on upsert behavior, it should know whether it's creating or updating an active game and call the appropriate endpoint.
   .put("/", zValidator("json", activeGameArraySchema), async (c) => {
     const items = c.req.valid("json");
     const userId = await requireUserId();
@@ -26,16 +29,23 @@ export const activeGameRoutes = new Hono()
       return c.json([]);
     }
 
+    const activeGameColumns = getColumns(schema.activeGame);
+    const upsertSet = {
+      // In SQLite upserts, `excluded` is the row that was attempted to be inserted.
+      // Build refs from schema metadata so db column names are not hardcoded.
+      gameLocalId: sql.raw(`excluded.${activeGameColumns.gameLocalId.name}`),
+      homeTeamLocalId: sql.raw(
+        `excluded.${activeGameColumns.homeTeamLocalId.name}`,
+      ),
+    };
+
     const rows = items.map((item) => activeGameToDbRow(item, userId));
     const inserted = await db
       .insert(schema.activeGame)
       .values(rows)
       .onConflictDoUpdate({
         target: [schema.activeGame.userId, schema.activeGame.localId],
-        set: {
-          gameLocalId: sql`excluded.game_local_id`,
-          homeTeamLocalId: sql`excluded.home_team_local_id`,
-        },
+        set: upsertSet,
       })
       .returning();
 
