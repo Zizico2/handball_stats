@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { zValidator } from "@hono/zod-validator";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import {
@@ -73,18 +73,18 @@ const collectionsRoutes = new Hono()
     const userId = await requireUserId();
     const db = await getDb();
 
-    await Promise.all(
-      ids.map((id) =>
-        db
-          .delete(schema.playerEvents)
-          .where(
-            and(
-              eq(schema.playerEvents.userId, userId),
-              eq(schema.playerEvents.localId, id),
-            ),
-          ),
-      ),
-    );
+    if (ids.length === 0) {
+      return c.body(null, 204);
+    }
+
+    await db
+      .delete(schema.playerEvents)
+      .where(
+        and(
+          eq(schema.playerEvents.userId, userId),
+          inArray(schema.playerEvents.localId, ids),
+        ),
+      );
 
     return c.body(null, 204);
   })
@@ -114,15 +114,18 @@ const collectionsRoutes = new Hono()
     const userId = await requireUserId();
     const db = await getDb();
 
-    await Promise.all(
-      ids.map((id) =>
-        db
-          .delete(schema.teams)
-          .where(
-            and(eq(schema.teams.userId, userId), eq(schema.teams.localId, id)),
-          ),
-      ),
-    );
+    if (ids.length === 0) {
+      return c.body(null, 204);
+    }
+
+    await db
+      .delete(schema.teams)
+      .where(
+        and(
+          eq(schema.teams.userId, userId),
+          inArray(schema.teams.localId, ids),
+        ),
+      );
 
     return c.body(null, 204);
   })
@@ -156,18 +159,18 @@ const collectionsRoutes = new Hono()
     const userId = await requireUserId();
     const db = await getDb();
 
-    await Promise.all(
-      ids.map((id) =>
-        db
-          .delete(schema.teamPlayers)
-          .where(
-            and(
-              eq(schema.teamPlayers.userId, userId),
-              eq(schema.teamPlayers.localId, id),
-            ),
-          ),
-      ),
-    );
+    if (ids.length === 0) {
+      return c.body(null, 204);
+    }
+
+    await db
+      .delete(schema.teamPlayers)
+      .where(
+        and(
+          eq(schema.teamPlayers.userId, userId),
+          inArray(schema.teamPlayers.localId, ids),
+        ),
+      );
 
     return c.body(null, 204);
   })
@@ -206,44 +209,42 @@ const collectionsRoutes = new Hono()
     const items = c.req.valid("json");
     const userId = await requireUserId();
     const db = await getDb();
-    const inserted = await Promise.all(
-      items.map(async (item) => {
-        const row = activeGameToDbRow(item, userId);
-        const [result] = await db
-          .insert(schema.activeGame)
-          .values(row)
-          .onConflictDoUpdate({
-            target: [schema.activeGame.userId, schema.activeGame.localId],
-            set: {
-              gameLocalId: row.gameLocalId,
-              homeTeamLocalId: row.homeTeamLocalId,
-            },
-          })
-          .returning();
+    if (items.length === 0) {
+      return c.json([]);
+    }
 
-        return dbRowToActiveGame(result);
-      }),
-    );
+    const rows = items.map((item) => activeGameToDbRow(item, userId));
+    const inserted = await db
+      .insert(schema.activeGame)
+      .values(rows)
+      .onConflictDoUpdate({
+        target: [schema.activeGame.userId, schema.activeGame.localId],
+        set: {
+          gameLocalId: sql`excluded.game_local_id`,
+          homeTeamLocalId: sql`excluded.home_team_local_id`,
+        },
+      })
+      .returning();
 
-    return c.json(inserted);
+    return c.json(inserted.map(dbRowToActiveGame));
   })
   .delete("/active-game", zValidator("json", idsSchema), async (c) => {
     const ids = c.req.valid("json");
     const userId = await requireUserId();
     const db = await getDb();
 
-    await Promise.all(
-      ids.map((id) =>
-        db
-          .delete(schema.activeGame)
-          .where(
-            and(
-              eq(schema.activeGame.userId, userId),
-              eq(schema.activeGame.localId, id),
-            ),
-          ),
-      ),
-    );
+    if (ids.length === 0) {
+      return c.body(null, 204);
+    }
+
+    await db
+      .delete(schema.activeGame)
+      .where(
+        and(
+          eq(schema.activeGame.userId, userId),
+          inArray(schema.activeGame.localId, ids),
+        ),
+      );
 
     return c.body(null, 204);
   });
