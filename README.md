@@ -1,15 +1,12 @@
 ## Handball Stats
 
-A local-first handball match tracking app built with Next.js App Router.
+A handball match tracking app built with Next.js App Router, deployed to Cloudflare Workers.
 
-The app is focused on three flows:
+The app covers three core flows:
 
-1. Create teams and players.
-2. Start a new game by selecting the home team.
-3. Record in-game events (attack, defense, sanction) with a running match clock.
-
-Today, data is stored in browser local storage through TanStack DB collections to speed up onboarding and product iteration.
-This is a temporary development setup: the alpha version will use server-backed collections.
+1. **Create teams and players** — build rosters before a match.
+2. **Start a new game** — select the home team and kick off.
+3. **Record in-game events** — log attack, defense, and sanction events against a running match clock.
 
 ## Tech Stack
 
@@ -17,96 +14,140 @@ This is a temporary development setup: the alpha version will use server-backed 
 |---|---|
 | Framework | [Next.js 16](https://nextjs.org/) (App Router) |
 | Language | TypeScript (strict mode) |
-| Runtime | [Cloudflare Workers](https://workers.cloudflare.com/) (edge) |
+| Runtime / Deployment | [Cloudflare Workers](https://workers.cloudflare.com/) via [OpenNext](https://opennext.js.org/) |
+| Database | [Cloudflare D1](https://developers.cloudflare.com/d1/) (SQLite) |
+| ORM | [Drizzle ORM](https://orm.drizzle.team/) |
 | Package Manager | [Bun](https://bun.sh/) |
 | Linting & Formatting | [Biome](https://biomejs.dev/) |
-| Deployment | [Cloudflare Workers](https://workers.cloudflare.com/) via [OpenNext](https://opennext.js.org/) |
-| CI/CD | GitHub Actions |
+| Auth | [Clerk](https://clerk.com/) |
 | Component Library | [MUI](https://mui.com/) |
+| CI/CD | GitHub Actions |
 
-## Onboarding: Bun Commands
+---
+
+## Local Development
 
 ### Prerequisites
 
-1. Install Bun: https://bun.sh/docs/installation
-2. Use a recent Node-compatible runtime environment (already handled by Bun in normal setup).
+| Tool | Install |
+|---|---|
+| **Bun** | https://bun.sh/docs/installation |
+| **Wrangler** (Cloudflare CLI) | Installed as a dev dependency — no global install needed |
 
-### Install dependencies
+### 1. Install dependencies
 
 ```bash
 bun install
 ```
 
-### Run the app locally
+### 2. Run database migrations (local D1)
+
+Drizzle generates migrations into `drizzle/`, but Wrangler expects flat SQL files.
+The `db:migrate:local` script handles both flattening and applying:
+
+```bash
+bun run db:migrate:local
+```
+
+> This runs `flatten.ts` to copy migration files into `drizzle_flat/`, then applies them to the local D1 database with Wrangler.
+
+### 3. Start the dev server
 
 ```bash
 bun run dev
 ```
 
-### Quality checks
+The app will be available at `http://localhost:3000`.
+
+---
+
+## Database Workflow (Drizzle + D1)
+
+The schema lives in `src/db/schema.ts`. When you change it:
+
+1. **Generate a new migration:**
+
+   ```bash
+   bun run db:generate
+   ```
+
+   This creates a new migration folder under `drizzle/`.
+
+2. **Apply locally:**
+
+   ```bash
+   bun run db:migrate:local
+   ```
+
+3. **Apply to production:**
+
+   ```bash
+   bun run db:migrate:prod
+   ```
+
+> Production migrations require Wrangler authentication with your Cloudflare account.
+
+---
+
+## Code Quality
+
+[Biome](https://biomejs.dev/) handles both linting and formatting.
 
 ```bash
+# Lint the project
 bun run lint
+
+# Check formatting (CI-safe, no writes)
 bun run format-check
-```
 
-### Auto-format code
-
-```bash
+# Auto-format
 bun run format
 ```
 
-### Production build
+---
+
+## Cloudflare / OpenNext Deployment
+
+Build and deploy the app to Cloudflare Workers via OpenNext:
 
 ```bash
-bun run build
-```
-
-### Cloudflare/OpenNext workflow
-
-```bash
+# Build for Cloudflare
 bun run build:cf
+
+# Preview locally (full Workers runtime)
 bun run preview
+
+# Deploy to production
 bun run deploy:cf
 ```
 
-### Generate Cloudflare environment types
+Generate Cloudflare environment types after changing `wrangler.toml` bindings:
 
 ```bash
 bun run cf-typegen
 ```
 
-## Zod Schemas (Data Model)
+---
 
-The app uses Zod in `src/datamodel.ts` to define and validate all domain data.
+## Project Structure
 
-Key points:
+```
+src/
+  app/          # Next.js App Router pages and API routes
+  components/   # React components
+  db/           # Drizzle schema and DB client
+  server/       # Hono API (routes under server/api/routes/)
+  datamodel.ts  # Zod schemas — single source of truth for domain types
+  collections.ts# TanStack DB collections (local storage, migrating to server-backed)
+drizzle/        # Generated migrations (nested folders)
+drizzle_flat/   # Flattened migrations consumed by Wrangler D1
+```
 
-1. `playerEventSchema` is a discriminated union by `eventType`, covering attack, defense, and sanction events.
-2. Every player event extends a shared base shape (`id`, `player`, `game_id`, `ellapsed_seconds`).
-3. `shotSchema` validates shot payloads and includes a domain rule: an `OffTarget` shot cannot be marked as goal.
-4. Team/game entities (`teamSchema`, `teamPlayerSchema`, `gameSchema`, `activeGameSchema`) define the rest of the app state with typed inference used across the UI.
+## Data Model
 
-This gives runtime validation plus strong TypeScript types from a single source of truth.
+The app uses Zod (`src/datamodel.ts`) for runtime validation and TypeScript type inference from a single source of truth.
 
-## TanStack DB Collections
-
-Collections are defined in `src/collections.ts` with `createCollection` + `localStorageCollectionOptions`.
-
-Each collection has:
-
-1. A storage key in local storage.
-2. A Zod schema for runtime validation.
-3. A key selector (`getKey`) for item identity.
-
-Current collections:
-
-1. `playerEventsCollection` (`game-events`) for recorded match events.
-2. `teamsCollection` (`teams`) for teams.
-3. `teamPlayersCollection` (`team-players`) for roster players.
-4. `gamesCollection` (`games`) for historical games.
-5. `activeGameCollection` (`active-game`) for the currently active game pointer.
-
-Current state: local storage is used only for development and iteration speed.
-Planned alpha state: collections will be server-backed, while keeping the same schema-driven validation approach.
+- `playerEventSchema` — discriminated union by `eventType` (attack, defense, sanction).
+- `shotSchema` — validates shot payloads; enforces that `OffTarget` shots cannot be goals.
+- `teamSchema`, `teamPlayerSchema`, `gameSchema`, `activeGameSchema` — remaining domain entities.
 
