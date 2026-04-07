@@ -6,6 +6,7 @@ import {
   Button,
   Dialog,
   DialogContent,
+  Grid,
   IconButton,
   Stack,
   Toolbar,
@@ -538,44 +539,38 @@ const PickShotDirectionDialog = ({
               width: "100%",
               maxWidth: 380,
               aspectRatio: "3 / 2",
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gridTemplateRows: "repeat(3, 1fr)",
-              gap: 0.5,
               p: 0.75,
               border: 3,
               borderColor: "primary.main",
               borderRadius: 1,
-              bgcolor: (theme) =>
-                theme.palette.mode === "dark"
-                  ? "rgba(255,255,255,0.06)"
-                  : "rgba(0,0,0,0.04)",
-              boxSizing: "border-box",
+              bgcolor: "action.hover",
             }}
           >
-            {shotAimSchema.options.map((aim) => (
-              <Button
-                key={aim}
-                variant="contained"
-                color="inherit"
-                onClick={() => onPick({ variant: "onTarget", aim })}
-                aria-label={SHOT_AIM_LABELS[aim]}
-                sx={{
-                  minHeight: 52,
-                  minWidth: 0,
-                  borderRadius: 0.5,
-                  p: 0.5,
-                  fontSize: "0.7rem",
-                  lineHeight: 1.2,
-                  textTransform: "none",
-                  color: "text.secondary",
-                  boxShadow: "none",
-                  "&:hover": { boxShadow: 1 },
-                }}
-              >
-                {SHOT_AIM_LABELS[aim]}
-              </Button>
-            ))}
+            <Grid container columns={3} spacing={0.5} sx={{ height: "100%" }}>
+              {shotAimSchema.options.map((aim) => (
+                <Grid key={aim} size={1}>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    color="inherit"
+                    onClick={() => onPick({ variant: "onTarget", aim })}
+                    aria-label={SHOT_AIM_LABELS[aim]}
+                    sx={{
+                      minHeight: 52,
+                      height: "100%",
+                      p: 0.5,
+                      fontSize: "0.7rem",
+                      lineHeight: 1.2,
+                      textTransform: "none",
+                      color: "text.secondary",
+                      boxShadow: "none",
+                    }}
+                  >
+                    {SHOT_AIM_LABELS[aim]}
+                  </Button>
+                </Grid>
+              ))}
+            </Grid>
           </Box>
           <Stack
             direction={{ xs: "column", sm: "row" }}
