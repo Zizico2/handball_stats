@@ -12,20 +12,21 @@ export const shotPosition = z.enum([
 
 export type ShotPosition = z.infer<typeof shotPosition>;
 
-export const shotDirectionSchema = z.enum([
-  // "TopLeft",
-  // "TopCenter",
-  // "TopRight",
-  // "MiddleLeft",
-  // "MiddleCenter",
-  // "MiddleRight",
-  // "BottomLeft",
-  // "BottomCenter",
-  // "BottomRight",
-  "OnTarget",
-  "OffTarget",
-  "Blocked",
+/** Target sector on the goal (3×3), from the shooter's perspective. */
+export const shotAimSchema = z.enum([
+  "TopLeft",
+  "TopCenter",
+  "TopRight",
+  "MiddleLeft",
+  "MiddleCenter",
+  "MiddleRight",
+  "BottomLeft",
+  "BottomCenter",
+  "BottomRight",
 ]);
+export type ShotAim = z.infer<typeof shotAimSchema>;
+
+export const shotDirectionSchema = z.enum(["OnTarget", "OffTarget", "Blocked"]);
 export type ShotDirection = z.infer<typeof shotDirectionSchema>;
 
 export const baseShotSchema = z.object({
@@ -33,11 +34,21 @@ export const baseShotSchema = z.object({
 });
 
 export const shotSchema = baseShotSchema
-  .extend({ direction: shotDirectionSchema })
+  .extend({
+    direction: shotDirectionSchema,
+    aim: shotAimSchema.optional(),
+  })
   .refine(({ direction, goal }) => !(direction === "OffTarget" && goal), {
     message: "An off-target shot cannot be a goal",
     path: ["goal"],
-  });
+  })
+  .refine(
+    ({ direction, aim }) => aim === undefined || direction === "OnTarget",
+    {
+      message: "Aim may only be recorded for on-target shots",
+      path: ["aim"],
+    },
+  );
 
 export type Shot = z.infer<typeof shotSchema>;
 

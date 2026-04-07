@@ -58,6 +58,13 @@ export function dbRowToPlayerEvent(row: DbPlayerEvent): PlayerEvent {
         }
           ? PlayerEvent["event"]["direction"]
           : never,
+        ...(row.shotAim
+          ? {
+              aim: row.shotAim as PlayerEvent extends { eventType: "shot" }
+                ? NonNullable<PlayerEvent["event"]["aim"]>
+                : never,
+            }
+          : {}),
       },
     };
   }
@@ -83,6 +90,7 @@ export function playerEventToDbRow(
     eventGroup: event.eventGroup,
     shotGoal: null as boolean | null,
     shotDirection: null as string | null,
+    shotAim: null as string | null,
   };
 
   if (event.eventType === "shot") {
@@ -90,6 +98,7 @@ export function playerEventToDbRow(
       ...base,
       shotGoal: event.event.goal,
       shotDirection: event.event.direction,
+      shotAim: event.event.aim ?? null,
     };
   }
 

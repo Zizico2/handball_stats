@@ -7,6 +7,7 @@ import {
   Dialog,
   DialogContent,
   IconButton,
+  Stack,
   Toolbar,
   Typography,
 } from "@mui/material";
@@ -27,9 +28,9 @@ import {
   type EventType,
   type PlayerEvent,
   playerEventSchema,
-  type ShotDirection,
+  type ShotAim,
   type ShotPosition,
-  shotDirectionSchema,
+  shotAimSchema,
   shotPosition,
   type TeamPlayer,
 } from "@/datamodel";
@@ -232,10 +233,10 @@ function InGame() {
       />
       <PickShotDirectionDialog
         open={state.matches("pickingShotDirection")}
-        onPickDirection={(direction) => {
-          if (direction) {
-            console.log("Picked direction:", direction);
-            send({ type: "PICK_SHOT_DIRECTION", direction });
+        onPick={(pick) => {
+          if (pick) {
+            console.log("Picked shot target:", pick);
+            send({ type: "PICK_SHOT_DIRECTION", pick });
           } else {
             send({ type: "CANCEL" });
           }
@@ -368,6 +369,7 @@ function EventLog({ events }: { events: PlayerEvent[] }) {
             <>
               <div>Goal: {event.event.goal ? "Yes" : "No"}</div>
               <div>Direction: {event.event.direction ?? "Not specified"}</div>
+              {event.event.aim ? <div>Aim: {event.event.aim}</div> : null}
             </>
           )}
         </Box>
@@ -484,24 +486,127 @@ const PickPlayerFullscreenDialog = ({
   );
 };
 
+const SHOT_AIM_LABELS: Record<ShotAim, string> = {
+  TopLeft: "Top left",
+  TopCenter: "Top center",
+  TopRight: "Top right",
+  MiddleLeft: "Middle left",
+  MiddleCenter: "Middle center",
+  MiddleRight: "Middle right",
+  BottomLeft: "Bottom left",
+  BottomCenter: "Bottom center",
+  BottomRight: "Bottom right",
+};
+
 const PickShotDirectionDialog = ({
   open,
-  onPickDirection,
+  onPick,
 }: {
   open: boolean;
-  onPickDirection: (direction: ShotDirection | null) => void;
+  onPick: (
+    pick:
+      | { variant: "onTarget"; aim: ShotAim }
+      | { variant: "simple"; direction: "OffTarget" | "Blocked" }
+      | null,
+  ) => void;
 }) => {
   return (
-    <ListSelectionDialog
-      open={open}
-      title="Pick Shot Direction"
-      options={shotDirectionSchema.options.map((option) => ({
-        text: option,
-        key: option,
-        value: option,
-      }))}
-      onPickOption={onPickDirection}
-    />
+    <Dialog fullScreen open={open}>
+      <AppBar sx={{ position: "relative" }}>
+        <Toolbar>
+          <IconButton
+            edge="start"
+            color="inherit"
+            onClick={() => onPick(null)}
+            aria-label="close"
+          >
+            <CloseIcon />
+          </IconButton>
+          <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
+            Shot target
+          </Typography>
+        </Toolbar>
+      </AppBar>
+      <DialogContent>
+        <Stack spacing={2} alignItems="center" sx={{ pt: 1 }}>
+          <Typography variant="body2" color="text.secondary" textAlign="center">
+            Tap the zone on the goal. Handball goals are wider than they are
+            tall—this frame matches that shape.
+          </Typography>
+          <Box
+            sx={{
+              width: "100%",
+              maxWidth: 380,
+              aspectRatio: "3 / 2",
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gridTemplateRows: "repeat(3, 1fr)",
+              gap: 0.5,
+              p: 0.75,
+              border: 3,
+              borderColor: "primary.main",
+              borderRadius: 1,
+              bgcolor: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "rgba(255,255,255,0.06)"
+                  : "rgba(0,0,0,0.04)",
+              boxSizing: "border-box",
+            }}
+          >
+            {shotAimSchema.options.map((aim) => (
+              <Button
+                key={aim}
+                variant="contained"
+                color="inherit"
+                onClick={() => onPick({ variant: "onTarget", aim })}
+                aria-label={SHOT_AIM_LABELS[aim]}
+                sx={{
+                  minHeight: 52,
+                  minWidth: 0,
+                  borderRadius: 0.5,
+                  p: 0.5,
+                  fontSize: "0.7rem",
+                  lineHeight: 1.2,
+                  textTransform: "none",
+                  color: "text.secondary",
+                  boxShadow: "none",
+                  "&:hover": { boxShadow: 1 },
+                }}
+              >
+                {SHOT_AIM_LABELS[aim]}
+              </Button>
+            ))}
+          </Box>
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={1}
+            width="100%"
+            maxWidth={380}
+          >
+            <Button
+              fullWidth
+              variant="outlined"
+              color="secondary"
+              onClick={() =>
+                onPick({ variant: "simple", direction: "OffTarget" })
+              }
+            >
+              Off target
+            </Button>
+            <Button
+              fullWidth
+              variant="outlined"
+              color="secondary"
+              onClick={() =>
+                onPick({ variant: "simple", direction: "Blocked" })
+              }
+            >
+              Blocked
+            </Button>
+          </Stack>
+        </Stack>
+      </DialogContent>
+    </Dialog>
   );
 };
 
