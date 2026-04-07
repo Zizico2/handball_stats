@@ -507,7 +507,10 @@ const PickShotDirectionDialog = ({
   onPick: (
     pick:
       | { variant: "onTarget"; aim: ShotAim }
-      | { variant: "simple"; direction: "OffTarget" | "Blocked" | "Post" }
+      | {
+          variant: "simple";
+          direction: "OnTarget" | "OffTarget" | "Blocked" | "Post";
+        }
       | null,
   ) => void;
 }) => {
@@ -534,43 +537,56 @@ const PickShotDirectionDialog = ({
             Tap the zone on the goal. Handball goals are wider than they are
             tall—this frame matches that shape.
           </Typography>
-          <Box
-            sx={{
-              width: "100%",
-              maxWidth: 380,
-              aspectRatio: "3 / 2",
-              p: 0.75,
-              border: 3,
-              borderColor: "primary.main",
-              borderRadius: 1,
-              bgcolor: "action.hover",
-            }}
-          >
-            <Grid container columns={3} spacing={0.5} sx={{ height: "100%" }}>
-              {shotAimSchema.options.map((aim) => (
-                <Grid key={aim} size={1}>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    color="inherit"
-                    onClick={() => onPick({ variant: "onTarget", aim })}
-                    aria-label={SHOT_AIM_LABELS[aim]}
-                    sx={{
-                      minHeight: 52,
-                      height: "100%",
-                      p: 0.5,
-                      fontSize: "0.7rem",
-                      lineHeight: 1.2,
-                      textTransform: "none",
-                      color: "text.secondary",
-                      boxShadow: "none",
-                    }}
-                  >
-                    {SHOT_AIM_LABELS[aim]}
-                  </Button>
-                </Grid>
-              ))}
-            </Grid>
+          <Box sx={{ width: "100%", maxWidth: 380 }}>
+            <Stack alignItems="flex-end" sx={{ mb: 0.5 }}>
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                onClick={() =>
+                  onPick({ variant: "simple", direction: "OnTarget" })
+                }
+              >
+                On target
+              </Button>
+            </Stack>
+            <Box
+              sx={{
+                width: "100%",
+                aspectRatio: "3 / 2",
+                p: 0.75,
+                border: 3,
+                borderColor: "primary.main",
+                borderRadius: 1,
+                bgcolor: "action.hover",
+              }}
+            >
+              <Grid container columns={3} spacing={0.5} sx={{ height: "100%" }}>
+                {shotAimSchema.options.map((aim) => (
+                  <Grid key={aim} size={1}>
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      color="inherit"
+                      onClick={() => onPick({ variant: "onTarget", aim })}
+                      aria-label={SHOT_AIM_LABELS[aim]}
+                      sx={{
+                        minHeight: 52,
+                        height: "100%",
+                        p: 0.5,
+                        fontSize: "0.7rem",
+                        lineHeight: 1.2,
+                        textTransform: "none",
+                        color: "text.secondary",
+                        boxShadow: "none",
+                      }}
+                    >
+                      {SHOT_AIM_LABELS[aim]}
+                    </Button>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
           </Box>
           <Stack
             direction={{ xs: "column", sm: "row" }}

@@ -38,7 +38,10 @@ export type Event =
         | { variant: "onTarget"; aim: ShotAim }
         | {
             variant: "simple";
-            direction: Extract<ShotDirection, "OffTarget" | "Blocked" | "Post">;
+            direction: Extract<
+              ShotDirection,
+              "OnTarget" | "OffTarget" | "Blocked" | "Post"
+            >;
           };
     }
   | { type: "PICK_GOAL_OR_NO_GOAL"; goal: boolean }
