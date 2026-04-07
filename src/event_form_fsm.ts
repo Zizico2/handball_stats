@@ -38,7 +38,7 @@ export type Event =
         | { variant: "onTarget"; aim: ShotAim }
         | {
             variant: "simple";
-            direction: Extract<ShotDirection, "OffTarget" | "Blocked">;
+            direction: Extract<ShotDirection, "OffTarget" | "Blocked" | "Post">;
           };
     }
   | { type: "PICK_GOAL_OR_NO_GOAL"; goal: boolean }
@@ -337,7 +337,8 @@ export const eventMachine = setup({
           target: "pickingGoalOrNoGoal",
           guard: ({ context }) =>
             context.playerEvent.eventType === "shot" &&
-            context.playerEvent.event?.direction === "OnTarget",
+            (context.playerEvent.event?.direction === "OnTarget" ||
+              context.playerEvent.event?.direction === "Post"),
         },
         {
           target: "finished",

@@ -26,7 +26,13 @@ export const shotAimSchema = z.enum([
 ]);
 export type ShotAim = z.infer<typeof shotAimSchema>;
 
-export const shotDirectionSchema = z.enum(["OnTarget", "OffTarget", "Blocked"]);
+export const shotDirectionSchema = z.enum([
+  "OnTarget",
+  "OffTarget",
+  "Blocked",
+  /** Hit the frame (post or bar)—not split by left/right/top. */
+  "Post",
+]);
 export type ShotDirection = z.infer<typeof shotDirectionSchema>;
 
 export const baseShotSchema = z.object({

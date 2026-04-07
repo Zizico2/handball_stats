@@ -506,7 +506,7 @@ const PickShotDirectionDialog = ({
   onPick: (
     pick:
       | { variant: "onTarget"; aim: ShotAim }
-      | { variant: "simple"; direction: "OffTarget" | "Blocked" }
+      | { variant: "simple"; direction: "OffTarget" | "Blocked" | "Post" }
       | null,
   ) => void;
 }) => {
@@ -602,6 +602,14 @@ const PickShotDirectionDialog = ({
               }
             >
               Blocked
+            </Button>
+            <Button
+              fullWidth
+              variant="outlined"
+              color="secondary"
+              onClick={() => onPick({ variant: "simple", direction: "Post" })}
+            >
+              Post
             </Button>
           </Stack>
         </Stack>
