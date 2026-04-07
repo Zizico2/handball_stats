@@ -337,8 +337,7 @@ export const eventMachine = setup({
           target: "pickingGoalOrNoGoal",
           guard: ({ context }) =>
             context.playerEvent.eventType === "shot" &&
-            (context.playerEvent.event?.direction === "OnTarget" ||
-              context.playerEvent.event?.direction === "Post"),
+            context.playerEvent.event?.direction === "OnTarget",
         },
         {
           target: "finished",

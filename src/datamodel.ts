@@ -48,6 +48,10 @@ export const shotSchema = baseShotSchema
     message: "An off-target shot cannot be a goal",
     path: ["goal"],
   })
+  .refine(({ direction, goal }) => !(direction === "Post" && goal), {
+    message: "A post shot cannot be a goal",
+    path: ["goal"],
+  })
   .refine(
     ({ direction, aim }) => aim === undefined || direction === "OnTarget",
     {
