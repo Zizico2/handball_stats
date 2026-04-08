@@ -2,7 +2,7 @@
 main = ".open-next/worker.js"
 name = "arcazzi"
 compatibility_date = "2026-02-10"
-compatibility_flags = [ "nodejs_compat" ]
+compatibility_flags = ["nodejs_compat"]
 
 [assets]
 directory = ".open-next/assets"
@@ -19,3 +19,11 @@ migrations_dir = "drizzle_flat"
 pattern = "arcazzi.bernardobordadagua.com"
 custom_domain = true
 
+[observability]
+
+[observability.logs]
+enabled = false
+invocation_logs = true
+
+[observability.traces]
+enabled = false
