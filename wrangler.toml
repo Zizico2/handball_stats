@@ -11,7 +11,7 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "arcazzi"
-database_id = "0a754140-f2d8-4dd9-9af0-14a7c017e384"
+database_id = "67d9d77d-6f08-49fa-a736-48a2bc956f3c"
 migrations_dir = "drizzle_flat"
 
 
