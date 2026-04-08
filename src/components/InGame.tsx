@@ -371,7 +371,7 @@ function EventLog({ events }: { events: PlayerEvent[] }) {
             <>
               <div>Goal: {event.event.goal ? "Yes" : "No"}</div>
               <div>Direction: {event.event.direction ?? "Not specified"}</div>
-              {event.event.aim ? <div>Aim: {event.event.aim}</div> : null}
+              <div>Aim: {event.event.aim ?? "Not specified"}</div>
             </>
           )}
         </Box>

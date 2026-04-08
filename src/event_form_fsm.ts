@@ -301,8 +301,7 @@ export const eventMachine = setup({
                 event: {
                   ...context.playerEvent.event,
                   direction: pick.direction,
-                  aim: pick.direction === "OnTarget" ? pick.aim : undefined,
-                  goal: pick.direction === "OnTarget" ? undefined : false,
+                  aim: pick.aim,
                 },
               },
             };
