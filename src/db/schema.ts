@@ -1,4 +1,6 @@
+import { sql } from "drizzle-orm";
 import {
+  check,
   foreignKey,
   integer,
   sqliteTable,
@@ -108,5 +110,9 @@ export const playerEvents = sqliteTable(
       columns: [table.userId, table.gameLocalId],
       foreignColumns: [games.userId, games.localId],
     }),
+    check(
+      "shot_direction_required_for_shot",
+      sql`${table.eventType} != 'shot' OR ${table.shotDirection} IS NOT NULL`,
+    ),
   ],
 );
