@@ -1,3 +1,6 @@
+// TODO: this should have more CHECK constraints, insuring invariants that the zod datamodel models.
+// TODO: or split playerEvents into multiple tables for different event types, so that shot-specific fields are only present for shot events and the DB schema itself enforces this invariant, instead of relying on the application code to do so.
+
 import { sql } from "drizzle-orm";
 import {
   check,

@@ -23,6 +23,8 @@ export type DbActiveGameInsert = typeof schema.activeGame.$inferInsert;
 
 const dbPlayerEventSchema = createSelectSchema(schema.playerEvents);
 
+// TODO: handle the possibility of the DB having corrupted/outdated data that doesn't parse correctly.
+// TODO: This is fine for now since, in alpha, I'm wiping the DB on every change
 const dbPlayerEventToDomainSchema = dbPlayerEventSchema
   .transform((row) => {
     const base = {
@@ -72,6 +74,8 @@ export function teamToDbRow(team: Team, userId: string): DbTeamInsert {
   };
 }
 
+// TODO: handle the possibility of the DB having corrupted/outdated data that doesn't parse correctly.
+// TODO: This is fine for now since, in alpha, I'm wiping the DB on every change
 export function dbRowToPlayerEvent(row: DbPlayerEvent): PlayerEvent {
   return dbPlayerEventToDomainSchema.parse(row);
 }

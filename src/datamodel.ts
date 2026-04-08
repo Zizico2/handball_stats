@@ -63,10 +63,6 @@ function withShotDirectionFields<T extends z.ZodRawShape>(
   );
 }
 
-/**
- * Persisted `direction` plus optional `aim` (same shape as on `Shot`, minus `goal`).
- * UI/FSM shot picks use this — not a parallel enum: `direction` is always `shotDirectionSchema`.
- */
 export const shotDirectionFieldsSchema = withShotDirectionFields(z.object({}));
 
 export type ShotDirectionFields = z.infer<typeof shotDirectionFieldsSchema>;
