@@ -6,8 +6,7 @@ import type {
   EventType,
   Player,
   PlayerEvent,
-  ShotAim,
-  ShotDirection,
+  ShotDirectionFields,
   ShotPosition,
 } from "./datamodel";
 import type { DeepPartial } from "./utils";
@@ -32,18 +31,7 @@ export type Event =
   | { type: "PICK_SANCTION_EVENT_TYPE"; eventType: EventType }
   //
   | { type: "PICK_PLAYER"; player: Player }
-  | {
-      type: "PICK_SHOT_DIRECTION";
-      pick:
-        | { variant: "onTarget"; aim: ShotAim }
-        | {
-            variant: "simple";
-            direction: Extract<
-              ShotDirection,
-              "OnTarget" | "OffTarget" | "Blocked" | "Post"
-            >;
-          };
-    }
+  | { type: "PICK_SHOT_DIRECTION"; pick: ShotDirectionFields }
   | { type: "PICK_GOAL_OR_NO_GOAL"; goal: boolean }
   | { type: "PICK_SHOT_POSITION"; position: ShotPosition }
   | { type: "CANCEL" };
@@ -306,19 +294,6 @@ export const eventMachine = setup({
               return context; // Return the original context if the event type is invalid
             }
             const { pick } = event;
-            if (pick.variant === "onTarget") {
-              return {
-                ...context,
-                playerEvent: {
-                  ...context.playerEvent,
-                  event: {
-                    ...context.playerEvent.event,
-                    direction: "OnTarget" as const,
-                    aim: pick.aim,
-                  },
-                },
-              };
-            }
             return {
               ...context,
               playerEvent: {
@@ -326,7 +301,8 @@ export const eventMachine = setup({
                 event: {
                   ...context.playerEvent.event,
                   direction: pick.direction,
-                  aim: undefined,
+                  aim: pick.direction === "OnTarget" ? pick.aim : undefined,
+                  goal: pick.direction === "OnTarget" ? undefined : false,
                 },
               },
             };

@@ -30,6 +30,7 @@ import {
   type PlayerEvent,
   playerEventSchema,
   type ShotAim,
+  type ShotDirectionFields,
   type ShotPosition,
   shotAimSchema,
   shotPosition,
@@ -504,15 +505,7 @@ const PickShotDirectionDialog = ({
   onPick,
 }: {
   open: boolean;
-  onPick: (
-    pick:
-      | { variant: "onTarget"; aim: ShotAim }
-      | {
-          variant: "simple";
-          direction: "OnTarget" | "OffTarget" | "Blocked" | "Post";
-        }
-      | null,
-  ) => void;
+  onPick: (pick: ShotDirectionFields | null) => void;
 }) => {
   return (
     <Dialog fullScreen open={open}>
@@ -543,9 +536,7 @@ const PickShotDirectionDialog = ({
                 variant="outlined"
                 color="error"
                 size="small"
-                onClick={() =>
-                  onPick({ variant: "simple", direction: "OnTarget" })
-                }
+                onClick={() => onPick({ direction: "OnTarget" })}
               >
                 On target
               </Button>
@@ -568,7 +559,7 @@ const PickShotDirectionDialog = ({
                       fullWidth
                       variant="contained"
                       color="inherit"
-                      onClick={() => onPick({ variant: "onTarget", aim })}
+                      onClick={() => onPick({ direction: "OnTarget", aim })}
                       aria-label={SHOT_AIM_LABELS[aim]}
                       sx={{
                         minHeight: 52,
@@ -598,9 +589,7 @@ const PickShotDirectionDialog = ({
               fullWidth
               variant="outlined"
               color="secondary"
-              onClick={() =>
-                onPick({ variant: "simple", direction: "OffTarget" })
-              }
+              onClick={() => onPick({ direction: "OffTarget" })}
             >
               Off target
             </Button>
@@ -608,9 +597,7 @@ const PickShotDirectionDialog = ({
               fullWidth
               variant="outlined"
               color="secondary"
-              onClick={() =>
-                onPick({ variant: "simple", direction: "Blocked" })
-              }
+              onClick={() => onPick({ direction: "Blocked" })}
             >
               Blocked
             </Button>
@@ -618,7 +605,7 @@ const PickShotDirectionDialog = ({
               fullWidth
               variant="outlined"
               color="secondary"
-              onClick={() => onPick({ variant: "simple", direction: "Post" })}
+              onClick={() => onPick({ direction: "Post" })}
             >
               Post
             </Button>
