@@ -6,7 +6,7 @@ import type {
   EventType,
   Player,
   PlayerEvent,
-  ShotDirection,
+  ShotDirectionFields,
   ShotPosition,
 } from "./datamodel";
 import type { DeepPartial } from "./utils";
@@ -31,7 +31,7 @@ export type Event =
   | { type: "PICK_SANCTION_EVENT_TYPE"; eventType: EventType }
   //
   | { type: "PICK_PLAYER"; player: Player }
-  | { type: "PICK_SHOT_DIRECTION"; direction: ShotDirection }
+  | { type: "PICK_SHOT_DIRECTION"; pick: ShotDirectionFields }
   | { type: "PICK_GOAL_OR_NO_GOAL"; goal: boolean }
   | { type: "PICK_SHOT_POSITION"; position: ShotPosition }
   | { type: "CANCEL" };
@@ -293,13 +293,15 @@ export const eventMachine = setup({
               );
               return context; // Return the original context if the event type is invalid
             }
+            const { pick } = event;
             return {
               ...context,
               playerEvent: {
                 ...context.playerEvent,
                 event: {
                   ...context.playerEvent.event,
-                  direction: event.direction,
+                  direction: pick.direction,
+                  aim: pick.aim,
                 },
               },
             };

@@ -12,30 +12,72 @@ export const shotPosition = z.enum([
 
 export type ShotPosition = z.infer<typeof shotPosition>;
 
+/** Target sector on the goal (3×3), from the shooter's perspective. */
+export const shotAimSchema = z.enum([
+  "TopLeft",
+  "TopCenter",
+  "TopRight",
+  "MiddleLeft",
+  "MiddleCenter",
+  "MiddleRight",
+  "BottomLeft",
+  "BottomCenter",
+  "BottomRight",
+]);
+export type ShotAim = z.infer<typeof shotAimSchema>;
+
 export const shotDirectionSchema = z.enum([
-  // "TopLeft",
-  // "TopCenter",
-  // "TopRight",
-  // "MiddleLeft",
-  // "MiddleCenter",
-  // "MiddleRight",
-  // "BottomLeft",
-  // "BottomCenter",
-  // "BottomRight",
   "OnTarget",
   "OffTarget",
   "Blocked",
+  /** Hit the frame (post or bar)—not split by left/right/top. */
+  "Post",
 ]);
 export type ShotDirection = z.infer<typeof shotDirectionSchema>;
+
+function withShotDirectionFields<T extends z.ZodRawShape>(
+  schema: z.ZodObject<T>,
+) {
+  const extended = schema.extend({
+    direction: shotDirectionSchema,
+    aim: shotAimSchema.optional(),
+  }) as z.ZodObject<
+    T & {
+      direction: typeof shotDirectionSchema;
+      aim: z.ZodOptional<typeof shotAimSchema>;
+    }
+  >;
+
+  return extended.refine(
+    (data) => {
+      const { direction, aim } = data as {
+        direction: ShotDirection;
+        aim?: ShotAim;
+      };
+      return aim === undefined || direction === "OnTarget";
+    },
+    {
+      message: "Aim may only be recorded for on-target shots",
+      path: ["aim"],
+    },
+  );
+}
+
+export const shotDirectionFieldsSchema = withShotDirectionFields(z.object({}));
+
+export type ShotDirectionFields = z.infer<typeof shotDirectionFieldsSchema>;
 
 export const baseShotSchema = z.object({
   goal: z.boolean(),
 });
 
-export const shotSchema = baseShotSchema
-  .extend({ direction: shotDirectionSchema })
+export const shotSchema = withShotDirectionFields(baseShotSchema)
   .refine(({ direction, goal }) => !(direction === "OffTarget" && goal), {
     message: "An off-target shot cannot be a goal",
+    path: ["goal"],
+  })
+  .refine(({ direction, goal }) => !(direction === "Post" && goal), {
+    message: "A post shot cannot be a goal",
     path: ["goal"],
   });
 

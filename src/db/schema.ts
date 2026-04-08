@@ -1,4 +1,9 @@
+// TODO: this should have more CHECK constraints, insuring invariants that the zod datamodel models.
+// TODO: or split playerEvents into multiple tables for different event types, so that shot-specific fields are only present for shot events and the DB schema itself enforces this invariant, instead of relying on the application code to do so.
+
+import { sql } from "drizzle-orm";
 import {
+  check,
   foreignKey,
   integer,
   sqliteTable,
@@ -97,6 +102,7 @@ export const playerEvents = sqliteTable(
     eventGroup: text("event_group").notNull(),
     shotGoal: integer("shot_goal", { mode: "boolean" }),
     shotDirection: text("shot_direction"),
+    shotAim: text("shot_aim"),
   },
   (table) => [
     uniqueIndex("player_events_user_id_local_id_uq").on(
@@ -107,5 +113,11 @@ export const playerEvents = sqliteTable(
       columns: [table.userId, table.gameLocalId],
       foreignColumns: [games.userId, games.localId],
     }),
+    check(
+      "shot_direction_required_for_shot",
+      sql.raw(
+        `\`${table.eventType.name}\` != 'shot' OR \`${table.shotDirection.name}\` IS NOT NULL`,
+      ),
+    ),
   ],
 );

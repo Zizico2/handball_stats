@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/d1";
+import { createSelectSchema } from "drizzle-orm/zod";
 import type {
   ActiveGame,
   Game,
@@ -6,6 +7,7 @@ import type {
   Team,
   TeamPlayer,
 } from "@/datamodel";
+import { playerEventSchema } from "@/datamodel";
 import * as schema from "./schema";
 
 export type DbPlayerEvent = typeof schema.playerEvents.$inferSelect;
@@ -18,6 +20,40 @@ export type DbGame = typeof schema.games.$inferSelect;
 export type DbGameInsert = typeof schema.games.$inferInsert;
 export type DbActiveGame = typeof schema.activeGame.$inferSelect;
 export type DbActiveGameInsert = typeof schema.activeGame.$inferInsert;
+
+const dbPlayerEventSchema = createSelectSchema(schema.playerEvents);
+
+// TODO: handle the possibility of the DB having corrupted/outdated data that doesn't parse correctly.
+// TODO: This is fine for now since, in alpha, I'm wiping the DB on every change
+const dbPlayerEventToDomainSchema = dbPlayerEventSchema
+  .transform((row) => {
+    const base = {
+      id: row.localId,
+      player: row.player,
+      game_id: row.gameLocalId,
+      ellapsed_seconds: row.ellapsedSeconds,
+    };
+
+    if (row.eventType === "shot") {
+      return {
+        ...base,
+        eventType: row.eventType,
+        eventGroup: row.eventGroup,
+        event: {
+          goal: row.shotGoal ?? false,
+          direction: row.shotDirection,
+          ...(row.shotAim !== null ? { aim: row.shotAim } : {}),
+        },
+      };
+    }
+
+    return {
+      ...base,
+      eventType: row.eventType,
+      eventGroup: row.eventGroup,
+    };
+  })
+  .pipe(playerEventSchema);
 
 export function createDb(d1: D1Database) {
   return drizzle(d1, { schema });
@@ -38,35 +74,10 @@ export function teamToDbRow(team: Team, userId: string): DbTeamInsert {
   };
 }
 
+// TODO: handle the possibility of the DB having corrupted/outdated data that doesn't parse correctly.
+// TODO: This is fine for now since, in alpha, I'm wiping the DB on every change
 export function dbRowToPlayerEvent(row: DbPlayerEvent): PlayerEvent {
-  const base = {
-    id: row.localId,
-    player: row.player,
-    game_id: row.gameLocalId,
-    ellapsed_seconds: row.ellapsedSeconds,
-  };
-
-  if (row.eventType === "shot") {
-    return {
-      ...base,
-      eventType: "shot" as const,
-      eventGroup: "attack" as const,
-      event: {
-        goal: row.shotGoal ?? false,
-        direction: row.shotDirection as PlayerEvent extends {
-          eventType: "shot";
-        }
-          ? PlayerEvent["event"]["direction"]
-          : never,
-      },
-    };
-  }
-
-  return {
-    ...base,
-    eventType: row.eventType,
-    eventGroup: row.eventGroup,
-  } as PlayerEvent;
+  return dbPlayerEventToDomainSchema.parse(row);
 }
 
 export function playerEventToDbRow(
@@ -83,6 +94,7 @@ export function playerEventToDbRow(
     eventGroup: event.eventGroup,
     shotGoal: null as boolean | null,
     shotDirection: null as string | null,
+    shotAim: null as string | null,
   };
 
   if (event.eventType === "shot") {
@@ -90,6 +102,7 @@ export function playerEventToDbRow(
       ...base,
       shotGoal: event.event.goal,
       shotDirection: event.event.direction,
+      shotAim: event.event.aim ?? null,
     };
   }
 
