@@ -22,7 +22,7 @@ custom_domain = true
 [observability]
 
 [observability.logs]
-enabled = false
+enabled = true
 invocation_logs = true
 
 [observability.traces]
