@@ -10,7 +10,10 @@ import {
 import { pauseTogglesCollection } from "@/collections";
 import type { ActiveGame, Game, PauseToggle } from "@/datamodel";
 import type { MatchStatus } from "@/inGameControlsAtoms";
-import { upsertGamesMutation } from "@/server/api/client";
+import {
+  getMatchClockSnapshotQuery,
+  upsertGamesMutation,
+} from "@/server/api/client";
 import { useNow } from "@/useNow";
 
 interface UseServerMatchClockOptions {
@@ -67,6 +70,39 @@ export function useServerMatchClock({
   matchStatus,
   setMatchStatus,
 }: UseServerMatchClockOptions): UseServerMatchClockResult {
+  const [serverOffsetMs, setServerOffsetMs] = useState(0);
+
+  const syncServerOffset = useCallback(async () => {
+    if (!activeGameData) {
+      return;
+    }
+
+    const requestedAtMs = Date.now();
+    const snapshot = await getMatchClockSnapshotQuery(activeGameData.gameId);
+    const receivedAtMs = Date.now();
+    const clientMidpointMs = Math.floor((requestedAtMs + receivedAtMs) / 2);
+    const nextOffsetMs = snapshot.serverNowMs - clientMidpointMs;
+
+    setServerOffsetMs(nextOffsetMs);
+  }, [activeGameData]);
+
+  useEffect(() => {
+    if (!activeGameData) {
+      return;
+    }
+
+    void syncServerOffset();
+
+    // Re-anchor client ticking to the server clock regularly.
+    const intervalId = window.setInterval(() => {
+      void syncServerOffset();
+    }, 5000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [activeGameData, syncServerOffset]);
+
   const [localHalfStarts, setLocalHalfStarts] = useState<{
     firstHalfStartedAtMs: number | null;
     secondHalfStartedAtMs: number | null;
@@ -105,7 +141,7 @@ export function useServerMatchClock({
     setMatchStatus,
   ]);
 
-  const nowMs = useNow(Boolean(activeGameData));
+  const nowMs = useNow(Boolean(activeGameData), 1000, serverOffsetMs);
 
   const activeGamePauseToggles = useMemo(() => {
     if (!activeGameData) {
@@ -226,12 +262,14 @@ export function useServerMatchClock({
       localHalfStarts.firstHalfStartedAtMs ?? now,
       localHalfStarts.secondHalfStartedAtMs,
     );
+    void syncServerOffset();
     setMatchStatus("firstHalf");
   }, [
     localHalfStarts.firstHalfStartedAtMs,
     localHalfStarts.secondHalfStartedAtMs,
     persistHalfStarts,
     setMatchStatus,
+    syncServerOffset,
   ]);
 
   const startSecondHalf = useCallback(() => {
@@ -240,31 +278,42 @@ export function useServerMatchClock({
       localHalfStarts.firstHalfStartedAtMs,
       localHalfStarts.secondHalfStartedAtMs ?? now,
     );
+    void syncServerOffset();
     setMatchStatus("secondHalf");
   }, [
     localHalfStarts.firstHalfStartedAtMs,
     localHalfStarts.secondHalfStartedAtMs,
     persistHalfStarts,
     setMatchStatus,
+    syncServerOffset,
   ]);
 
   const startHalftime = useCallback(() => {
     if (matchStatus === "firstHalf" && !firstHalfPaused) {
       appendPauseToggle("firstHalf");
     }
+    void syncServerOffset();
     setMatchStatus("halftime");
-  }, [appendPauseToggle, firstHalfPaused, matchStatus, setMatchStatus]);
+  }, [
+    appendPauseToggle,
+    firstHalfPaused,
+    matchStatus,
+    setMatchStatus,
+    syncServerOffset,
+  ]);
 
   const togglePause = useCallback(() => {
     if (matchStatus === "firstHalf") {
       appendPauseToggle("firstHalf");
+      void syncServerOffset();
       return;
     }
 
     if (matchStatus === "secondHalf") {
       appendPauseToggle("secondHalf");
+      void syncServerOffset();
     }
-  }, [appendPauseToggle, matchStatus]);
+  }, [appendPauseToggle, matchStatus, syncServerOffset]);
 
   const clearClockState = useCallback(() => {
     setLocalHalfStarts({

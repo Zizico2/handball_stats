@@ -290,6 +290,18 @@ export const pauseToggleSchema = z.object({
 });
 export type PauseToggle = z.infer<typeof pauseToggleSchema>;
 
+export const matchClockSnapshotSchema = z.object({
+  gameId: z.number(),
+  serverNowMs: z.number(),
+  activeHalf: matchHalfSchema.nullable(),
+  activeElapsedSeconds: z.number(),
+  firstHalfElapsedSeconds: z.number(),
+  secondHalfElapsedSeconds: z.number(),
+  firstHalfPaused: z.boolean(),
+  secondHalfPaused: z.boolean(),
+});
+export type MatchClockSnapshot = z.infer<typeof matchClockSnapshotSchema>;
+
 export const activeGameSchema = z.object({
   id: z.literal(1),
   gameId: z.number(),

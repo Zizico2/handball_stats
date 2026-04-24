@@ -2,6 +2,7 @@ import { hc } from "hono/client";
 import type {
   ActiveGame,
   Game,
+  MatchClockSnapshot,
   PauseToggle,
   PlayerEvent,
   Team,
@@ -163,4 +164,14 @@ export async function deletePauseTogglesMutation(ids: number[]) {
   });
 
   await assertSuccessfulResponse(response);
+}
+
+export async function getMatchClockSnapshotQuery(gameId: number) {
+  const response = await apiClient.api.collections["match-clock"][
+    ":gameId"
+  ].$get({
+    param: { gameId: String(gameId) },
+  });
+
+  return parseJsonResponse<MatchClockSnapshot>(response);
 }
