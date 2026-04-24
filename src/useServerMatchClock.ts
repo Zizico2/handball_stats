@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useStopwatch } from "react-timer-hook";
 import { pauseTogglesCollection } from "@/collections";
 import type { ActiveGame, Game, PauseToggle } from "@/datamodel";
 import type { MatchStatus } from "@/inGameControlsAtoms";
@@ -96,15 +97,6 @@ export function useServerMatchClock({
     }
 
     void syncServerOffset();
-
-    // Re-anchor client ticking to the server clock regularly.
-    const intervalId = window.setInterval(() => {
-      void syncServerOffset();
-    }, 5000);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
   }, [activeGameData, syncServerOffset]);
 
   const [localHalfStarts, setLocalHalfStarts] = useState<{
@@ -206,29 +198,60 @@ export function useServerMatchClock({
       ? secondHalfElapsedSeconds
       : firstHalfElapsedSeconds;
 
-  const [stableDisplayedSeconds, setStableDisplayedSeconds] = useState(0);
+  const stopwatch = useStopwatch({
+    autoStart: false,
+    offsetTimestamp: new Date(),
+  });
+  const { minutes, pause, reset, seconds, start, totalSeconds } = stopwatch;
+
   const displayClockKey = `${activeGameData?.gameId ?? "none"}:${
     matchStatus === "secondHalf" ? "secondHalf" : "firstHalf"
   }`;
   const previousDisplayClockKeyRef = useRef(displayClockKey);
 
   useEffect(() => {
-    setStableDisplayedSeconds((previous) => {
-      if (previousDisplayClockKeyRef.current !== displayClockKey) {
-        // New game or switched displayed half: reset baseline.
-        previousDisplayClockKeyRef.current = displayClockKey;
-        return displayedSeconds;
-      }
+    if (previousDisplayClockKeyRef.current === displayClockKey) {
+      return;
+    }
 
-      // Never go backward inside the same displayed clock timeline.
-      return displayedSeconds >= previous ? displayedSeconds : previous;
-    });
-  }, [displayClockKey, displayedSeconds]);
+    previousDisplayClockKeyRef.current = displayClockKey;
+    reset(new Date(Date.now() + displayedSeconds * 1000), isRunning);
+  }, [displayClockKey, displayedSeconds, isRunning, reset]);
 
-  const eventElapsedSeconds =
-    matchStatus === "secondHalf"
-      ? secondHalfElapsedSeconds
-      : firstHalfElapsedSeconds;
+  const previousRunningRef = useRef(isRunning);
+
+  useEffect(() => {
+    if (previousRunningRef.current === isRunning) {
+      return;
+    }
+
+    previousRunningRef.current = isRunning;
+
+    if (isRunning) {
+      start();
+      return;
+    }
+
+    pause();
+    // Freeze exactly on server-derived elapsed when pausing.
+    reset(new Date(Date.now() + displayedSeconds * 1000), false);
+  }, [displayedSeconds, isRunning, pause, reset, start]);
+
+  const lastStopwatchResyncSecondRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!isRunning || displayedSeconds <= 0 || displayedSeconds % 5 !== 0) {
+      return;
+    }
+
+    if (lastStopwatchResyncSecondRef.current === displayedSeconds) {
+      return;
+    }
+
+    lastStopwatchResyncSecondRef.current = displayedSeconds;
+    reset(new Date(Date.now() + displayedSeconds * 1000), true);
+    void syncServerOffset();
+  }, [displayedSeconds, isRunning, reset, syncServerOffset]);
 
   const nextPauseToggleIdRef = useRef(1);
 
@@ -340,10 +363,10 @@ export function useServerMatchClock({
   }, [setMatchStatus]);
 
   return {
-    minutes: Math.floor(stableDisplayedSeconds / 60),
-    seconds: stableDisplayedSeconds % 60,
+    minutes,
+    seconds,
     isRunning,
-    eventElapsedSeconds,
+    eventElapsedSeconds: totalSeconds,
     activeGamePauseToggles,
     startFirstHalf,
     startSecondHalf,
