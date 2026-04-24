@@ -146,6 +146,10 @@ export function useServerMatchClock({
   ]);
 
   const nowMs = useNow(Boolean(activeGameData), 1000, serverOffsetMs);
+  const getCorrectedNowMs = useCallback(
+    () => Date.now() + serverOffsetMs,
+    [serverOffsetMs],
+  );
 
   const activeGamePauseToggles = useMemo(() => {
     if (!activeGameData) {
@@ -202,6 +206,25 @@ export function useServerMatchClock({
       ? secondHalfElapsedSeconds
       : firstHalfElapsedSeconds;
 
+  const [stableDisplayedSeconds, setStableDisplayedSeconds] = useState(0);
+  const displayClockKey = `${activeGameData?.gameId ?? "none"}:${
+    matchStatus === "secondHalf" ? "secondHalf" : "firstHalf"
+  }`;
+  const previousDisplayClockKeyRef = useRef(displayClockKey);
+
+  useEffect(() => {
+    setStableDisplayedSeconds((previous) => {
+      if (previousDisplayClockKeyRef.current !== displayClockKey) {
+        // New game or switched displayed half: reset baseline.
+        previousDisplayClockKeyRef.current = displayClockKey;
+        return displayedSeconds;
+      }
+
+      // Never go backward inside the same displayed clock timeline.
+      return displayedSeconds >= previous ? displayedSeconds : previous;
+    });
+  }, [displayClockKey, displayedSeconds]);
+
   const eventElapsedSeconds =
     matchStatus === "secondHalf"
       ? secondHalfElapsedSeconds
@@ -252,72 +275,61 @@ export function useServerMatchClock({
         id: nextPauseToggleIdRef.current,
         gameId: activeGameData.gameId,
         half,
-        toggledAtMs: Date.now(),
+        toggledAtMs: getCorrectedNowMs(),
       });
 
       nextPauseToggleIdRef.current += 1;
     },
-    [activeGameData],
+    [activeGameData, getCorrectedNowMs],
   );
 
   const startFirstHalf = useCallback(() => {
-    const now = Date.now();
+    const now = getCorrectedNowMs();
     void persistHalfStarts(
       localHalfStarts.firstHalfStartedAtMs ?? now,
       localHalfStarts.secondHalfStartedAtMs,
     );
-    void syncServerOffset();
     setMatchStatus("firstHalf");
   }, [
     localHalfStarts.firstHalfStartedAtMs,
     localHalfStarts.secondHalfStartedAtMs,
+    getCorrectedNowMs,
     persistHalfStarts,
     setMatchStatus,
-    syncServerOffset,
   ]);
 
   const startSecondHalf = useCallback(() => {
-    const now = Date.now();
+    const now = getCorrectedNowMs();
     void persistHalfStarts(
       localHalfStarts.firstHalfStartedAtMs,
       localHalfStarts.secondHalfStartedAtMs ?? now,
     );
-    void syncServerOffset();
     setMatchStatus("secondHalf");
   }, [
     localHalfStarts.firstHalfStartedAtMs,
     localHalfStarts.secondHalfStartedAtMs,
+    getCorrectedNowMs,
     persistHalfStarts,
     setMatchStatus,
-    syncServerOffset,
   ]);
 
   const startHalftime = useCallback(() => {
     if (matchStatus === "firstHalf" && !firstHalfPaused) {
       appendPauseToggle("firstHalf");
     }
-    void syncServerOffset();
     setMatchStatus("halftime");
-  }, [
-    appendPauseToggle,
-    firstHalfPaused,
-    matchStatus,
-    setMatchStatus,
-    syncServerOffset,
-  ]);
+  }, [appendPauseToggle, firstHalfPaused, matchStatus, setMatchStatus]);
 
   const togglePause = useCallback(() => {
     if (matchStatus === "firstHalf") {
       appendPauseToggle("firstHalf");
-      void syncServerOffset();
       return;
     }
 
     if (matchStatus === "secondHalf") {
       appendPauseToggle("secondHalf");
-      void syncServerOffset();
     }
-  }, [appendPauseToggle, matchStatus, syncServerOffset]);
+  }, [appendPauseToggle, matchStatus]);
 
   const clearClockState = useCallback(() => {
     setLocalHalfStarts({
@@ -328,8 +340,8 @@ export function useServerMatchClock({
   }, [setMatchStatus]);
 
   return {
-    minutes: Math.floor(displayedSeconds / 60),
-    seconds: displayedSeconds % 60,
+    minutes: Math.floor(stableDisplayedSeconds / 60),
+    seconds: stableDisplayedSeconds % 60,
     isRunning,
     eventElapsedSeconds,
     activeGamePauseToggles,
