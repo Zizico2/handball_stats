@@ -252,6 +252,9 @@ export const eventGroupSchema = z.enum(
 );
 export type EventGroup = z.infer<typeof eventGroupSchema>;
 
+export const matchHalfSchema = z.enum(["firstHalf", "secondHalf"]);
+export type MatchHalf = z.infer<typeof matchHalfSchema>;
+
 function withBase<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
   return basePlayerEventSchema.extend(schema.shape);
 }
@@ -274,8 +277,18 @@ export const gameSchema = z.object({
   id: z.number(),
   homeTeamId: z.number(),
   createdAt: z.iso.datetime(),
+  firstHalfStartedAtMs: z.number().nullable().optional(),
+  secondHalfStartedAtMs: z.number().nullable().optional(),
 });
 export type Game = z.infer<typeof gameSchema>;
+
+export const pauseToggleSchema = z.object({
+  id: z.number(),
+  gameId: z.number(),
+  half: matchHalfSchema,
+  toggledAtMs: z.number(),
+});
+export type PauseToggle = z.infer<typeof pauseToggleSchema>;
 
 export const activeGameSchema = z.object({
   id: z.literal(1),

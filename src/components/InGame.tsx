@@ -21,6 +21,8 @@ import { assign } from "xstate";
 import z from "zod";
 import {
   activeGameCollection,
+  gamesCollection,
+  pauseTogglesCollection,
   playerEventsCollection,
   teamPlayersCollection,
 } from "@/collections";
@@ -42,7 +44,7 @@ import {
   initialInGameControlsState,
   type MatchStatus,
 } from "@/inGameControlsAtoms";
-import { usePersistentStopwatch } from "@/usePersistentStopwatch";
+import { upsertGamesMutation } from "@/server/api/client";
 
 function insertPlayerEvent(partialEvent: unknown): void {
   try {
@@ -57,11 +59,43 @@ function insertPlayerEvent(partialEvent: unknown): void {
   }
 }
 
+function calculateElapsedSeconds(
+  startedAtMs: number | null,
+  sortedToggleTimes: number[],
+  nowMs: number,
+): number {
+  if (startedAtMs === null) {
+    return 0;
+  }
+
+  let completedPausedMs = 0;
+
+  for (let index = 0; index + 1 < sortedToggleTimes.length; index += 2) {
+    completedPausedMs +=
+      sortedToggleTimes[index + 1] - sortedToggleTimes[index];
+  }
+
+  const effectiveNowMs =
+    sortedToggleTimes.length % 2 === 1
+      ? sortedToggleTimes[sortedToggleTimes.length - 1]
+      : nowMs;
+
+  return Math.floor(
+    Math.max(0, effectiveNowMs - startedAtMs - completedPausedMs) / 1000,
+  );
+}
+
 function InGame() {
   const setInGameControls = useSetAtom(inGameControlsAtom);
 
   const playerEvents = useLiveSuspenseQuery((q) =>
     q.from({ event: playerEventsCollection }),
+  );
+
+  const games = useLiveSuspenseQuery((q) => q.from({ game: gamesCollection }));
+
+  const pauseToggles = useLiveSuspenseQuery((q) =>
+    q.from({ pauseToggle: pauseTogglesCollection }),
   );
 
   const activeGame = useLiveSuspenseQuery((q) =>
@@ -79,10 +113,72 @@ function InGame() {
       .findOne(),
   );
 
-  const { totalSeconds, minutes, seconds, isRunning, start, pause, reset } =
-    usePersistentStopwatch({ autoStart: false });
+  const lastPauseToggle = useLiveSuspenseQuery((q) =>
+    q
+      .from({ pauseToggle: pauseTogglesCollection })
+      .orderBy(({ pauseToggle }) => pauseToggle.id, "desc")
+      .findOne(),
+  );
+
+  const activeGameData = activeGame.data;
+  const activeGameRecord = activeGameData
+    ? (games.data.find((game) => game.id === activeGameData.gameId) ?? null)
+    : null;
+
+  const [localHalfStarts, setLocalHalfStarts] = useState<{
+    firstHalfStartedAtMs: number | null;
+    secondHalfStartedAtMs: number | null;
+  }>({
+    firstHalfStartedAtMs: null,
+    secondHalfStartedAtMs: null,
+  });
+
+  useEffect(() => {
+    setLocalHalfStarts({
+      firstHalfStartedAtMs: activeGameRecord?.firstHalfStartedAtMs ?? null,
+      secondHalfStartedAtMs: activeGameRecord?.secondHalfStartedAtMs ?? null,
+    });
+  }, [
+    activeGameRecord?.firstHalfStartedAtMs,
+    activeGameRecord?.secondHalfStartedAtMs,
+  ]);
+
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!activeGameData) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [activeGameData]);
 
   const [matchStatus, setMatchStatus] = useState<MatchStatus | null>(null);
+
+  useEffect(() => {
+    if (matchStatus !== null) {
+      return;
+    }
+
+    if (localHalfStarts.secondHalfStartedAtMs !== null) {
+      setMatchStatus("secondHalf");
+      return;
+    }
+
+    if (localHalfStarts.firstHalfStartedAtMs !== null) {
+      setMatchStatus("firstHalf");
+    }
+  }, [
+    localHalfStarts.firstHalfStartedAtMs,
+    localHalfStarts.secondHalfStartedAtMs,
+    matchStatus,
+  ]);
 
   const [state, send] = useMachine(
     eventMachine.provide({
@@ -96,14 +192,100 @@ function InGame() {
   );
 
   const nextEventId = (lastEvent.data?.id ?? 0) + 1;
+  const nextPauseToggleId = (lastPauseToggle.data?.id ?? 0) + 1;
 
   const selectedTeamPlayers = teamPlayers.data
     .filter((player) => player.teamId === activeGame.data?.homeTeamId)
     .sort((left, right) => left.number - right.number);
 
-  const handleClearGame = useCallback(() => {
-    const activeGameData = activeGame.data;
+  const activeGamePauseToggles = activeGameData
+    ? pauseToggles.data.filter(
+        (toggle) => toggle.gameId === activeGameData.gameId,
+      )
+    : [];
 
+  const firstHalfToggleTimes = activeGamePauseToggles
+    .filter((toggle) => toggle.half === "firstHalf")
+    .map((toggle) => toggle.toggledAtMs)
+    .sort((left, right) => left - right);
+
+  const secondHalfToggleTimes = activeGamePauseToggles
+    .filter((toggle) => toggle.half === "secondHalf")
+    .map((toggle) => toggle.toggledAtMs)
+    .sort((left, right) => left - right);
+
+  const firstHalfElapsedSeconds = calculateElapsedSeconds(
+    localHalfStarts.firstHalfStartedAtMs,
+    firstHalfToggleTimes,
+    nowMs,
+  );
+
+  const secondHalfElapsedSeconds = calculateElapsedSeconds(
+    localHalfStarts.secondHalfStartedAtMs,
+    secondHalfToggleTimes,
+    nowMs,
+  );
+
+  const firstHalfPaused = firstHalfToggleTimes.length % 2 === 1;
+  const secondHalfPaused = secondHalfToggleTimes.length % 2 === 1;
+
+  const isRunning =
+    matchStatus === "firstHalf"
+      ? localHalfStarts.firstHalfStartedAtMs !== null && !firstHalfPaused
+      : matchStatus === "secondHalf"
+        ? localHalfStarts.secondHalfStartedAtMs !== null && !secondHalfPaused
+        : false;
+
+  const displayedSeconds =
+    matchStatus === "secondHalf"
+      ? secondHalfElapsedSeconds
+      : firstHalfElapsedSeconds;
+  const minutes = Math.floor(displayedSeconds / 60);
+  const seconds = displayedSeconds % 60;
+
+  const eventElapsedSeconds =
+    matchStatus === "secondHalf"
+      ? secondHalfElapsedSeconds
+      : firstHalfElapsedSeconds;
+
+  const persistHalfStarts = useCallback(
+    async (
+      firstHalfStartedAtMs: number | null,
+      secondHalfStartedAtMs: number | null,
+    ) => {
+      if (!activeGameRecord) {
+        return;
+      }
+
+      const updatedGame = {
+        ...activeGameRecord,
+        firstHalfStartedAtMs,
+        secondHalfStartedAtMs,
+      };
+
+      setLocalHalfStarts({ firstHalfStartedAtMs, secondHalfStartedAtMs });
+      await upsertGamesMutation([updatedGame]);
+    },
+    [activeGameRecord],
+  );
+
+  const appendPauseToggle = useCallback(
+    (half: "firstHalf" | "secondHalf") => {
+      if (!activeGameData) {
+        return;
+      }
+
+      pauseTogglesCollection.insert({
+        id: nextPauseToggleId,
+        gameId: activeGameData.gameId,
+        half,
+        toggledAtMs: Date.now(),
+      });
+    },
+    [activeGameData, nextPauseToggleId],
+  );
+
+  const handleClearGame = useCallback(() => {
     if (activeGameData) {
       for (const event of playerEvents.data.filter(
         (item) => item.game_id === activeGameData.gameId,
@@ -111,38 +293,63 @@ function InGame() {
         playerEventsCollection.delete(event.id);
       }
 
+      for (const toggle of activeGamePauseToggles) {
+        pauseTogglesCollection.delete(toggle.id);
+      }
+
       activeGameCollection.delete(activeGameData.id);
     }
 
-    localStorage.removeItem("persistentStopwatch");
+    setLocalHalfStarts({
+      firstHalfStartedAtMs: null,
+      secondHalfStartedAtMs: null,
+    });
     setMatchStatus(null);
-    reset(new Date(), false);
-  }, [activeGame.data, playerEvents.data, reset]);
+  }, [activeGameData, activeGamePauseToggles, playerEvents.data]);
 
   const handleStartFirstHalf = useCallback(() => {
-    start();
+    const now = Date.now();
+    void persistHalfStarts(
+      localHalfStarts.firstHalfStartedAtMs ?? now,
+      localHalfStarts.secondHalfStartedAtMs,
+    );
     setMatchStatus("firstHalf");
-  }, [start]);
+  }, [
+    localHalfStarts.firstHalfStartedAtMs,
+    localHalfStarts.secondHalfStartedAtMs,
+    persistHalfStarts,
+  ]);
 
   const handleStartSecondHalf = useCallback(() => {
-    start();
+    const now = Date.now();
+    void persistHalfStarts(
+      localHalfStarts.firstHalfStartedAtMs,
+      localHalfStarts.secondHalfStartedAtMs ?? now,
+    );
     setMatchStatus("secondHalf");
-  }, [start]);
+  }, [
+    localHalfStarts.firstHalfStartedAtMs,
+    localHalfStarts.secondHalfStartedAtMs,
+    persistHalfStarts,
+  ]);
 
   const handleStartHalftime = useCallback(() => {
-    const offset = new Date();
-    offset.setSeconds(offset.getSeconds() + 60 * 30);
-    reset(offset, false);
+    if (matchStatus === "firstHalf" && !firstHalfPaused) {
+      appendPauseToggle("firstHalf");
+    }
     setMatchStatus("halftime");
-  }, [reset]);
+  }, [appendPauseToggle, firstHalfPaused, matchStatus]);
 
   const handleTogglePause = useCallback(() => {
-    if (isRunning) {
-      pause();
-    } else {
-      start();
+    if (matchStatus === "firstHalf") {
+      appendPauseToggle("firstHalf");
+      return;
     }
-  }, [isRunning, pause, start]);
+
+    if (matchStatus === "secondHalf") {
+      appendPauseToggle("secondHalf");
+    }
+  }, [appendPauseToggle, matchStatus]);
 
   const handleStartEvent = (eventGroup: EventGroup) => {
     if (!activeGame.data) {
@@ -152,13 +359,11 @@ function InGame() {
     send({
       type: "START",
       eventGroup,
-      ellapsed_seconds: totalSeconds,
+      ellapsed_seconds: eventElapsedSeconds,
       game_id: activeGame.data.gameId,
       id: nextEventId,
     });
   };
-
-  const activeGameData = activeGame.data;
 
   const activeGameEvents = activeGameData
     ? playerEvents.data.filter(

@@ -75,6 +75,8 @@ function NewGame() {
       id: nextGameId,
       homeTeamId: selectedTeamId,
       createdAt: new Date().toISOString(),
+      firstHalfStartedAtMs: null,
+      secondHalfStartedAtMs: null,
     });
 
     if (activeGame.data) {

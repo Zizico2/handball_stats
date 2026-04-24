@@ -4,6 +4,7 @@ import { createCollection } from "@tanstack/react-db";
 import type {
   ActiveGame,
   Game,
+  PauseToggle,
   PlayerEvent,
   Team,
   TeamPlayer,
@@ -11,25 +12,30 @@ import type {
 import {
   activeGameSchema,
   gameSchema,
+  pauseToggleSchema,
   playerEventSchema,
   teamPlayerSchema,
   teamSchema,
 } from "@/datamodel";
 import {
   createGamesMutation,
+  createPauseTogglesMutation,
   createPlayerEventsMutation,
   createTeamPlayersMutation,
   createTeamsMutation,
   deleteActiveGameMutation,
+  deletePauseTogglesMutation,
   deletePlayerEventsMutation,
   deleteTeamPlayersMutation,
   deleteTeamsMutation,
   listActiveGameQuery,
   listGamesQuery,
+  listPauseTogglesQuery,
   listPlayerEventsQuery,
   listTeamPlayersQuery,
   listTeamsQuery,
   upsertActiveGameMutation,
+  upsertGamesMutation,
 } from "@/server/api/client";
 
 const queryClient = new QueryClient();
@@ -102,6 +108,29 @@ export const gamesCollection = createCollection(
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
       await createGamesMutation(newItems);
+    },
+    onUpdate: async ({ transaction }) => {
+      const updatedItems = transaction.mutations.map((m) => m.modified);
+      await upsertGamesMutation(updatedItems);
+    },
+  }),
+);
+
+export const pauseTogglesCollection = createCollection(
+  queryCollectionOptions({
+    id: "pause-toggles",
+    queryKey: ["pause-toggles"],
+    queryClient,
+    schema: pauseToggleSchema,
+    getKey: (item: PauseToggle) => item.id,
+    queryFn: listPauseTogglesQuery,
+    onInsert: async ({ transaction }) => {
+      const newItems = transaction.mutations.map((m) => m.modified);
+      await createPauseTogglesMutation(newItems);
+    },
+    onDelete: async ({ transaction }) => {
+      const ids = transaction.mutations.map((m) => m.key);
+      await deletePauseTogglesMutation(ids);
     },
   }),
 );

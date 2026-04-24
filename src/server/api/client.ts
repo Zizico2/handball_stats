@@ -2,6 +2,7 @@ import { hc } from "hono/client";
 import type {
   ActiveGame,
   Game,
+  PauseToggle,
   PlayerEvent,
   Team,
   TeamPlayer,
@@ -118,6 +119,14 @@ export async function createGamesMutation(items: Game[]) {
   return parseJsonResponse<Game[]>(response);
 }
 
+export async function upsertGamesMutation(items: Game[]) {
+  const response = await apiClient.api.collections.games.$put({
+    json: items,
+  });
+
+  return parseJsonResponse<Game[]>(response);
+}
+
 export async function upsertActiveGameMutation(items: ActiveGame[]) {
   const response = await apiClient.api.collections["active-game"].$put({
     json: items,
@@ -128,6 +137,28 @@ export async function upsertActiveGameMutation(items: ActiveGame[]) {
 
 export async function deleteActiveGameMutation(ids: number[]) {
   const response = await apiClient.api.collections["active-game"].$delete({
+    json: ids,
+  });
+
+  await assertSuccessfulResponse(response);
+}
+
+export async function listPauseTogglesQuery() {
+  const response = await apiClient.api.collections["pause-toggles"].$get();
+
+  return parseJsonResponse<PauseToggle[]>(response);
+}
+
+export async function createPauseTogglesMutation(items: PauseToggle[]) {
+  const response = await apiClient.api.collections["pause-toggles"].$post({
+    json: items,
+  });
+
+  return parseJsonResponse<PauseToggle[]>(response);
+}
+
+export async function deletePauseTogglesMutation(ids: number[]) {
+  const response = await apiClient.api.collections["pause-toggles"].$delete({
     json: ids,
   });
 

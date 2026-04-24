@@ -54,6 +54,8 @@ export const games = sqliteTable(
     localId: integer("local_id").notNull(),
     homeTeamLocalId: integer("home_team_local_id").notNull(),
     createdAt: text("created_at").notNull(),
+    firstHalfStartedAtMs: integer("first_half_started_at_ms"),
+    secondHalfStartedAtMs: integer("second_half_started_at_ms"),
   },
   (table) => [
     uniqueIndex("games_user_id_local_id_uq").on(table.userId, table.localId),
@@ -61,6 +63,32 @@ export const games = sqliteTable(
       columns: [table.userId, table.homeTeamLocalId],
       foreignColumns: [teams.userId, teams.localId],
     }),
+  ],
+);
+
+export const pauseToggles = sqliteTable(
+  "pause_toggles",
+  {
+    id: integer().primaryKey(),
+    userId: text("user_id").notNull(),
+    localId: integer("local_id").notNull(),
+    gameLocalId: integer("game_local_id").notNull(),
+    half: text("half").notNull(),
+    toggledAtMs: integer("toggled_at_ms").notNull(),
+  },
+  (table) => [
+    uniqueIndex("pause_toggles_user_id_local_id_uq").on(
+      table.userId,
+      table.localId,
+    ),
+    foreignKey({
+      columns: [table.userId, table.gameLocalId],
+      foreignColumns: [games.userId, games.localId],
+    }),
+    check(
+      "pause_toggles_half_check",
+      sql.raw(`\`${table.half.name}\` IN ('firstHalf', 'secondHalf')`),
+    ),
   ],
 );
 

@@ -1,5 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
-import { eq } from "drizzle-orm";
+import { eq, getColumns, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { dbRowToGame, gameToDbRow } from "@/db";
 import * as schema from "@/db/schema";
@@ -24,6 +24,39 @@ export const gamesRoutes = new Hono()
     const inserted = await db
       .insert(schema.games)
       .values(items.map((item) => gameToDbRow(item, userId)))
+      .returning();
+
+    return c.json(inserted.map(dbRowToGame));
+  })
+  .put("/", zValidator("json", gamesArraySchema), async (c) => {
+    const items = c.req.valid("json");
+    const userId = await requireUserId();
+    const db = await getDb();
+
+    if (items.length === 0) {
+      return c.json([]);
+    }
+
+    const gameColumns = getColumns(schema.games);
+    const rows = items.map((item) => gameToDbRow(item, userId));
+    const inserted = await db
+      .insert(schema.games)
+      .values(rows)
+      .onConflictDoUpdate({
+        target: [schema.games.userId, schema.games.localId],
+        set: {
+          homeTeamLocalId: sql.raw(
+            `excluded.${gameColumns.homeTeamLocalId.name}`,
+          ),
+          createdAt: sql.raw(`excluded.${gameColumns.createdAt.name}`),
+          firstHalfStartedAtMs: sql.raw(
+            `excluded.${gameColumns.firstHalfStartedAtMs.name}`,
+          ),
+          secondHalfStartedAtMs: sql.raw(
+            `excluded.${gameColumns.secondHalfStartedAtMs.name}`,
+          ),
+        },
+      })
       .returning();
 
     return c.json(inserted.map(dbRowToGame));

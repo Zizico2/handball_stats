@@ -3,6 +3,8 @@ import { createSelectSchema } from "drizzle-orm/zod";
 import type {
   ActiveGame,
   Game,
+  MatchHalf,
+  PauseToggle,
   PlayerEvent,
   Team,
   TeamPlayer,
@@ -20,6 +22,8 @@ export type DbGame = typeof schema.games.$inferSelect;
 export type DbGameInsert = typeof schema.games.$inferInsert;
 export type DbActiveGame = typeof schema.activeGame.$inferSelect;
 export type DbActiveGameInsert = typeof schema.activeGame.$inferInsert;
+export type DbPauseToggle = typeof schema.pauseToggles.$inferSelect;
+export type DbPauseToggleInsert = typeof schema.pauseToggles.$inferInsert;
 
 const dbPlayerEventSchema = createSelectSchema(schema.playerEvents);
 
@@ -136,6 +140,8 @@ export function dbRowToGame(row: DbGame): Game {
     id: row.localId,
     homeTeamId: row.homeTeamLocalId,
     createdAt: row.createdAt,
+    firstHalfStartedAtMs: row.firstHalfStartedAtMs,
+    secondHalfStartedAtMs: row.secondHalfStartedAtMs,
   };
 }
 
@@ -145,6 +151,30 @@ export function gameToDbRow(game: Game, userId: string): DbGameInsert {
     localId: game.id,
     homeTeamLocalId: game.homeTeamId,
     createdAt: game.createdAt,
+    firstHalfStartedAtMs: game.firstHalfStartedAtMs ?? null,
+    secondHalfStartedAtMs: game.secondHalfStartedAtMs ?? null,
+  };
+}
+
+export function dbRowToPauseToggle(row: DbPauseToggle): PauseToggle {
+  return {
+    id: row.localId,
+    gameId: row.gameLocalId,
+    half: row.half as MatchHalf,
+    toggledAtMs: row.toggledAtMs,
+  };
+}
+
+export function pauseToggleToDbRow(
+  pauseToggle: PauseToggle,
+  userId: string,
+): DbPauseToggleInsert {
+  return {
+    userId,
+    localId: pauseToggle.id,
+    gameLocalId: pauseToggle.gameId,
+    half: pauseToggle.half,
+    toggledAtMs: pauseToggle.toggledAtMs,
   };
 }
 
