@@ -1,3 +1,4 @@
+import { useLiveSuspenseQuery } from "@tanstack/react-db";
 import {
   type Dispatch,
   type SetStateAction,
@@ -19,7 +20,6 @@ import { useNow } from "@/useNow";
 interface UseServerMatchClockOptions {
   activeGameData: ActiveGame | null;
   activeGameRecord: Game | null;
-  pauseToggles: PauseToggle[];
   matchStatus: MatchStatus | null;
   setMatchStatus: Dispatch<SetStateAction<MatchStatus | null>>;
 }
@@ -66,10 +66,14 @@ function calculateElapsedSeconds(
 export function useServerMatchClock({
   activeGameData,
   activeGameRecord,
-  pauseToggles,
   matchStatus,
   setMatchStatus,
 }: UseServerMatchClockOptions): UseServerMatchClockResult {
+  const pauseTogglesQuery = useLiveSuspenseQuery((q) =>
+    q.from({ pauseToggle: pauseTogglesCollection }),
+  );
+  const pauseToggles = pauseTogglesQuery.data;
+
   const [serverOffsetMs, setServerOffsetMs] = useState(0);
 
   const syncServerOffset = useCallback(async () => {
@@ -332,7 +336,7 @@ export function useServerMatchClock({
     startFirstHalf,
     startSecondHalf,
     startHalftime,
-    togglePause,
     clearClockState,
+    togglePause,
   };
 }

@@ -68,10 +68,6 @@ function InGame() {
 
   const games = useLiveSuspenseQuery((q) => q.from({ game: gamesCollection }));
 
-  const pauseToggles = useLiveSuspenseQuery((q) =>
-    q.from({ pauseToggle: pauseTogglesCollection }),
-  );
-
   const activeGame = useLiveSuspenseQuery((q) =>
     q.from({ activeGame: activeGameCollection }).findOne(),
   );
@@ -87,7 +83,7 @@ function InGame() {
       .findOne(),
   );
 
-  const activeGameData = activeGame.data;
+  const activeGameData = activeGame.data ?? null;
   const activeGameRecord = activeGameData
     ? (games.data.find((game) => game.id === activeGameData.gameId) ?? null)
     : null;
@@ -125,7 +121,6 @@ function InGame() {
   } = useServerMatchClock({
     activeGameData,
     activeGameRecord,
-    pauseToggles: pauseToggles.data,
     matchStatus,
     setMatchStatus,
   });
