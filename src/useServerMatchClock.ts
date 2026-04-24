@@ -38,7 +38,11 @@ interface UseServerMatchClockResult {
   clearClockState: () => void;
 }
 
-function calculateElapsedSeconds(
+function msToS(elapsedMs: number): number {
+  return Math.floor(elapsedMs / 1000);
+}
+
+function calculateElapsedMs(
   startedAtMs: number | null,
   sortedToggleTimes: number[],
   nowMs: number,
@@ -59,9 +63,7 @@ function calculateElapsedSeconds(
       ? sortedToggleTimes[sortedToggleTimes.length - 1]
       : nowMs;
 
-  return Math.floor(
-    Math.max(0, effectiveNowMs - startedAtMs - completedPausedMs) / 1000,
-  );
+  return Math.max(0, effectiveNowMs - startedAtMs - completedPausedMs);
 }
 
 export function useServerMatchClock({
@@ -171,17 +173,19 @@ export function useServerMatchClock({
     [activeGamePauseToggles],
   );
 
-  const firstHalfElapsedSeconds = calculateElapsedSeconds(
+  const firstHalfElapsedMs = calculateElapsedMs(
     localHalfStarts.firstHalfStartedAtMs,
     firstHalfToggleTimes,
     nowMs,
   );
+  const firstHalfElapsedSeconds = msToS(firstHalfElapsedMs);
 
-  const secondHalfElapsedSeconds = calculateElapsedSeconds(
+  const secondHalfElapsedMs = calculateElapsedMs(
     localHalfStarts.secondHalfStartedAtMs,
     secondHalfToggleTimes,
     nowMs,
   );
+  const secondHalfElapsedSeconds = msToS(secondHalfElapsedMs);
 
   const firstHalfPaused = firstHalfToggleTimes.length % 2 === 1;
   const secondHalfPaused = secondHalfToggleTimes.length % 2 === 1;
@@ -197,26 +201,47 @@ export function useServerMatchClock({
     matchStatus === "secondHalf"
       ? secondHalfElapsedSeconds
       : firstHalfElapsedSeconds;
+  const displayedElapsedMs =
+    matchStatus === "secondHalf" ? secondHalfElapsedMs : firstHalfElapsedMs;
 
   const stopwatch = useStopwatch({
     autoStart: false,
     offsetTimestamp: new Date(),
+    interval: 100,
   });
-  const { minutes, pause, reset, seconds, start, totalSeconds } = stopwatch;
+  const {
+    minutes,
+    pause,
+    reset,
+    seconds,
+    start,
+    totalMilliseconds,
+    totalSeconds,
+  } = stopwatch;
 
   const displayClockKey = `${activeGameData?.gameId ?? "none"}:${
     matchStatus === "secondHalf" ? "secondHalf" : "firstHalf"
   }`;
-  const previousDisplayClockKeyRef = useRef(displayClockKey);
+  const previousDisplayClockKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (previousDisplayClockKeyRef.current === displayClockKey) {
+    const isKeyChanged = previousDisplayClockKeyRef.current !== displayClockKey;
+    const needsInitialHydration =
+      totalMilliseconds === 0 && displayedElapsedMs > 0;
+
+    if (!isKeyChanged && !needsInitialHydration) {
       return;
     }
 
     previousDisplayClockKeyRef.current = displayClockKey;
-    reset(new Date(Date.now() + displayedSeconds * 1000), isRunning);
-  }, [displayClockKey, displayedSeconds, isRunning, reset]);
+    reset(new Date(Date.now() + displayedElapsedMs), isRunning);
+  }, [
+    displayClockKey,
+    displayedElapsedMs,
+    isRunning,
+    reset,
+    totalMilliseconds,
+  ]);
 
   const previousRunningRef = useRef(isRunning);
 
@@ -234,9 +259,10 @@ export function useServerMatchClock({
 
     pause();
     // Freeze exactly on server-derived elapsed when pausing.
-    reset(new Date(Date.now() + displayedSeconds * 1000), false);
-  }, [displayedSeconds, isRunning, pause, reset, start]);
+    reset(new Date(Date.now() + displayedElapsedMs), false);
+  }, [displayedElapsedMs, isRunning, pause, reset, start]);
 
+  const pendingCorrectionMsRef = useRef(0);
   const lastStopwatchResyncSecondRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -249,9 +275,62 @@ export function useServerMatchClock({
     }
 
     lastStopwatchResyncSecondRef.current = displayedSeconds;
-    reset(new Date(Date.now() + displayedSeconds * 1000), true);
+    const authoritativeMs = displayedSeconds * 1000;
+    const driftMs = authoritativeMs - totalMilliseconds;
+
+    // Ignore tiny discrepancies and smooth larger corrections over time.
+    if (Math.abs(driftMs) >= 120) {
+      const accumulated = pendingCorrectionMsRef.current + driftMs;
+      pendingCorrectionMsRef.current = Math.max(
+        -3000,
+        Math.min(3000, accumulated),
+      );
+    }
+
     void syncServerOffset();
-  }, [displayedSeconds, isRunning, reset, syncServerOffset]);
+  }, [displayedSeconds, isRunning, syncServerOffset, totalMilliseconds]);
+
+  const lastCorrectionSecondRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!isRunning) {
+      return;
+    }
+
+    if (pendingCorrectionMsRef.current === 0) {
+      return;
+    }
+
+    if (lastCorrectionSecondRef.current === totalSeconds) {
+      return;
+    }
+
+    lastCorrectionSecondRef.current = totalSeconds;
+
+    const maxStepPerSecondMs = 150;
+    const stepMs =
+      pendingCorrectionMsRef.current > 0
+        ? Math.min(maxStepPerSecondMs, pendingCorrectionMsRef.current)
+        : Math.max(-maxStepPerSecondMs, pendingCorrectionMsRef.current);
+
+    pendingCorrectionMsRef.current -= stepMs;
+
+    const adjustedElapsedMs = Math.max(0, totalMilliseconds + stepMs);
+    const secondFloorMs = totalSeconds * 1000;
+    const secondCeilMs = secondFloorMs + 999;
+
+    // Never let correction cross second boundaries; carry leftovers to next tick.
+    const boundedAdjustedElapsedMs = Math.max(
+      secondFloorMs,
+      Math.min(secondCeilMs, adjustedElapsedMs),
+    );
+
+    if (boundedAdjustedElapsedMs === totalMilliseconds) {
+      return;
+    }
+
+    reset(new Date(Date.now() + boundedAdjustedElapsedMs), true);
+  }, [isRunning, reset, totalMilliseconds, totalSeconds]);
 
   const nextPauseToggleIdRef = useRef(1);
 
