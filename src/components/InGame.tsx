@@ -44,7 +44,7 @@ import {
   initialInGameControlsState,
   type MatchStatus,
 } from "@/inGameControlsAtoms";
-import { upsertGamesMutation } from "@/server/api/client";
+import { useServerMatchClock } from "@/useServerMatchClock";
 
 function insertPlayerEvent(partialEvent: unknown): void {
   try {
@@ -57,32 +57,6 @@ function insertPlayerEvent(partialEvent: unknown): void {
       console.error("Failed to insert player event:", error);
     }
   }
-}
-
-function calculateElapsedSeconds(
-  startedAtMs: number | null,
-  sortedToggleTimes: number[],
-  nowMs: number,
-): number {
-  if (startedAtMs === null) {
-    return 0;
-  }
-
-  let completedPausedMs = 0;
-
-  for (let index = 0; index + 1 < sortedToggleTimes.length; index += 2) {
-    completedPausedMs +=
-      sortedToggleTimes[index + 1] - sortedToggleTimes[index];
-  }
-
-  const effectiveNowMs =
-    sortedToggleTimes.length % 2 === 1
-      ? sortedToggleTimes[sortedToggleTimes.length - 1]
-      : nowMs;
-
-  return Math.floor(
-    Math.max(0, effectiveNowMs - startedAtMs - completedPausedMs) / 1000,
-  );
 }
 
 function InGame() {
@@ -113,72 +87,12 @@ function InGame() {
       .findOne(),
   );
 
-  const lastPauseToggle = useLiveSuspenseQuery((q) =>
-    q
-      .from({ pauseToggle: pauseTogglesCollection })
-      .orderBy(({ pauseToggle }) => pauseToggle.id, "desc")
-      .findOne(),
-  );
-
   const activeGameData = activeGame.data;
   const activeGameRecord = activeGameData
     ? (games.data.find((game) => game.id === activeGameData.gameId) ?? null)
     : null;
 
-  const [localHalfStarts, setLocalHalfStarts] = useState<{
-    firstHalfStartedAtMs: number | null;
-    secondHalfStartedAtMs: number | null;
-  }>({
-    firstHalfStartedAtMs: null,
-    secondHalfStartedAtMs: null,
-  });
-
-  useEffect(() => {
-    setLocalHalfStarts({
-      firstHalfStartedAtMs: activeGameRecord?.firstHalfStartedAtMs ?? null,
-      secondHalfStartedAtMs: activeGameRecord?.secondHalfStartedAtMs ?? null,
-    });
-  }, [
-    activeGameRecord?.firstHalfStartedAtMs,
-    activeGameRecord?.secondHalfStartedAtMs,
-  ]);
-
-  const [nowMs, setNowMs] = useState(() => Date.now());
-
-  useEffect(() => {
-    if (!activeGameData) {
-      return;
-    }
-
-    const intervalId = window.setInterval(() => {
-      setNowMs(Date.now());
-    }, 1000);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [activeGameData]);
-
   const [matchStatus, setMatchStatus] = useState<MatchStatus | null>(null);
-
-  useEffect(() => {
-    if (matchStatus !== null) {
-      return;
-    }
-
-    if (localHalfStarts.secondHalfStartedAtMs !== null) {
-      setMatchStatus("secondHalf");
-      return;
-    }
-
-    if (localHalfStarts.firstHalfStartedAtMs !== null) {
-      setMatchStatus("firstHalf");
-    }
-  }, [
-    localHalfStarts.firstHalfStartedAtMs,
-    localHalfStarts.secondHalfStartedAtMs,
-    matchStatus,
-  ]);
 
   const [state, send] = useMachine(
     eventMachine.provide({
@@ -192,98 +106,29 @@ function InGame() {
   );
 
   const nextEventId = (lastEvent.data?.id ?? 0) + 1;
-  const nextPauseToggleId = (lastPauseToggle.data?.id ?? 0) + 1;
 
   const selectedTeamPlayers = teamPlayers.data
     .filter((player) => player.teamId === activeGame.data?.homeTeamId)
     .sort((left, right) => left.number - right.number);
 
-  const activeGamePauseToggles = activeGameData
-    ? pauseToggles.data.filter(
-        (toggle) => toggle.gameId === activeGameData.gameId,
-      )
-    : [];
-
-  const firstHalfToggleTimes = activeGamePauseToggles
-    .filter((toggle) => toggle.half === "firstHalf")
-    .map((toggle) => toggle.toggledAtMs)
-    .sort((left, right) => left - right);
-
-  const secondHalfToggleTimes = activeGamePauseToggles
-    .filter((toggle) => toggle.half === "secondHalf")
-    .map((toggle) => toggle.toggledAtMs)
-    .sort((left, right) => left - right);
-
-  const firstHalfElapsedSeconds = calculateElapsedSeconds(
-    localHalfStarts.firstHalfStartedAtMs,
-    firstHalfToggleTimes,
-    nowMs,
-  );
-
-  const secondHalfElapsedSeconds = calculateElapsedSeconds(
-    localHalfStarts.secondHalfStartedAtMs,
-    secondHalfToggleTimes,
-    nowMs,
-  );
-
-  const firstHalfPaused = firstHalfToggleTimes.length % 2 === 1;
-  const secondHalfPaused = secondHalfToggleTimes.length % 2 === 1;
-
-  const isRunning =
-    matchStatus === "firstHalf"
-      ? localHalfStarts.firstHalfStartedAtMs !== null && !firstHalfPaused
-      : matchStatus === "secondHalf"
-        ? localHalfStarts.secondHalfStartedAtMs !== null && !secondHalfPaused
-        : false;
-
-  const displayedSeconds =
-    matchStatus === "secondHalf"
-      ? secondHalfElapsedSeconds
-      : firstHalfElapsedSeconds;
-  const minutes = Math.floor(displayedSeconds / 60);
-  const seconds = displayedSeconds % 60;
-
-  const eventElapsedSeconds =
-    matchStatus === "secondHalf"
-      ? secondHalfElapsedSeconds
-      : firstHalfElapsedSeconds;
-
-  const persistHalfStarts = useCallback(
-    async (
-      firstHalfStartedAtMs: number | null,
-      secondHalfStartedAtMs: number | null,
-    ) => {
-      if (!activeGameRecord) {
-        return;
-      }
-
-      const updatedGame = {
-        ...activeGameRecord,
-        firstHalfStartedAtMs,
-        secondHalfStartedAtMs,
-      };
-
-      setLocalHalfStarts({ firstHalfStartedAtMs, secondHalfStartedAtMs });
-      await upsertGamesMutation([updatedGame]);
-    },
-    [activeGameRecord],
-  );
-
-  const appendPauseToggle = useCallback(
-    (half: "firstHalf" | "secondHalf") => {
-      if (!activeGameData) {
-        return;
-      }
-
-      pauseTogglesCollection.insert({
-        id: nextPauseToggleId,
-        gameId: activeGameData.gameId,
-        half,
-        toggledAtMs: Date.now(),
-      });
-    },
-    [activeGameData, nextPauseToggleId],
-  );
+  const {
+    activeGamePauseToggles,
+    clearClockState,
+    eventElapsedSeconds,
+    isRunning,
+    minutes,
+    seconds,
+    startFirstHalf,
+    startHalftime,
+    startSecondHalf,
+    togglePause,
+  } = useServerMatchClock({
+    activeGameData,
+    activeGameRecord,
+    pauseToggles: pauseToggles.data,
+    matchStatus,
+    setMatchStatus,
+  });
 
   const handleClearGame = useCallback(() => {
     if (activeGameData) {
@@ -300,56 +145,13 @@ function InGame() {
       activeGameCollection.delete(activeGameData.id);
     }
 
-    setLocalHalfStarts({
-      firstHalfStartedAtMs: null,
-      secondHalfStartedAtMs: null,
-    });
-    setMatchStatus(null);
-  }, [activeGameData, activeGamePauseToggles, playerEvents.data]);
-
-  const handleStartFirstHalf = useCallback(() => {
-    const now = Date.now();
-    void persistHalfStarts(
-      localHalfStarts.firstHalfStartedAtMs ?? now,
-      localHalfStarts.secondHalfStartedAtMs,
-    );
-    setMatchStatus("firstHalf");
+    clearClockState();
   }, [
-    localHalfStarts.firstHalfStartedAtMs,
-    localHalfStarts.secondHalfStartedAtMs,
-    persistHalfStarts,
+    activeGameData,
+    activeGamePauseToggles,
+    clearClockState,
+    playerEvents.data,
   ]);
-
-  const handleStartSecondHalf = useCallback(() => {
-    const now = Date.now();
-    void persistHalfStarts(
-      localHalfStarts.firstHalfStartedAtMs,
-      localHalfStarts.secondHalfStartedAtMs ?? now,
-    );
-    setMatchStatus("secondHalf");
-  }, [
-    localHalfStarts.firstHalfStartedAtMs,
-    localHalfStarts.secondHalfStartedAtMs,
-    persistHalfStarts,
-  ]);
-
-  const handleStartHalftime = useCallback(() => {
-    if (matchStatus === "firstHalf" && !firstHalfPaused) {
-      appendPauseToggle("firstHalf");
-    }
-    setMatchStatus("halftime");
-  }, [appendPauseToggle, firstHalfPaused, matchStatus]);
-
-  const handleTogglePause = useCallback(() => {
-    if (matchStatus === "firstHalf") {
-      appendPauseToggle("firstHalf");
-      return;
-    }
-
-    if (matchStatus === "secondHalf") {
-      appendPauseToggle("secondHalf");
-    }
-  }, [appendPauseToggle, matchStatus]);
 
   const handleStartEvent = (eventGroup: EventGroup) => {
     if (!activeGame.data) {
@@ -376,10 +178,10 @@ function InGame() {
       matchStatus,
       isRunning,
       onClearGame: handleClearGame,
-      onStartFirstHalf: handleStartFirstHalf,
-      onStartSecondHalf: handleStartSecondHalf,
-      onStartHalftime: handleStartHalftime,
-      onTogglePause: handleTogglePause,
+      onStartFirstHalf: startFirstHalf,
+      onStartSecondHalf: startSecondHalf,
+      onStartHalftime: startHalftime,
+      onTogglePause: togglePause,
     });
 
     return () => {
@@ -387,13 +189,13 @@ function InGame() {
     };
   }, [
     handleClearGame,
-    handleStartFirstHalf,
-    handleStartHalftime,
-    handleStartSecondHalf,
-    handleTogglePause,
     isRunning,
     matchStatus,
     setInGameControls,
+    startFirstHalf,
+    startHalftime,
+    startSecondHalf,
+    togglePause,
   ]);
 
   return (
