@@ -352,7 +352,9 @@ export function useServerMatchClock({
         return;
       }
 
-      await gamesCollection.update(activeGameRecord.id, {
+      // TODO(test): make this `writeUpdate` fail in purpose to test that the UI stays consistent.
+      await gamesCollection.utils.writeUpdate({
+        id: activeGameRecord.id,
         firstHalfStartedAtMs,
         secondHalfStartedAtMs,
       });
