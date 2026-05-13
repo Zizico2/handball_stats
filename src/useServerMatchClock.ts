@@ -9,13 +9,10 @@ import {
   useState,
 } from "react";
 import { useStopwatch } from "react-timer-hook";
-import { pauseTogglesCollection } from "@/collections";
+import { gamesCollection, pauseTogglesCollection } from "@/collections";
 import type { ActiveGame, Game, PauseToggle } from "@/datamodel";
 import type { MatchStatus } from "@/inGameControlsAtoms";
-import {
-  getMatchClockSnapshotQuery,
-  upsertGamesMutation,
-} from "@/server/api/client";
+import { getMatchClockSnapshotQuery } from "@/server/api/client";
 import { useNow } from "@/useNow";
 
 interface UseServerMatchClockOptions {
@@ -355,14 +352,11 @@ export function useServerMatchClock({
         return;
       }
 
-      const updatedGame: Game = {
-        ...activeGameRecord,
+      setLocalHalfStarts({ firstHalfStartedAtMs, secondHalfStartedAtMs });
+      await gamesCollection.update(activeGameRecord.id, {
         firstHalfStartedAtMs,
         secondHalfStartedAtMs,
-      };
-
-      setLocalHalfStarts({ firstHalfStartedAtMs, secondHalfStartedAtMs });
-      await upsertGamesMutation([updatedGame]);
+      });
     },
     [activeGameRecord],
   );
