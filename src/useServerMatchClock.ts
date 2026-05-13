@@ -207,7 +207,7 @@ export function useServerMatchClock({
   const stopwatch = useStopwatch({
     autoStart: false,
     offsetTimestamp: new Date(),
-    interval: 100,
+    interval: 1000,
   });
   const {
     minutes,
