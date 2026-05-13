@@ -352,11 +352,11 @@ export function useServerMatchClock({
         return;
       }
 
-      setLocalHalfStarts({ firstHalfStartedAtMs, secondHalfStartedAtMs });
       await gamesCollection.update(activeGameRecord.id, {
         firstHalfStartedAtMs,
         secondHalfStartedAtMs,
       });
+      setLocalHalfStarts({ firstHalfStartedAtMs, secondHalfStartedAtMs });
     },
     [activeGameRecord],
   );
