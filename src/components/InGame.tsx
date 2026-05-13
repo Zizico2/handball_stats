@@ -68,6 +68,9 @@ function InGame() {
 
   const games = useLiveSuspenseQuery((q) => q.from({ game: gamesCollection }));
 
+  // TODO: should the `activeGameCollection` "join" with the `gamesCollection` to get the info directly?
+  // TODO: having this logic in a UI components feels off. Maybe there's a notion of "derived collections",
+  // TODO: or some sort of service layer where this kind of logic can live?
   const activeGame = useLiveSuspenseQuery((q) =>
     q.from({ activeGame: activeGameCollection }).findOne(),
   );
@@ -84,6 +87,7 @@ function InGame() {
   );
 
   const activeGameData = activeGame.data ?? null;
+
   const activeGameRecord = activeGameData
     ? (games.data.find((game) => game.id === activeGameData.gameId) ?? null)
     : null;
