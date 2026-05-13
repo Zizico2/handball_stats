@@ -352,12 +352,16 @@ export function useServerMatchClock({
         return;
       }
 
-      // TODO(test): make this `writeUpdate` fail in purpose to test that the UI stays consistent.
-      await gamesCollection.utils.writeUpdate({
-        id: activeGameRecord.id,
-        firstHalfStartedAtMs,
-        secondHalfStartedAtMs,
-      });
+      // TODO(test): make this `update` fail in purpose to test that the UI stays consistent.
+      await gamesCollection.update(
+        activeGameRecord.id,
+
+        (draft) => {
+          draft.firstHalfStartedAtMs = firstHalfStartedAtMs;
+          draft.secondHalfStartedAtMs = secondHalfStartedAtMs;
+        },
+      );
+
       setLocalHalfStarts({ firstHalfStartedAtMs, secondHalfStartedAtMs });
     },
     [activeGameRecord],
