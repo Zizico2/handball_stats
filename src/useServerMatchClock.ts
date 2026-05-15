@@ -241,6 +241,7 @@ export function useServerMatchClock({
 
     previousDisplayClockKeyRef.current = displayClockKey;
 
+    // TODO; should there be some "clear" utility?
     if (isKeyChanged) {
       pendingCorrectionMsRef.current = 0;
       lastStopwatchResyncSecondRef.current = -1;
