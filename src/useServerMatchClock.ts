@@ -438,12 +438,13 @@ export function useServerMatchClock({
   }, [appendPauseToggle, matchStatus]);
 
   const clearClockState = useCallback(() => {
+    reset(new Date(), false);
     setLocalHalfStarts({
       firstHalfStartedAtMs: null,
       secondHalfStartedAtMs: null,
     });
     setMatchStatus(null);
-  }, [setMatchStatus]);
+  }, [reset, setMatchStatus]);
 
   return {
     minutes,
