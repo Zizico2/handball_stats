@@ -46,7 +46,7 @@ function calculateHalfElapsedSeconds(
 export async function getMatchClockSnapshot(
   userId: string,
   gameLocalId: number,
-  nowMs: number = Date.now(),
+  nowMs: number,
 ): Promise<MatchClockSnapshot> {
   const db = await getDb();
 

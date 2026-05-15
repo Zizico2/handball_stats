@@ -98,6 +98,10 @@ export function useServerMatchClock({
     void syncServerOffset();
   }, [activeGameData, syncServerOffset]);
 
+  // TODO: I don't love that we have to duplicate the server-derived half start times in local state
+  // TODO: Tanstack DB should provide some facilities for this kind of "derive local state from server data" pattern that we have to implement manually here.
+  // TODO: maybe there's a derived collection or something. or maybe a query collection can be repurposed for this.
+
   const [localHalfStarts, setLocalHalfStarts] = useState<{
     firstHalfStartedAtMs: number | null;
     secondHalfStartedAtMs: number | null;
@@ -353,14 +357,10 @@ export function useServerMatchClock({
       }
 
       // TODO(test): make this `update` fail in purpose to test that the UI stays consistent.
-      await gamesCollection.update(
-        activeGameRecord.id,
-
-        (draft) => {
-          draft.firstHalfStartedAtMs = firstHalfStartedAtMs;
-          draft.secondHalfStartedAtMs = secondHalfStartedAtMs;
-        },
-      );
+      gamesCollection.update(activeGameRecord.id, (draft) => {
+        draft.firstHalfStartedAtMs = firstHalfStartedAtMs;
+        draft.secondHalfStartedAtMs = secondHalfStartedAtMs;
+      });
 
       setLocalHalfStarts({ firstHalfStartedAtMs, secondHalfStartedAtMs });
     },

@@ -22,26 +22,22 @@ export const playerEventsRoutes = new Hono()
     const items = c.req.valid("json");
     const userId = await requireUserId();
     const db = await getDb();
-    const gameIds = [...new Set(items.map((item) => item.game_id))];
-    const snapshotsByGameId = new Map(
-      await Promise.all(
-        gameIds.map(async (gameId) => {
-          const snapshot = await getMatchClockSnapshot(userId, gameId);
-          return [gameId, snapshot.activeElapsedSeconds] as const;
-        }),
-      ),
-    );
-    const rowsWithServerElapsed = items.map((item) => {
-      const ellapsedSeconds = snapshotsByGameId.get(item.game_id);
 
-      return playerEventToDbRow(
-        {
-          ...item,
-          ellapsed_seconds: ellapsedSeconds,
-        },
-        userId,
-      );
-    });
+    const nowMs = Date.now();
+    const rowsWithServerElapsed = await Promise.all(
+      items.map(async (item) => {
+        const { activeElapsedSeconds } = await getMatchClockSnapshot(
+          userId,
+          item.game_id,
+          nowMs,
+        );
+        return playerEventToDbRow(
+          { ...item, ellapsed_seconds: activeElapsedSeconds },
+          userId,
+        );
+      }),
+    );
+
     const inserted = await db
       .insert(schema.playerEvents)
       .values(rowsWithServerElapsed)
