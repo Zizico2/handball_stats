@@ -25,7 +25,7 @@ export const playerEventsRoutes = new Hono()
 
     const nowMs = Date.now();
     const uniqueGameIds = [...new Set(items.map((item) => item.game_id))];
-    const elapsedSecondsByGameId = new Map<string, number>();
+    const elapsedSecondsByGameId = new Map<number, number>();
 
     await Promise.all(
       uniqueGameIds.map(async (gameId) => {
