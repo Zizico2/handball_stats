@@ -81,13 +81,17 @@ export function useServerMatchClock({
       return;
     }
 
-    const requestedAtMs = Date.now();
-    const snapshot = await getMatchClockSnapshotQuery(activeGameData.gameId);
-    const receivedAtMs = Date.now();
-    const clientMidpointMs = Math.floor((requestedAtMs + receivedAtMs) / 2);
-    const nextOffsetMs = snapshot.serverNowMs - clientMidpointMs;
+    try {
+      const requestedAtMs = Date.now();
+      const snapshot = await getMatchClockSnapshotQuery(activeGameData.gameId);
+      const receivedAtMs = Date.now();
+      const clientMidpointMs = Math.floor((requestedAtMs + receivedAtMs) / 2);
+      const nextOffsetMs = snapshot.serverNowMs - clientMidpointMs;
 
-    setServerOffsetMs(nextOffsetMs);
+      setServerOffsetMs(nextOffsetMs);
+    } catch (error) {
+      console.error("Failed to sync server match clock offset", error);
+    }
   }, [activeGameData]);
 
   useEffect(() => {
