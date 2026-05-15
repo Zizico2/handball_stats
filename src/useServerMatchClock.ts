@@ -289,8 +289,7 @@ export function useServerMatchClock({
     }
 
     lastStopwatchResyncSecondRef.current = displayedSeconds;
-    const authoritativeMs = displayedSeconds * 1000;
-    const driftMs = authoritativeMs - totalMilliseconds;
+    const driftMs = displayedElapsedMs - totalMilliseconds;
 
     // Ignore tiny discrepancies and smooth larger corrections over time.
     if (Math.abs(driftMs) >= 120) {
@@ -302,7 +301,13 @@ export function useServerMatchClock({
     }
 
     void syncServerOffset();
-  }, [displayedSeconds, isRunning, syncServerOffset, totalMilliseconds]);
+  }, [
+    displayedElapsedMs,
+    displayedSeconds,
+    isRunning,
+    syncServerOffset,
+    totalMilliseconds,
+  ]);
 
   const lastCorrectionSecondRef = useRef<number | null>(null);
 
