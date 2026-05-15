@@ -76,6 +76,7 @@ export function useServerMatchClock({
 
   const [serverOffsetMs, setServerOffsetMs] = useState(0);
 
+  // TODO: how exactly does this work?
   const syncServerOffset = useCallback(async () => {
     if (!activeGameData) {
       return;
