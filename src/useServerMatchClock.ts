@@ -240,6 +240,13 @@ export function useServerMatchClock({
     }
 
     previousDisplayClockKeyRef.current = displayClockKey;
+
+    if (isKeyChanged) {
+      pendingCorrectionMsRef.current = 0;
+      lastStopwatchResyncSecondRef.current = -1;
+      lastCorrectionSecondRef.current = -1;
+    }
+
     reset(new Date(Date.now() + displayedElapsedMs), isRunning);
   }, [
     displayClockKey,
