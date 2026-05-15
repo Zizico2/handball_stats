@@ -24,18 +24,28 @@ export const playerEventsRoutes = new Hono()
     const db = await getDb();
 
     const nowMs = Date.now();
-    const rowsWithServerElapsed = await Promise.all(
-      items.map(async (item) => {
+    const uniqueGameIds = [...new Set(items.map((item) => item.game_id))];
+    const elapsedSecondsByGameId = new Map<string, number>();
+
+    await Promise.all(
+      uniqueGameIds.map(async (gameId) => {
         const { activeElapsedSeconds } = await getMatchClockSnapshot(
           userId,
-          item.game_id,
+          gameId,
           nowMs,
         );
-        return playerEventToDbRow(
-          { ...item, ellapsed_seconds: activeElapsedSeconds },
-          userId,
-        );
+        elapsedSecondsByGameId.set(gameId, activeElapsedSeconds);
       }),
+    );
+
+    const rowsWithServerElapsed = items.map((item) =>
+      playerEventToDbRow(
+        {
+          ...item,
+          ellapsed_seconds: elapsedSecondsByGameId.get(item.game_id) ?? 0,
+        },
+        userId,
+      ),
     );
 
     const inserted = await db
