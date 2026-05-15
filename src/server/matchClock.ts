@@ -118,8 +118,7 @@ export async function getMatchClockSnapshot(
   const activeHalf: MatchHalf | null =
     gameRow.firstHalfStartedAtMs === null
       ? null
-      : gameRow.secondHalfStartedAtMs !== null &&
-          nowMs >= gameRow.secondHalfStartedAtMs
+      : gameRow.secondHalfStartedAtMs !== null
         ? "secondHalf"
         : "firstHalf";
 
