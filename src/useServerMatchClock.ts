@@ -369,7 +369,7 @@ export function useServerMatchClock({
         return;
       }
 
-      // TODO(test): make this `update` fail in purpose to test that the UI stays consistent.
+      // TODO(test): make this `update` fail on purpose to test that the UI stays consistent.
       gamesCollection.update(activeGameRecord.id, (draft) => {
         draft.firstHalfStartedAtMs = firstHalfStartedAtMs;
         draft.secondHalfStartedAtMs = secondHalfStartedAtMs;
