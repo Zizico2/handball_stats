@@ -71,15 +71,15 @@ export const pauseToggles = sqliteTable(
   {
     id: integer().primaryKey(),
     userId: text("user_id").notNull(),
-    localId: integer("local_id").notNull(),
+    // localId: integer("local_id").notNull(),
     gameLocalId: integer("game_local_id").notNull(),
     half: text("half").notNull(),
     toggledAtMs: integer("toggled_at_ms").notNull(),
   },
   (table) => [
-    uniqueIndex("pause_toggles_user_id_local_id_uq").on(
+    uniqueIndex("pause_toggles_user_id_toggled_at_ms_uq").on(
       table.userId,
-      table.localId,
+      table.toggledAtMs,
     ),
     foreignKey({
       columns: [table.userId, table.gameLocalId],

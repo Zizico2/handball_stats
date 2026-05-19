@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "e3389d85-e4f6-452f-8d0f-74df308920df",
+  "id": "c21fd34e-f107-445a-bbd9-9710f51f44d1",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -167,16 +167,6 @@
       "default": null,
       "generated": null,
       "name": "user_id",
-      "entityType": "columns",
-      "table": "pause_toggles"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "local_id",
       "entityType": "columns",
       "table": "pause_toggles"
     },
@@ -619,14 +609,14 @@
           "isExpression": false
         },
         {
-          "value": "local_id",
+          "value": "toggled_at_ms",
           "isExpression": false
         }
       ],
       "isUnique": true,
       "where": null,
       "origin": "manual",
-      "name": "pause_toggles_user_id_local_id_uq",
+      "name": "pause_toggles_user_id_toggled_at_ms_uq",
       "entityType": "indexes",
       "table": "pause_toggles"
     },

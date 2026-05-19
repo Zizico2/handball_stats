@@ -350,19 +350,19 @@ export function useServerMatchClock({
     reset(new Date(Date.now() + boundedAdjustedElapsedMs), true);
   }, [isRunning, reset, totalMilliseconds, totalSeconds]);
 
-  const nextPauseToggleIdRef = useRef(1);
+  // const nextPauseToggleIdRef = useRef(1);
 
-  useEffect(() => {
-    const nextPauseToggleId =
-      pauseToggles.reduce(
-        (currentMax, pauseToggle) => Math.max(currentMax, pauseToggle.id),
-        0,
-      ) + 1;
+  // useEffect(() => {
+  //   const nextPauseToggleId =
+  //     pauseToggles.reduce(
+  //       (currentMax, pauseToggle) => Math.max(currentMax, pauseToggle.id),
+  //       0,
+  //     ) + 1;
 
-    if (nextPauseToggleIdRef.current < nextPauseToggleId) {
-      nextPauseToggleIdRef.current = nextPauseToggleId;
-    }
-  }, [pauseToggles]);
+  //   if (nextPauseToggleIdRef.current < nextPauseToggleId) {
+  //     nextPauseToggleIdRef.current = nextPauseToggleId;
+  //   }
+  // }, [pauseToggles]);
 
   const persistHalfStarts = useCallback(
     async (
@@ -391,13 +391,13 @@ export function useServerMatchClock({
       }
 
       pauseTogglesCollection.insert({
-        id: nextPauseToggleIdRef.current,
+        // id: nextPauseToggleIdRef.current,
         gameId: activeGameData.gameId,
         half,
         toggledAtMs: getCorrectedNowMs(),
       });
 
-      nextPauseToggleIdRef.current += 1;
+      // nextPauseToggleIdRef.current += 1;
     },
     [activeGameData, getCorrectedNowMs],
   );

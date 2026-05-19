@@ -1,5 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, asc } from "drizzle-orm";
 import { Hono } from "hono";
 import { dbRowToPauseToggle, pauseToggleToDbRow } from "@/db";
 import * as schema from "@/db/schema";
@@ -13,7 +13,9 @@ export const pauseTogglesRoutes = new Hono()
     const rows = await db
       .select()
       .from(schema.pauseToggles)
-      .where(eq(schema.pauseToggles.userId, userId));
+      .where(eq(schema.pauseToggles.userId, userId))
+      .orderBy(asc(schema.pauseToggles.toggledAtMs));
+
 
     return c.json(rows.map(dbRowToPauseToggle));
   })
@@ -28,6 +30,7 @@ export const pauseTogglesRoutes = new Hono()
 
     return c.json(inserted.map(dbRowToPauseToggle));
   })
+  // TODO: update this. how can I delete this?
   .delete("/", zValidator("json", idsSchema), async (c) => {
     const ids = c.req.valid("json");
     const userId = await requireUserId();
@@ -42,7 +45,8 @@ export const pauseTogglesRoutes = new Hono()
       .where(
         and(
           eq(schema.pauseToggles.userId, userId),
-          inArray(schema.pauseToggles.localId, ids),
+          // eq(schema.pauseToggles.gameLocalId, ids[0].gameLocalId),
+          // inArray(schema.pauseToggles.localId, ids),
         ),
       );
 

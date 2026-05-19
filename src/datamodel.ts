@@ -283,7 +283,7 @@ export const gameSchema = z.object({
 export type Game = z.infer<typeof gameSchema>;
 
 export const pauseToggleSchema = z.object({
-  id: z.number(),
+  // id: z.number(),
   gameId: z.number(),
   half: matchHalfSchema,
   toggledAtMs: z.number(),

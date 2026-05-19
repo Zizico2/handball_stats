@@ -130,7 +130,8 @@ export const pauseTogglesCollection = createCollection(
     queryKey: ["pause-toggles"],
     queryClient,
     schema: pauseToggleSchema,
-    getKey: (item: PauseToggle) => item.id,
+    getKey: (item: PauseToggle) => `${item.gameId}-${item.toggledAtMs}`,
+    // TODO: make sure `toggledAtMs` are unique in this function. they don't have to be unique accross the whole DB, but withing the same game, they do, which is what this collection should represent.
     queryFn: listPauseTogglesQuery,
     // TODO: use `Promise.all` or similar to run these in parallel instead of sequentially
     onInsert: async ({ transaction }) => {
