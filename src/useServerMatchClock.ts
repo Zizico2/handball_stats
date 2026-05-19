@@ -391,13 +391,10 @@ export function useServerMatchClock({
       }
 
       pauseTogglesCollection.insert({
-        // id: nextPauseToggleIdRef.current,
         gameId: activeGameData.gameId,
         half,
         toggledAtMs: getCorrectedNowMs(),
       });
-
-      // nextPauseToggleIdRef.current += 1;
     },
     [activeGameData, getCorrectedNowMs],
   );

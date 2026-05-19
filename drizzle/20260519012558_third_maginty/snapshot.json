@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "c21fd34e-f107-445a-bbd9-9710f51f44d1",
+  "id": "c25e3618-b1b7-46df-83a3-667e21921368",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -609,6 +609,10 @@
           "isExpression": false
         },
         {
+          "value": "game_local_id",
+          "isExpression": false
+        },
+        {
           "value": "toggled_at_ms",
           "isExpression": false
         }
@@ -616,7 +620,7 @@
       "isUnique": true,
       "where": null,
       "origin": "manual",
-      "name": "pause_toggles_user_id_toggled_at_ms_uq",
+      "name": "pause_toggles_user_id_game_local_id_toggled_at_ms_uq",
       "entityType": "indexes",
       "table": "pause_toggles"
     },

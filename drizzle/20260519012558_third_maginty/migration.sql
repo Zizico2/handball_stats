@@ -64,7 +64,7 @@ CREATE TABLE `teams` (
 --> statement-breakpoint
 CREATE UNIQUE INDEX `active_game_user_id_local_id_uq` ON `active_game` (`user_id`,`local_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `games_user_id_local_id_uq` ON `games` (`user_id`,`local_id`);--> statement-breakpoint
-CREATE UNIQUE INDEX `pause_toggles_user_id_toggled_at_ms_uq` ON `pause_toggles` (`user_id`,`toggled_at_ms`);--> statement-breakpoint
+CREATE UNIQUE INDEX `pause_toggles_user_id_game_local_id_toggled_at_ms_uq` ON `pause_toggles` (`user_id`,`game_local_id`,`toggled_at_ms`);--> statement-breakpoint
 CREATE UNIQUE INDEX `player_events_user_id_local_id_uq` ON `player_events` (`user_id`,`local_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `team_players_user_id_local_id_uq` ON `team_players` (`user_id`,`local_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `teams_user_id_local_id_uq` ON `teams` (`user_id`,`local_id`);

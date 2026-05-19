@@ -5,6 +5,7 @@ import type {
   ActiveGame,
   Game,
   PauseToggle,
+  PauseToggleDeleteKey,
   PlayerEvent,
   Team,
   TeamPlayer,
@@ -19,12 +20,11 @@ import {
 } from "@/datamodel";
 import {
   createGamesMutation,
-  createPauseTogglesMutation,
   createPlayerEventsMutation,
   createTeamPlayersMutation,
   createTeamsMutation,
   deleteActiveGameMutation,
-  deletePauseTogglesMutation,
+  deletePauseToggleMutation,
   deletePlayerEventsMutation,
   deleteTeamPlayersMutation,
   deleteTeamsMutation,
@@ -36,9 +36,29 @@ import {
   listTeamsQuery,
   upsertActiveGameMutation,
   upsertGamesMutation,
+  upsertPauseToggleMutation,
 } from "@/server/api/client";
 
 const queryClient = new QueryClient();
+
+export function getPauseToggleKey(toggle: {
+  gameId: number;
+  toggledAtMs: number;
+}) {
+  return `${toggle.gameId}:${toggle.toggledAtMs}`;
+}
+
+function parsePauseToggleKey(key: string): PauseToggleDeleteKey {
+  const [gameIdRaw, toggledAtMsRaw] = key.split(":");
+  const gameId = Number(gameIdRaw);
+  const toggledAtMs = Number(toggledAtMsRaw);
+
+  if (!Number.isFinite(gameId) || !Number.isFinite(toggledAtMs)) {
+    throw new Error(`Invalid pause toggle key: ${key}`);
+  }
+
+  return { gameId, toggledAtMs };
+}
 
 export const playerEventsCollection = createCollection(
   queryCollectionOptions({
@@ -130,18 +150,19 @@ export const pauseTogglesCollection = createCollection(
     queryKey: ["pause-toggles"],
     queryClient,
     schema: pauseToggleSchema,
-    getKey: (item: PauseToggle) => `${item.gameId}-${item.toggledAtMs}`,
-    // TODO: make sure `toggledAtMs` are unique in this function. they don't have to be unique accross the whole DB, but withing the same game, they do, which is what this collection should represent.
+    getKey: (item: PauseToggle) => getPauseToggleKey(item),
     queryFn: listPauseTogglesQuery,
     // TODO: use `Promise.all` or similar to run these in parallel instead of sequentially
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
-      await createPauseTogglesMutation(newItems);
+      await Promise.all(
+        newItems.map((item) => upsertPauseToggleMutation(item)),
+      );
     },
     // TODO: use `Promise.all` or similar to run these in parallel instead of sequentially
     onDelete: async ({ transaction }) => {
-      const ids = transaction.mutations.map((m) => m.key);
-      await deletePauseTogglesMutation(ids);
+      const keys = transaction.mutations.map((m) => parsePauseToggleKey(m.key));
+      await Promise.all(keys.map((key) => deletePauseToggleMutation(key)));
     },
   }),
 );

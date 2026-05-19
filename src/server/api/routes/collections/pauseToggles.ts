@@ -1,10 +1,28 @@
 import { zValidator } from "@hono/zod-validator";
-import { and, eq, inArray, asc } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
+import { z } from "zod";
 import { dbRowToPauseToggle, pauseToggleToDbRow } from "@/db";
 import * as schema from "@/db/schema";
 import { getDb } from "@/server/db";
-import { idsSchema, pauseTogglesArraySchema, requireUserId } from "./shared";
+import { requireUserId, upsertPauseToggleBodySchema } from "./shared";
+
+const pauseToggleResourceIdSchema = z.object({
+  pauseToggleId: z.string().min(1),
+});
+
+function decodePauseToggleResourceId(resourceId: string) {
+  const decoded = decodeURIComponent(resourceId);
+  const [gameIdRaw, toggledAtMsRaw] = decoded.split(":");
+  const gameId = Number(gameIdRaw);
+  const toggledAtMs = Number(toggledAtMsRaw);
+
+  if (!Number.isInteger(gameId) || !Number.isInteger(toggledAtMs)) {
+    throw new Error(`Invalid pause toggle resource id: ${resourceId}`);
+  }
+
+  return { gameId, toggledAtMs };
+}
 
 export const pauseTogglesRoutes = new Hono()
   .get("/", async (c) => {
@@ -16,39 +34,88 @@ export const pauseTogglesRoutes = new Hono()
       .where(eq(schema.pauseToggles.userId, userId))
       .orderBy(asc(schema.pauseToggles.toggledAtMs));
 
-
     return c.json(rows.map(dbRowToPauseToggle));
   })
-  .post("/", zValidator("json", pauseTogglesArraySchema), async (c) => {
-    const items = c.req.valid("json");
-    const userId = await requireUserId();
-    const db = await getDb();
-    const inserted = await db
-      .insert(schema.pauseToggles)
-      .values(items.map((item) => pauseToggleToDbRow(item, userId)))
-      .returning();
+  .put(
+    "/:pauseToggleId",
+    zValidator("param", pauseToggleResourceIdSchema),
+    zValidator("json", upsertPauseToggleBodySchema),
+    async (c) => {
+      const { pauseToggleId } = c.req.valid("param");
+      const { half } = c.req.valid("json");
+      const userId = await requireUserId();
+      const db = await getDb();
+      const { gameId, toggledAtMs } =
+        decodePauseToggleResourceId(pauseToggleId);
 
-    return c.json(inserted.map(dbRowToPauseToggle));
-  })
-  // TODO: update this. how can I delete this?
-  .delete("/", zValidator("json", idsSchema), async (c) => {
-    const ids = c.req.valid("json");
-    const userId = await requireUserId();
-    const db = await getDb();
+      const inserted = await db
+        .insert(schema.pauseToggles)
+        .values(
+          pauseToggleToDbRow(
+            {
+              gameId,
+              half,
+              toggledAtMs,
+            },
+            userId,
+          ),
+        )
+        .onConflictDoNothing({
+          target: [
+            schema.pauseToggles.userId,
+            schema.pauseToggles.gameLocalId,
+            schema.pauseToggles.toggledAtMs,
+          ],
+        })
+        .returning();
 
-    if (ids.length === 0) {
-      return c.body(null, 204);
-    }
+      if (inserted.length > 0) {
+        return c.json(dbRowToPauseToggle(inserted[0]));
+      }
 
-    await db
-      .delete(schema.pauseToggles)
-      .where(
-        and(
-          eq(schema.pauseToggles.userId, userId),
-          // eq(schema.pauseToggles.gameLocalId, ids[0].gameLocalId),
-          // inArray(schema.pauseToggles.localId, ids),
-        ),
+      const existing = await db
+        .select()
+        .from(schema.pauseToggles)
+        .where(
+          and(
+            eq(schema.pauseToggles.userId, userId),
+            eq(schema.pauseToggles.gameLocalId, gameId),
+            eq(schema.pauseToggles.toggledAtMs, toggledAtMs),
+          ),
+        )
+        .get();
+
+      return c.json(
+        existing
+          ? dbRowToPauseToggle(existing)
+          : {
+              gameId,
+              half,
+              toggledAtMs,
+            },
       );
+    },
+  )
+  .delete(
+    "/:pauseToggleId",
+    zValidator("param", pauseToggleResourceIdSchema),
+    async (c) => {
+      const { pauseToggleId } = c.req.valid("param");
+      const userId = await requireUserId();
+      const db = await getDb();
+      const { gameId, toggledAtMs } =
+        decodePauseToggleResourceId(pauseToggleId);
 
-    return c.body(null, 204);
-  });
+      await db
+        .delete(schema.pauseToggles)
+        .where(
+          and(
+            eq(schema.pauseToggles.userId, userId),
+            eq(schema.pauseToggles.gameLocalId, gameId),
+            eq(schema.pauseToggles.toggledAtMs, toggledAtMs),
+          ),
+        );
+
+      return c.body(null, 204);
+    },
+  );

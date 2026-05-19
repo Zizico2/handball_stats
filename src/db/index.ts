@@ -3,6 +3,7 @@ import { createSelectSchema } from "drizzle-orm/zod";
 import type {
   ActiveGame,
   Game,
+  InsertPauseToggle,
   MatchHalf,
   PauseToggle,
   PlayerEvent,
@@ -158,7 +159,6 @@ export function gameToDbRow(game: Game, userId: string): DbGameInsert {
 
 export function dbRowToPauseToggle(row: DbPauseToggle): PauseToggle {
   return {
-    id: row.localId,
     gameId: row.gameLocalId,
     half: row.half as MatchHalf,
     toggledAtMs: row.toggledAtMs,
@@ -166,12 +166,11 @@ export function dbRowToPauseToggle(row: DbPauseToggle): PauseToggle {
 }
 
 export function pauseToggleToDbRow(
-  pauseToggle: PauseToggle,
+  pauseToggle: InsertPauseToggle & { toggledAtMs: number },
   userId: string,
 ): DbPauseToggleInsert {
   return {
     userId,
-    localId: pauseToggle.id,
     gameLocalId: pauseToggle.gameId,
     half: pauseToggle.half,
     toggledAtMs: pauseToggle.toggledAtMs,
