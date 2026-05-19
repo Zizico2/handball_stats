@@ -63,6 +63,21 @@ function calculateElapsedMs(
   return Math.max(0, effectiveNowMs - startedAtMs - completedPausedMs);
 }
 
+function inferActiveHalf(
+  firstHalfStartedAtMs: number | null,
+  secondHalfStartedAtMs: number | null,
+): "firstHalf" | "secondHalf" | null {
+  if (secondHalfStartedAtMs !== null) {
+    return "secondHalf";
+  }
+
+  if (firstHalfStartedAtMs !== null) {
+    return "firstHalf";
+  }
+
+  return null;
+}
+
 export function useServerMatchClock({
   activeGameData,
   activeGameRecord,
@@ -151,6 +166,18 @@ export function useServerMatchClock({
     [serverOffsetMs],
   );
 
+  const activeHalf = useMemo(
+    () =>
+      inferActiveHalf(
+        localHalfStarts.firstHalfStartedAtMs,
+        localHalfStarts.secondHalfStartedAtMs,
+      ),
+    [
+      localHalfStarts.firstHalfStartedAtMs,
+      localHalfStarts.secondHalfStartedAtMs,
+    ],
+  );
+
   const activeGamePauseToggles = useMemo(() => {
     if (!activeGameData) {
       return [];
@@ -161,54 +188,28 @@ export function useServerMatchClock({
     );
   }, [activeGameData, pauseToggles]);
 
-  const firstHalfToggleTimes = useMemo(
+  const activeHalfToggleTimes = useMemo(
     () =>
       activeGamePauseToggles
-        .filter((toggle) => toggle.half === "firstHalf")
+        .filter((toggle) => toggle.half === activeHalf)
         .map((toggle) => toggle.toggledAtMs)
         .sort((left, right) => left - right),
-    [activeGamePauseToggles],
+    [activeGamePauseToggles, activeHalf],
   );
 
-  const secondHalfToggleTimes = useMemo(
-    () =>
-      activeGamePauseToggles
-        .filter((toggle) => toggle.half === "secondHalf")
-        .map((toggle) => toggle.toggledAtMs)
-        .sort((left, right) => left - right),
-    [activeGamePauseToggles],
-  );
-
-  const firstHalfElapsedMs = calculateElapsedMs(
-    localHalfStarts.firstHalfStartedAtMs,
-    firstHalfToggleTimes,
+  const activeElapsedMs = calculateElapsedMs(
+    activeHalf === "firstHalf"
+      ? localHalfStarts.firstHalfStartedAtMs
+      : activeHalf === "secondHalf"
+        ? localHalfStarts.secondHalfStartedAtMs
+        : null,
+    activeHalfToggleTimes,
     nowMs,
   );
-  const firstHalfElapsedSeconds = msToS(firstHalfElapsedMs);
+  const activeElapsedSeconds = msToS(activeElapsedMs);
+  const paused = activeHalfToggleTimes.length % 2 === 1;
 
-  const secondHalfElapsedMs = calculateElapsedMs(
-    localHalfStarts.secondHalfStartedAtMs,
-    secondHalfToggleTimes,
-    nowMs,
-  );
-  const secondHalfElapsedSeconds = msToS(secondHalfElapsedMs);
-
-  const firstHalfPaused = firstHalfToggleTimes.length % 2 === 1;
-  const secondHalfPaused = secondHalfToggleTimes.length % 2 === 1;
-
-  const isRunning =
-    matchStatus === "firstHalf"
-      ? localHalfStarts.firstHalfStartedAtMs !== null && !firstHalfPaused
-      : matchStatus === "secondHalf"
-        ? localHalfStarts.secondHalfStartedAtMs !== null && !secondHalfPaused
-        : false;
-
-  const displayedSeconds =
-    matchStatus === "secondHalf"
-      ? secondHalfElapsedSeconds
-      : firstHalfElapsedSeconds;
-  const displayedElapsedMs =
-    matchStatus === "secondHalf" ? secondHalfElapsedMs : firstHalfElapsedMs;
+  const isRunning = activeHalf !== null && !paused;
 
   const stopwatch = useStopwatch({
     autoStart: false,
@@ -226,14 +227,14 @@ export function useServerMatchClock({
   } = stopwatch;
 
   const displayClockKey = `${activeGameData?.gameId ?? "none"}:${
-    matchStatus === "secondHalf" ? "secondHalf" : "firstHalf"
+    activeHalf ?? "firstHalf"
   }`;
   const previousDisplayClockKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     const isKeyChanged = previousDisplayClockKeyRef.current !== displayClockKey;
     const needsInitialHydration =
-      totalMilliseconds === 0 && displayedElapsedMs > 0;
+      totalMilliseconds === 0 && activeElapsedMs > 0;
 
     if (!isKeyChanged && !needsInitialHydration) {
       return;
@@ -248,14 +249,8 @@ export function useServerMatchClock({
       lastCorrectionSecondRef.current = -1;
     }
 
-    reset(new Date(Date.now() + displayedElapsedMs), isRunning);
-  }, [
-    displayClockKey,
-    displayedElapsedMs,
-    isRunning,
-    reset,
-    totalMilliseconds,
-  ]);
+    reset(new Date(Date.now() + activeElapsedMs), isRunning);
+  }, [displayClockKey, activeElapsedMs, isRunning, reset, totalMilliseconds]);
 
   const previousRunningRef = useRef(isRunning);
 
@@ -273,23 +268,27 @@ export function useServerMatchClock({
 
     pause();
     // Freeze exactly on server-derived elapsed when pausing.
-    reset(new Date(Date.now() + displayedElapsedMs), false);
-  }, [displayedElapsedMs, isRunning, pause, reset, start]);
+    reset(new Date(Date.now() + activeElapsedMs), false);
+  }, [activeElapsedMs, isRunning, pause, reset, start]);
 
   const pendingCorrectionMsRef = useRef(0);
   const lastStopwatchResyncSecondRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!isRunning || displayedSeconds <= 0 || displayedSeconds % 5 !== 0) {
+    if (
+      !isRunning ||
+      activeElapsedSeconds <= 0 ||
+      activeElapsedSeconds % 5 !== 0
+    ) {
       return;
     }
 
-    if (lastStopwatchResyncSecondRef.current === displayedSeconds) {
+    if (lastStopwatchResyncSecondRef.current === activeElapsedSeconds) {
       return;
     }
 
-    lastStopwatchResyncSecondRef.current = displayedSeconds;
-    const driftMs = displayedElapsedMs - totalMilliseconds;
+    lastStopwatchResyncSecondRef.current = activeElapsedSeconds;
+    const driftMs = activeElapsedMs - totalMilliseconds;
 
     // Ignore tiny discrepancies and smooth larger corrections over time.
     if (Math.abs(driftMs) >= 120) {
@@ -302,8 +301,8 @@ export function useServerMatchClock({
 
     void syncServerOffset();
   }, [
-    displayedElapsedMs,
-    displayedSeconds,
+    activeElapsedMs,
+    activeElapsedSeconds,
     isRunning,
     syncServerOffset,
     totalMilliseconds,
@@ -434,22 +433,22 @@ export function useServerMatchClock({
   ]);
 
   const startHalftime = useCallback(() => {
-    if (matchStatus === "firstHalf" && !firstHalfPaused) {
+    if (activeHalf === "firstHalf" && !paused) {
       appendPauseToggle("firstHalf");
     }
     setMatchStatus("halftime");
-  }, [appendPauseToggle, firstHalfPaused, matchStatus, setMatchStatus]);
+  }, [activeHalf, appendPauseToggle, paused, setMatchStatus]);
 
   const togglePause = useCallback(() => {
-    if (matchStatus === "firstHalf") {
+    if (activeHalf === "firstHalf") {
       appendPauseToggle("firstHalf");
       return;
     }
 
-    if (matchStatus === "secondHalf") {
+    if (activeHalf === "secondHalf") {
       appendPauseToggle("secondHalf");
     }
-  }, [appendPauseToggle, matchStatus]);
+  }, [activeHalf, appendPauseToggle]);
 
   const clearClockState = useCallback(() => {
     reset(new Date(), false);

@@ -1,8 +1,10 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "84fa6fc1-6893-4dac-a5b7-9ef19e57e304",
-  "prevIds": ["00000000-0000-0000-0000-000000000000"],
+  "id": "e3389d85-e4f6-452f-8d0f-74df308920df",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
   "ddl": [
     {
       "name": "active_game",
@@ -10,6 +12,10 @@
     },
     {
       "name": "games",
+      "entityType": "tables"
+    },
+    {
+      "name": "pause_toggles",
       "entityType": "tables"
     },
     {
@@ -123,6 +129,86 @@
       "name": "created_at",
       "entityType": "columns",
       "table": "games"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "first_half_started_at_ms",
+      "entityType": "columns",
+      "table": "games"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "second_half_started_at_ms",
+      "entityType": "columns",
+      "table": "games"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "pause_toggles"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "pause_toggles"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "local_id",
+      "entityType": "columns",
+      "table": "pause_toggles"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "game_local_id",
+      "entityType": "columns",
+      "table": "pause_toggles"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "half",
+      "entityType": "columns",
+      "table": "pause_toggles"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "toggled_at_ms",
+      "entityType": "columns",
+      "table": "pause_toggles"
     },
     {
       "type": "integer",
@@ -335,9 +421,15 @@
       "table": "teams"
     },
     {
-      "columns": ["user_id", "game_local_id"],
+      "columns": [
+        "user_id",
+        "game_local_id"
+      ],
       "tableTo": "games",
-      "columnsTo": ["user_id", "local_id"],
+      "columnsTo": [
+        "user_id",
+        "local_id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "nameExplicit": false,
@@ -346,9 +438,15 @@
       "table": "active_game"
     },
     {
-      "columns": ["user_id", "home_team_local_id"],
+      "columns": [
+        "user_id",
+        "home_team_local_id"
+      ],
       "tableTo": "teams",
-      "columnsTo": ["user_id", "local_id"],
+      "columnsTo": [
+        "user_id",
+        "local_id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "nameExplicit": false,
@@ -357,9 +455,15 @@
       "table": "active_game"
     },
     {
-      "columns": ["user_id", "home_team_local_id"],
+      "columns": [
+        "user_id",
+        "home_team_local_id"
+      ],
       "tableTo": "teams",
-      "columnsTo": ["user_id", "local_id"],
+      "columnsTo": [
+        "user_id",
+        "local_id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "nameExplicit": false,
@@ -368,9 +472,32 @@
       "table": "games"
     },
     {
-      "columns": ["user_id", "game_local_id"],
+      "columns": [
+        "user_id",
+        "game_local_id"
+      ],
       "tableTo": "games",
-      "columnsTo": ["user_id", "local_id"],
+      "columnsTo": [
+        "user_id",
+        "local_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_pause_toggles_user_id_game_local_id_games_user_id_local_id_fk",
+      "entityType": "fks",
+      "table": "pause_toggles"
+    },
+    {
+      "columns": [
+        "user_id",
+        "game_local_id"
+      ],
+      "tableTo": "games",
+      "columnsTo": [
+        "user_id",
+        "local_id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "nameExplicit": false,
@@ -379,9 +506,15 @@
       "table": "player_events"
     },
     {
-      "columns": ["user_id", "team_local_id"],
+      "columns": [
+        "user_id",
+        "team_local_id"
+      ],
       "tableTo": "teams",
-      "columnsTo": ["user_id", "local_id"],
+      "columnsTo": [
+        "user_id",
+        "local_id"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "nameExplicit": false,
@@ -390,35 +523,54 @@
       "table": "team_players"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "active_game_pk",
       "table": "active_game",
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "games_pk",
       "table": "games",
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "pause_toggles_pk",
+      "table": "pause_toggles",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "player_events_pk",
       "table": "player_events",
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "team_players_pk",
       "table": "team_players",
       "entityType": "pks"
     },
     {
-      "columns": ["id"],
+      "columns": [
+        "id"
+      ],
       "nameExplicit": false,
       "name": "teams_pk",
       "table": "teams",
@@ -474,6 +626,24 @@
       "isUnique": true,
       "where": null,
       "origin": "manual",
+      "name": "pause_toggles_user_id_local_id_uq",
+      "entityType": "indexes",
+      "table": "pause_toggles"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        },
+        {
+          "value": "local_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
       "name": "player_events_user_id_local_id_uq",
       "entityType": "indexes",
       "table": "player_events"
@@ -513,6 +683,12 @@
       "name": "teams_user_id_local_id_uq",
       "entityType": "indexes",
       "table": "teams"
+    },
+    {
+      "value": "`half` IN ('firstHalf', 'secondHalf')",
+      "name": "pause_toggles_half_check",
+      "entityType": "checks",
+      "table": "pause_toggles"
     },
     {
       "value": "`event_type` != 'shot' OR `shot_direction` IS NOT NULL",
