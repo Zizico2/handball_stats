@@ -221,7 +221,6 @@ export function useServerMatchClock({
     pause,
     reset,
     seconds,
-    start,
     totalMilliseconds,
     totalSeconds,
   } = stopwatch;
@@ -262,14 +261,14 @@ export function useServerMatchClock({
     previousRunningRef.current = isRunning;
 
     if (isRunning) {
-      start();
+      reset(new Date(Date.now() + activeElapsedMs), true);
       return;
     }
 
     pause();
     // Freeze exactly on server-derived elapsed when pausing.
     reset(new Date(Date.now() + activeElapsedMs), false);
-  }, [activeElapsedMs, isRunning, pause, reset, start]);
+  }, [activeElapsedMs, isRunning, pause, reset]);
 
   const pendingCorrectionMsRef = useRef(0);
   const lastStopwatchResyncSecondRef = useRef<number | null>(null);
