@@ -1,5 +1,8 @@
 import z from "zod";
 
+export const matchHalfSchema = z.enum(["firstHalf", "secondHalf"]);
+export type MatchHalf = z.infer<typeof matchHalfSchema>;
+
 export const shotPosition = z.enum([
   "9m+",
   "6m+",
@@ -91,6 +94,7 @@ export const basePlayerEventSchema = z.object({
   player: playerSchema,
   game_id: z.number(),
   ellapsed_seconds: z.number(),
+  half: matchHalfSchema,
 });
 export type BasePlayerEvent = z.infer<typeof basePlayerEventSchema>;
 
@@ -274,8 +278,31 @@ export const gameSchema = z.object({
   id: z.number(),
   homeTeamId: z.number(),
   createdAt: z.iso.datetime(),
+  firstHalfStartedAtMs: z.number().nullable().optional(),
+  secondHalfStartedAtMs: z.number().nullable().optional(),
 });
 export type Game = z.infer<typeof gameSchema>;
+
+export const pauseToggleSchema = z.object({
+  id: z.uuid(),
+  gameId: z.number(),
+  half: matchHalfSchema,
+  // TODO: use z.date() for this.
+  toggledAtMs: z.number(),
+});
+export type PauseToggle = z.infer<typeof pauseToggleSchema>;
+
+export const matchClockSnapshotSchema = z.object({
+  gameId: z.number(),
+  serverNowMs: z.number(),
+  activeHalf: matchHalfSchema.nullable(),
+  activeElapsedSeconds: z.number(),
+  firstHalfElapsedSeconds: z.number(),
+  secondHalfElapsedSeconds: z.number(),
+  firstHalfPaused: z.boolean(),
+  secondHalfPaused: z.boolean(),
+});
+export type MatchClockSnapshot = z.infer<typeof matchClockSnapshotSchema>;
 
 export const activeGameSchema = z.object({
   id: z.literal(1),

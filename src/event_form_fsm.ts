@@ -4,6 +4,7 @@ import { assign, setup } from "xstate";
 import type {
   EventGroup,
   EventType,
+  MatchHalf,
   Player,
   PlayerEvent,
   ShotDirectionFields,
@@ -24,6 +25,7 @@ export type Event =
       ellapsed_seconds: number;
       game_id: number;
       id: number;
+      half: MatchHalf;
     }
   //
   | { type: "PICK_ATTACK_EVENT_TYPE"; eventType: EventType }
@@ -79,6 +81,7 @@ export const eventMachine = setup({
                 ellapsed_seconds: event.ellapsed_seconds,
                 game_id: event.game_id,
                 id: event.id,
+                half: event.half,
               },
             };
           }),

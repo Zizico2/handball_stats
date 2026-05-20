@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "84fa6fc1-6893-4dac-a5b7-9ef19e57e304",
+  "id": "1c50b216-6198-47a2-a365-0ee5fb70b2a8",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -12,6 +12,10 @@
     },
     {
       "name": "games",
+      "entityType": "tables"
+    },
+    {
+      "name": "pause_toggles",
       "entityType": "tables"
     },
     {
@@ -132,6 +136,86 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "first_half_started_at_ms",
+      "entityType": "columns",
+      "table": "games"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "second_half_started_at_ms",
+      "entityType": "columns",
+      "table": "games"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "pause_toggles"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "pause_toggles"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "client_id",
+      "entityType": "columns",
+      "table": "pause_toggles"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "game_local_id",
+      "entityType": "columns",
+      "table": "pause_toggles"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "half",
+      "entityType": "columns",
+      "table": "pause_toggles"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "toggled_at_ms",
+      "entityType": "columns",
+      "table": "pause_toggles"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "id",
       "entityType": "columns",
       "table": "player_events"
@@ -203,6 +287,16 @@
       "default": null,
       "generated": null,
       "name": "event_group",
+      "entityType": "columns",
+      "table": "player_events"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "half",
       "entityType": "columns",
       "table": "player_events"
     },
@@ -400,6 +494,23 @@
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "nameExplicit": false,
+      "name": "fk_pause_toggles_user_id_game_local_id_games_user_id_local_id_fk",
+      "entityType": "fks",
+      "table": "pause_toggles"
+    },
+    {
+      "columns": [
+        "user_id",
+        "game_local_id"
+      ],
+      "tableTo": "games",
+      "columnsTo": [
+        "user_id",
+        "local_id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
       "name": "fk_player_events_user_id_game_local_id_games_user_id_local_id_fk",
       "entityType": "fks",
       "table": "player_events"
@@ -437,6 +548,15 @@
       "nameExplicit": false,
       "name": "games_pk",
       "table": "games",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "pause_toggles_pk",
+      "table": "pause_toggles",
       "entityType": "pks"
     },
     {
@@ -509,6 +629,24 @@
           "isExpression": false
         },
         {
+          "value": "client_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "pause_toggles_client_id_uq",
+      "entityType": "indexes",
+      "table": "pause_toggles"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        },
+        {
           "value": "local_id",
           "isExpression": false
         }
@@ -555,6 +693,18 @@
       "name": "teams_user_id_local_id_uq",
       "entityType": "indexes",
       "table": "teams"
+    },
+    {
+      "value": "`half` IN ('firstHalf', 'secondHalf')",
+      "name": "pause_toggles_half_check",
+      "entityType": "checks",
+      "table": "pause_toggles"
+    },
+    {
+      "value": "`half` IN ('firstHalf', 'secondHalf')",
+      "name": "player_events_half_check",
+      "entityType": "checks",
+      "table": "player_events"
     },
     {
       "value": "`event_type` != 'shot' OR `shot_direction` IS NOT NULL",

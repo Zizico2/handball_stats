@@ -21,6 +21,8 @@ import { assign } from "xstate";
 import z from "zod";
 import {
   activeGameCollection,
+  gamesCollection,
+  pauseTogglesCollection,
   playerEventsCollection,
   teamPlayersCollection,
 } from "@/collections";
@@ -42,7 +44,7 @@ import {
   initialInGameControlsState,
   type MatchStatus,
 } from "@/inGameControlsAtoms";
-import { usePersistentStopwatch } from "@/usePersistentStopwatch";
+import { useServerMatchClock } from "@/useServerMatchClock";
 
 function insertPlayerEvent(partialEvent: unknown): void {
   try {
@@ -64,6 +66,11 @@ function InGame() {
     q.from({ event: playerEventsCollection }),
   );
 
+  const games = useLiveSuspenseQuery((q) => q.from({ game: gamesCollection }));
+
+  // TODO: should the `activeGameCollection` "join" with the `gamesCollection` to get the info directly?
+  // TODO: having this logic in a UI components feels off. Maybe there's a notion of "derived collections",
+  // TODO: or some sort of service layer where this kind of logic can live?
   const activeGame = useLiveSuspenseQuery((q) =>
     q.from({ activeGame: activeGameCollection }).findOne(),
   );
@@ -79,8 +86,11 @@ function InGame() {
       .findOne(),
   );
 
-  const { totalSeconds, minutes, seconds, isRunning, start, pause, reset } =
-    usePersistentStopwatch({ autoStart: false });
+  const activeGameData = activeGame.data ?? null;
+
+  const activeGameRecord = activeGameData
+    ? (games.data.find((game) => game.id === activeGameData.gameId) ?? null)
+    : null;
 
   const [matchStatus, setMatchStatus] = useState<MatchStatus | null>(null);
 
@@ -101,9 +111,26 @@ function InGame() {
     .filter((player) => player.teamId === activeGame.data?.homeTeamId)
     .sort((left, right) => left.number - right.number);
 
-  const handleClearGame = useCallback(() => {
-    const activeGameData = activeGame.data;
+  const {
+    activeGamePauseToggles,
+    activeHalf,
+    clearClockState,
+    eventElapsedSeconds,
+    isRunning,
+    minutes,
+    seconds,
+    startFirstHalf,
+    startHalftime,
+    startSecondHalf,
+    togglePause,
+  } = useServerMatchClock({
+    activeGameData,
+    activeGameRecord,
+    matchStatus,
+    setMatchStatus,
+  });
 
+  const handleClearGame = useCallback(() => {
     if (activeGameData) {
       for (const event of playerEvents.data.filter(
         (item) => item.game_id === activeGameData.gameId,
@@ -111,54 +138,39 @@ function InGame() {
         playerEventsCollection.delete(event.id);
       }
 
+      for (const toggle of activeGamePauseToggles) {
+        pauseTogglesCollection.delete(toggle.id);
+      }
+
       activeGameCollection.delete(activeGameData.id);
     }
 
-    localStorage.removeItem("persistentStopwatch");
-    setMatchStatus(null);
-    reset(new Date(), false);
-  }, [activeGame.data, playerEvents.data, reset]);
-
-  const handleStartFirstHalf = useCallback(() => {
-    start();
-    setMatchStatus("firstHalf");
-  }, [start]);
-
-  const handleStartSecondHalf = useCallback(() => {
-    start();
-    setMatchStatus("secondHalf");
-  }, [start]);
-
-  const handleStartHalftime = useCallback(() => {
-    const offset = new Date();
-    offset.setSeconds(offset.getSeconds() + 60 * 30);
-    reset(offset, false);
-    setMatchStatus("halftime");
-  }, [reset]);
-
-  const handleTogglePause = useCallback(() => {
-    if (isRunning) {
-      pause();
-    } else {
-      start();
-    }
-  }, [isRunning, pause, start]);
+    clearClockState();
+  }, [
+    activeGameData,
+    activeGamePauseToggles,
+    clearClockState,
+    playerEvents.data,
+  ]);
 
   const handleStartEvent = (eventGroup: EventGroup) => {
     if (!activeGame.data) {
       return;
     }
 
+    if (!activeHalf) {
+      return;
+    }
+
     send({
       type: "START",
       eventGroup,
-      ellapsed_seconds: totalSeconds,
+      ellapsed_seconds: eventElapsedSeconds,
       game_id: activeGame.data.gameId,
       id: nextEventId,
+      half: activeHalf,
     });
   };
-
-  const activeGameData = activeGame.data;
 
   const activeGameEvents = activeGameData
     ? playerEvents.data.filter(
@@ -171,10 +183,10 @@ function InGame() {
       matchStatus,
       isRunning,
       onClearGame: handleClearGame,
-      onStartFirstHalf: handleStartFirstHalf,
-      onStartSecondHalf: handleStartSecondHalf,
-      onStartHalftime: handleStartHalftime,
-      onTogglePause: handleTogglePause,
+      onStartFirstHalf: startFirstHalf,
+      onStartSecondHalf: startSecondHalf,
+      onStartHalftime: startHalftime,
+      onTogglePause: togglePause,
     });
 
     return () => {
@@ -182,13 +194,13 @@ function InGame() {
     };
   }, [
     handleClearGame,
-    handleStartFirstHalf,
-    handleStartHalftime,
-    handleStartSecondHalf,
-    handleTogglePause,
     isRunning,
     matchStatus,
     setInGameControls,
+    startFirstHalf,
+    startHalftime,
+    startSecondHalf,
+    togglePause,
   ]);
 
   return (

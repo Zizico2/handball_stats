@@ -3,6 +3,7 @@ import { HTTPException } from "hono/http-exception";
 import {
   activeGameSchema,
   gameSchema,
+  pauseToggleSchema,
   playerEventSchema,
   teamPlayerSchema,
   teamSchema,
@@ -14,6 +15,11 @@ export const teamsArraySchema = teamSchema.array();
 export const teamPlayersArraySchema = teamPlayerSchema.array();
 export const gamesArraySchema = gameSchema.array();
 export const activeGameArraySchema = activeGameSchema.array();
+export const pauseTogglesArraySchema = pauseToggleSchema.array();
+export const upsertPauseToggleBodySchema = pauseToggleSchema.omit({
+  id: true,
+  toggledAtMs: true,
+});
 
 export async function requireUserId() {
   const { userId } = await auth();
