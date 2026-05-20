@@ -1,8 +1,8 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "1c50b216-6198-47a2-a365-0ee5fb70b2a8",
-  "prevIds": ["00000000-0000-0000-0000-000000000000"],
+  "id": "d9ff63e4-9e27-4aff-88fe-32784f71b06e",
+  "prevIds": ["1c50b216-6198-47a2-a365-0ee5fb70b2a8"],
   "ddl": [
     {
       "name": "active_game",
@@ -325,6 +325,16 @@
       "default": null,
       "generated": null,
       "name": "shot_aim",
+      "entityType": "columns",
+      "table": "player_events"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "substitution_player_in",
       "entityType": "columns",
       "table": "player_events"
     },

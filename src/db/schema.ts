@@ -129,6 +129,7 @@ export const playerEvents = sqliteTable(
     shotGoal: integer("shot_goal", { mode: "boolean" }),
     shotDirection: text("shot_direction"),
     shotAim: text("shot_aim"),
+    substitutionPlayerIn: integer("substitution_player_in"),
   },
   (table) => [
     uniqueIndex("player_events_user_id_local_id_uq").on(

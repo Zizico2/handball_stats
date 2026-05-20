@@ -52,6 +52,20 @@ const dbPlayerEventToDomainSchema = dbPlayerEventSchema
       };
     }
 
+    if (row.eventType === "substitution") {
+      if (row.substitutionPlayerIn === null) {
+        throw new Error("Missing substitutionPlayerIn in DB row");
+      }
+      return {
+        ...base,
+        eventType: row.eventType,
+        eventGroup: row.eventGroup,
+        event: {
+          playerIn: row.substitutionPlayerIn,
+        },
+      };
+    }
+
     return {
       ...base,
       eventType: row.eventType,
@@ -101,6 +115,7 @@ export function playerEventToDbRow(
     shotGoal: null as boolean | null,
     shotDirection: null as string | null,
     shotAim: null as string | null,
+    substitutionPlayerIn: null as number | null,
   };
 
   if (event.eventType === "shot") {
@@ -109,6 +124,13 @@ export function playerEventToDbRow(
       shotGoal: event.event.goal,
       shotDirection: event.event.direction,
       shotAim: event.event.aim ?? null,
+    };
+  }
+
+  if (event.eventType === "substitution") {
+    return {
+      ...base,
+      substitutionPlayerIn: event.event.playerIn,
     };
   }
 

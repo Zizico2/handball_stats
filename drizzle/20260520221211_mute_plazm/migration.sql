@@ -1,0 +1,1 @@
+ALTER TABLE `player_events` ADD `substitution_player_in` integer;
