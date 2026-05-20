@@ -225,9 +225,8 @@ export function useServerMatchClock({
     totalSeconds,
   } = stopwatch;
 
-  const displayClockKey = `${activeGameData?.gameId ?? "none"}:${
-    activeHalf ?? "firstHalf"
-  }`;
+  const displayClockKey = `${activeGameData?.gameId ?? "none"}:${activeHalf ?? "firstHalf"
+    }`;
   const previousDisplayClockKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -392,10 +391,9 @@ export function useServerMatchClock({
       pauseTogglesCollection.insert({
         gameId: activeGameData.gameId,
         half,
-        toggledAtMs: getCorrectedNowMs(),
       });
     },
-    [activeGameData, getCorrectedNowMs],
+    [activeGameData],
   );
 
   const startFirstHalf = useCallback(() => {

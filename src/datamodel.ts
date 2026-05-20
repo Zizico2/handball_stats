@@ -291,9 +291,8 @@ export type InsertPauseToggle = z.infer<typeof insertPauseToggleSchema>;
 export const pauseToggleSchema = z.object({
   gameId: z.number(),
   half: matchHalfSchema,
-  toggledAtMs: z
-    .number()
-    .default(() => -(Date.now() * 1000 + Math.floor(Math.random() * 1000))),
+  // TODO: use z.date() for this.
+  toggledAtMs: z.number().default(-1),
 });
 export type PauseToggle = z.infer<typeof pauseToggleSchema>;
 

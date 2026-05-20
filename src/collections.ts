@@ -155,6 +155,14 @@ export const pauseTogglesCollection = createCollection(
     // TODO: use `Promise.all` or similar to run these in parallel instead of sequentially
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
+      for (const item of newItems) {
+        if (item.toggledAtMs !== -1) {
+          // TODO: is returning an error here fine?
+          throw new Error(
+            `Invalid pause toggle: toggledAtMs must be set to -1, the default value, when inserting, got ${item.toggledAtMs}`,
+          );
+        }
+      }
       await Promise.all(
         newItems.map((item) => upsertPauseToggleMutation(item)),
       );
