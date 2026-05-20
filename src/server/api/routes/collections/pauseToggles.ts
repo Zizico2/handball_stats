@@ -62,10 +62,16 @@ export const pauseTogglesRoutes = new Hono()
         )
         .get();
 
+      if (existing) {
+        return c.json(dbRowToPauseToggle(existing));
+      }
+
       return c.json(
-        existing
-          ? dbRowToPauseToggle(existing)
-          : { id: pauseToggleId, gameId, half, toggledAtMs },
+        {
+          error:
+            "Pause toggle could not be created because the clientId conflicts with an existing record.",
+        },
+        409,
       );
     },
   )
