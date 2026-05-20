@@ -234,6 +234,14 @@ export const substitutionEventSchema = withBase(
 );
 export type SubstitutionEvent = z.infer<typeof substitutionEventSchema>;
 
+export const startingPlayerEventSchema = withBase(
+  z.object({
+    eventType: z.literal("startingPlayer"),
+    eventGroup: z.literal("substitution"),
+  }),
+);
+export type StartingPlayerEvent = z.infer<typeof startingPlayerEventSchema>;
+
 export const playerEventSchema = z.discriminatedUnion("eventType", [
   // attack events
   shotEventSchema,
@@ -255,6 +263,7 @@ export const playerEventSchema = z.discriminatedUnion("eventType", [
   twoMinuteSuspensionEventSchema,
   // substitution events
   substitutionEventSchema,
+  startingPlayerEventSchema,
 ]);
 
 export type PlayerEvent = z.infer<typeof playerEventSchema>;

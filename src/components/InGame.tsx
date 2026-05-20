@@ -8,10 +8,15 @@ import {
   AppBar,
   Box,
   Button,
+  Checkbox,
+  Chip,
   Dialog,
   DialogContent,
   Grid,
   IconButton,
+  List,
+  ListItemButton,
+  ListItemText,
   Stack,
   Toolbar,
   Typography,
@@ -33,6 +38,7 @@ import {
 import {
   type EventGroup,
   type EventType,
+  type PlayerEvent,
   playerEventSchema,
   type ShotAim,
   type ShotDirectionFields,
@@ -97,6 +103,7 @@ function InGame() {
     : null;
 
   const [matchStatus, setMatchStatus] = useState<MatchStatus | null>(null);
+  const [starting7DialogOpen, setStarting7DialogOpen] = useState(false);
 
   const [state, send] = useMachine(
     eventMachine.provide({
@@ -182,6 +189,47 @@ function InGame() {
       )
     : [];
 
+  const currentHalfForStarting =
+    matchStatus === "secondHalf" || matchStatus === "halftime"
+      ? "secondHalf"
+      : "firstHalf";
+
+  const startingEvents = activeGameEvents.filter(
+    (e) =>
+      e.eventType === "startingPlayer" && e.half === currentHalfForStarting,
+  );
+  const startingPlayerNumbers = startingEvents.map((e) => e.player);
+  const activePlayerNumbers = getActivePlayers(activeGameEvents);
+
+  const handleSaveStarting7 = (numbers: number[]) => {
+    if (!activeGameData) return;
+
+    // 1. Delete all existing startingPlayer events for this game and current half
+    const existingStarting = activeGameEvents.filter(
+      (e) =>
+        e.eventType === "startingPlayer" && e.half === currentHalfForStarting,
+    );
+    for (const event of existingStarting) {
+      playerEventsCollection.delete(event.id);
+    }
+
+    // 2. Insert new startingPlayer events
+    numbers.forEach((num, index) => {
+      const eventId = nextEventId + index;
+      insertPlayerEvent({
+        id: eventId,
+        player: num,
+        game_id: activeGameData.gameId,
+        ellapsed_seconds: 0,
+        half: currentHalfForStarting,
+        eventType: "startingPlayer",
+        eventGroup: "substitution",
+      });
+    });
+
+    setStarting7DialogOpen(false);
+  };
+
   useEffect(() => {
     setInGameControls({
       matchStatus,
@@ -239,10 +287,87 @@ function InGame() {
                 Go to New Game
               </Button>
             </Box>
-          ) : null}
+          ) : startingPlayerNumbers.length === 0 ? (
+            <Box
+              sx={{
+                bgcolor: "rgba(237, 108, 2, 0.08)",
+                border: "1px solid",
+                borderColor: "rgba(237, 108, 2, 0.3)",
+                borderRadius: 2,
+                p: 2,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 1.5,
+                maxWidth: 400,
+                mx: "auto",
+              }}
+            >
+              <Typography
+                variant="body2"
+                color="warning.dark"
+                fontWeight="medium"
+                textAlign="center"
+              >
+                Starting lineup is not defined yet. Set the starting players to
+                enable accurate tracking of who is on court.
+              </Typography>
+              <Button
+                variant="contained"
+                color="warning"
+                onClick={() => setStarting7DialogOpen(true)}
+                size="small"
+              >
+                Set Starting Lineup
+              </Button>
+            </Box>
+          ) : (
+            <Box sx={{ width: "100%", maxWidth: 400, mx: "auto", my: 1 }}>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{ mb: 1 }}
+              >
+                <Typography
+                  variant="subtitle2"
+                  color="text.secondary"
+                  fontWeight="bold"
+                >
+                  On Court ({activePlayerNumbers.size})
+                </Typography>
+              </Stack>
+              <Stack
+                direction="row"
+                spacing={1}
+                flexWrap="wrap"
+                useFlexGap
+                sx={{ gap: 1 }}
+              >
+                {Array.from(activePlayerNumbers).map((num) => {
+                  const p = selectedTeamPlayers.find(
+                    (player) => player.number === num,
+                  );
+                  return (
+                    <Chip
+                      key={num}
+                      label={`#${num} ${p ? p.name.split(" ")[0] : ""}`}
+                      size="small"
+                      color="secondary"
+                      variant="outlined"
+                    />
+                  );
+                })}
+              </Stack>
+            </Box>
+          )}
           <EventGroupButtons
             onRecordEvent={handleStartEvent}
-            disabled={!activeGame.data || selectedTeamPlayers.length === 0}
+            disabled={
+              !activeGame.data ||
+              selectedTeamPlayers.length === 0 ||
+              startingPlayerNumbers.length === 0
+            }
           />
         </Box>
         <EventLog events={activeGameEvents} getPlayerLabel={getPlayerLabel} />
@@ -250,6 +375,8 @@ function InGame() {
       <PickPlayerFullscreenDialog
         open={state.matches("pickingPlayer")}
         players={selectedTeamPlayers}
+        activePlayerNumbers={activePlayerNumbers}
+        prioritizeActive={true}
         title={
           state.context.playerEvent.eventType === "substitution"
             ? "Pick Player Leaving"
@@ -269,6 +396,8 @@ function InGame() {
         players={selectedTeamPlayers.filter(
           (p) => p.number !== state.context.playerEvent.player,
         )}
+        activePlayerNumbers={activePlayerNumbers}
+        prioritizeActive={false}
         title="Pick Player Entering"
         onPickPlayer={(pickedPlayer) => {
           if (pickedPlayer) {
@@ -278,6 +407,13 @@ function InGame() {
             send({ type: "CANCEL" });
           }
         }}
+      />
+      <PickStarting7Dialog
+        open={starting7DialogOpen}
+        players={selectedTeamPlayers}
+        currentStartingNumbers={startingPlayerNumbers}
+        onSave={handleSaveStarting7}
+        onClose={() => setStarting7DialogOpen(false)}
       />
       <PickShotDirectionDialog
         open={state.matches("pickingShotDirection")}
@@ -556,26 +692,131 @@ const PickSanctionEventTypeDialog = ({
 
 const PickPlayerFullscreenDialog = ({
   players,
+  activePlayerNumbers,
+  prioritizeActive = true,
   open,
   title = "Pick a Player",
   onPickPlayer,
 }: {
   players: TeamPlayer[];
+  activePlayerNumbers: Set<number>;
+  prioritizeActive?: boolean;
   open: boolean;
   title?: string;
   onPickPlayer: (pickedPlayer: number | null) => void;
 }) => {
+  const hasStartingLineup = activePlayerNumbers.size > 0;
+
+  const sortedPlayers = [...players].sort((a, b) => {
+    if (hasStartingLineup) {
+      const aActive = activePlayerNumbers.has(a.number);
+      const bActive = activePlayerNumbers.has(b.number);
+      if (aActive && !bActive) return prioritizeActive ? -1 : 1;
+      if (!aActive && bActive) return prioritizeActive ? 1 : -1;
+    }
+    return a.number - b.number;
+  });
+
   return (
     <ListSelectionDialog
       open={open}
       title={title}
-      options={players.map((player) => ({
+      options={sortedPlayers.map((player) => ({
         text: `#${player.number} ${player.name}`,
         key: `${player.number}`,
         value: player.number,
+        group: hasStartingLineup
+          ? activePlayerNumbers.has(player.number)
+            ? "On Court"
+            : "Bench"
+          : undefined,
       }))}
       onPickOption={onPickPlayer}
     />
+  );
+};
+
+const PickStarting7Dialog = ({
+  open,
+  players,
+  currentStartingNumbers,
+  onSave,
+  onClose,
+}: {
+  open: boolean;
+  players: TeamPlayer[];
+  currentStartingNumbers: number[];
+  onSave: (numbers: number[]) => void;
+  onClose: () => void;
+}) => {
+  const [selected, setSelected] = useState<number[]>(currentStartingNumbers);
+
+  const handleToggle = (number: number) => {
+    setSelected((prev) =>
+      prev.includes(number)
+        ? prev.filter((n) => n !== number)
+        : [...prev, number],
+    );
+  };
+
+  const targetCount = Math.min(7, players.length);
+  const isValid = selected.length === targetCount;
+
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
+      <DialogContent>
+        <Stack spacing={2} sx={{ py: 1 }}>
+          <Typography variant="h6" fontWeight="bold">
+            Define Starting Lineup
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Select {targetCount} starting players.
+            {selected.length !== targetCount &&
+              ` (Currently selected: ${selected.length})`}
+          </Typography>
+
+          <Box
+            sx={{
+              maxHeight: 300,
+              overflowY: "auto",
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 1,
+            }}
+          >
+            <List>
+              {players.map((player) => {
+                const isChecked = selected.includes(player.number);
+                return (
+                  <ListItemButton
+                    key={player.number}
+                    onClick={() => handleToggle(player.number)}
+                  >
+                    <Checkbox checked={isChecked} edge="start" disableRipple />
+                    <ListItemText
+                      primary={`#${player.number} ${player.name}`}
+                    />
+                  </ListItemButton>
+                );
+              })}
+            </List>
+          </Box>
+
+          <Stack direction="row" spacing={2} justifyContent="flex-end">
+            <Button onClick={onClose} color="inherit">
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => onSave(selected)}
+              disabled={!isValid}
+            >
+              Save Lineup
+            </Button>
+          </Stack>
+        </Stack>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -748,11 +989,31 @@ const PickShotPositionDialog = ({
   );
 };
 
+export function getActivePlayers(events: PlayerEvent[]): Set<number> {
+  const active = new Set<number>();
+  const sorted = [...events].sort((a, b) => a.id - b.id);
+  let clearedForSecondHalf = false;
+  for (const e of sorted) {
+    if (e.eventType === "startingPlayer") {
+      if (e.half === "secondHalf" && !clearedForSecondHalf) {
+        active.clear();
+        clearedForSecondHalf = true;
+      }
+      active.add(e.player);
+    } else if (e.eventType === "substitution") {
+      active.delete(e.player);
+      active.add(e.event.playerIn);
+    }
+  }
+  return active;
+}
+
 // Abstracted list style dialog, since the 3 dialogs are very similar, only differing in the options they show and the type of data they return.
 interface Option<T> {
   text: string;
   key: string;
   value: T;
+  group?: string;
 }
 
 function ListSelectionDialog<T>({
@@ -785,17 +1046,52 @@ function ListSelectionDialog<T>({
       </AppBar>
       <DialogContent>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {options.map((option) => (
-            <Button
-              key={option.key}
-              variant="contained"
-              onClick={() => {
-                onPickOption(option.value);
-              }}
-            >
-              {option.text}
-            </Button>
-          ))}
+          {options.every((o) => !o.group)
+            ? options.map((option) => (
+                <Button
+                  key={option.key}
+                  variant="contained"
+                  onClick={() => {
+                    onPickOption(option.value);
+                  }}
+                >
+                  {option.text}
+                </Button>
+              ))
+            : Array.from(new Set(options.map((o) => o.group || ""))).map(
+                (groupName) => (
+                  <Box
+                    key={groupName}
+                    sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+                  >
+                    {groupName && (
+                      <Typography
+                        variant="subtitle2"
+                        color="text.secondary"
+                        fontWeight="bold"
+                        sx={{ mt: 1 }}
+                      >
+                        {groupName}
+                      </Typography>
+                    )}
+                    <Stack spacing={1.5}>
+                      {options
+                        .filter((o) => (o.group || "") === groupName)
+                        .map((option) => (
+                          <Button
+                            key={option.key}
+                            variant="contained"
+                            onClick={() => {
+                              onPickOption(option.value);
+                            }}
+                          >
+                            {option.text}
+                          </Button>
+                        ))}
+                    </Stack>
+                  </Box>
+                ),
+              )}
         </Box>
       </DialogContent>
     </Dialog>
