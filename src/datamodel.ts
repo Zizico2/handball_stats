@@ -1,4 +1,3 @@
-
 import z from "zod";
 
 export const matchHalfSchema = z.enum(["firstHalf", "secondHalf"]);
@@ -256,7 +255,6 @@ export const eventGroupSchema = z.enum(
   playerEventSchema.options.map((option) => option.shape.eventGroup.value),
 );
 export type EventGroup = z.infer<typeof eventGroupSchema>;
-
 
 function withBase<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
   return basePlayerEventSchema.extend(schema.shape);

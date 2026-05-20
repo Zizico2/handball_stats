@@ -77,7 +77,7 @@ export const pauseToggles = sqliteTable(
     toggledAtMs: integer("toggled_at_ms").notNull(),
   },
   (table) => [
-    uniqueIndex("pause_toggles_client_id_uq").on(table.clientId),
+    uniqueIndex("pause_toggles_client_id_uq").on(table.userId, table.clientId),
     uniqueIndex("pause_toggles_user_id_game_local_id_toggled_at_ms_uq").on(
       table.userId,
       table.gameLocalId,

@@ -2,9 +2,7 @@
   "version": "7",
   "dialect": "sqlite",
   "id": "0c52064d-a17a-4e77-a576-2682f0919c0f",
-  "prevIds": [
-    "00000000-0000-0000-0000-000000000000"
-  ],
+  "prevIds": ["00000000-0000-0000-0000-000000000000"],
   "ddl": [
     {
       "name": "active_game",
@@ -431,15 +429,9 @@
       "table": "teams"
     },
     {
-      "columns": [
-        "user_id",
-        "game_local_id"
-      ],
+      "columns": ["user_id", "game_local_id"],
       "tableTo": "games",
-      "columnsTo": [
-        "user_id",
-        "local_id"
-      ],
+      "columnsTo": ["user_id", "local_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "nameExplicit": false,
@@ -448,15 +440,9 @@
       "table": "active_game"
     },
     {
-      "columns": [
-        "user_id",
-        "home_team_local_id"
-      ],
+      "columns": ["user_id", "home_team_local_id"],
       "tableTo": "teams",
-      "columnsTo": [
-        "user_id",
-        "local_id"
-      ],
+      "columnsTo": ["user_id", "local_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "nameExplicit": false,
@@ -465,15 +451,9 @@
       "table": "active_game"
     },
     {
-      "columns": [
-        "user_id",
-        "home_team_local_id"
-      ],
+      "columns": ["user_id", "home_team_local_id"],
       "tableTo": "teams",
-      "columnsTo": [
-        "user_id",
-        "local_id"
-      ],
+      "columnsTo": ["user_id", "local_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "nameExplicit": false,
@@ -482,15 +462,9 @@
       "table": "games"
     },
     {
-      "columns": [
-        "user_id",
-        "game_local_id"
-      ],
+      "columns": ["user_id", "game_local_id"],
       "tableTo": "games",
-      "columnsTo": [
-        "user_id",
-        "local_id"
-      ],
+      "columnsTo": ["user_id", "local_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "nameExplicit": false,
@@ -499,15 +473,9 @@
       "table": "pause_toggles"
     },
     {
-      "columns": [
-        "user_id",
-        "game_local_id"
-      ],
+      "columns": ["user_id", "game_local_id"],
       "tableTo": "games",
-      "columnsTo": [
-        "user_id",
-        "local_id"
-      ],
+      "columnsTo": ["user_id", "local_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "nameExplicit": false,
@@ -516,15 +484,9 @@
       "table": "player_events"
     },
     {
-      "columns": [
-        "user_id",
-        "team_local_id"
-      ],
+      "columns": ["user_id", "team_local_id"],
       "tableTo": "teams",
-      "columnsTo": [
-        "user_id",
-        "local_id"
-      ],
+      "columnsTo": ["user_id", "local_id"],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "nameExplicit": false,
@@ -533,54 +495,42 @@
       "table": "team_players"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "active_game_pk",
       "table": "active_game",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "games_pk",
       "table": "games",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "pause_toggles_pk",
       "table": "pause_toggles",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "player_events_pk",
       "table": "player_events",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "team_players_pk",
       "table": "team_players",
       "entityType": "pks"
     },
     {
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "name": "teams_pk",
       "table": "teams",

@@ -152,7 +152,10 @@ export function useServerMatchClock({
   const firstHalfStartedAtMs = activeGameRecord?.firstHalfStartedAtMs ?? null;
   const secondHalfStartedAtMs = activeGameRecord?.secondHalfStartedAtMs ?? null;
 
-  const activeHalf = inferActiveHalf(firstHalfStartedAtMs, secondHalfStartedAtMs);
+  const activeHalf = inferActiveHalf(
+    firstHalfStartedAtMs,
+    secondHalfStartedAtMs,
+  );
 
   const nowMs = useNow(Boolean(activeGameData), 1000, serverOffsetMs);
 
@@ -268,4 +271,3 @@ export function useServerMatchClock({
     togglePause,
   };
 }
-

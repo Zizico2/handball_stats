@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { and, asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
+import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import { dbRowToPauseToggle, pauseToggleToDbRow } from "@/db";
 import * as schema from "@/db/schema";
@@ -66,13 +67,10 @@ export const pauseTogglesRoutes = new Hono()
         return c.json(dbRowToPauseToggle(existing));
       }
 
-      return c.json(
-        {
-          error:
-            "Pause toggle could not be created because the clientId conflicts with an existing record.",
-        },
-        409,
-      );
+      throw new HTTPException(409, {
+        message:
+          "Pause toggle could not be created because the clientId conflicts with an existing record.",
+      });
     },
   )
   .delete(
