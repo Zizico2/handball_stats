@@ -4,7 +4,6 @@ import type {
   Game,
   MatchClockSnapshot,
   PauseToggle,
-  PauseToggleDeleteKey,
   PlayerEvent,
   Team,
   TeamPlayer,
@@ -152,25 +151,24 @@ export async function listPauseTogglesQuery() {
 }
 
 export async function upsertPauseToggleMutation(item: PauseToggle) {
-  const pauseToggleId = encodeURIComponent(
-    `${item.gameId}:${item.toggledAtMs}`,
-  );
   const response = await apiClient.api.collections["pause-toggles"][
     ":pauseToggleId"
   ].$put({
-    param: { pauseToggleId },
-    json: { half: item.half },
+    param: { pauseToggleId: item.id },
+    json: {
+      gameId: item.gameId,
+      half: item.half,
+    },
   });
 
   return parseJsonResponse<PauseToggle>(response);
 }
 
-export async function deletePauseToggleMutation(key: PauseToggleDeleteKey) {
-  const pauseToggleId = encodeURIComponent(`${key.gameId}:${key.toggledAtMs}`);
+export async function deletePauseToggleMutation(id: string) {
   const response = await apiClient.api.collections["pause-toggles"][
     ":pauseToggleId"
   ].$delete({
-    param: { pauseToggleId },
+    param: { pauseToggleId: id },
   });
 
   await assertSuccessfulResponse(response);

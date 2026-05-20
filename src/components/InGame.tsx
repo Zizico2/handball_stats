@@ -22,7 +22,6 @@ import z from "zod";
 import {
   activeGameCollection,
   gamesCollection,
-  getPauseToggleKey,
   pauseTogglesCollection,
   playerEventsCollection,
   teamPlayersCollection,
@@ -139,7 +138,7 @@ function InGame() {
       }
 
       for (const toggle of activeGamePauseToggles) {
-        pauseTogglesCollection.delete(getPauseToggleKey(toggle));
+        pauseTogglesCollection.delete(toggle.id);
       }
 
       activeGameCollection.delete(activeGameData.id);

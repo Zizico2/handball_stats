@@ -216,17 +216,12 @@ export function useServerMatchClock({
     offsetTimestamp: new Date(),
     interval: 1000,
   });
-  const {
-    minutes,
-    pause,
-    reset,
-    seconds,
-    totalMilliseconds,
-    totalSeconds,
-  } = stopwatch;
+  const { minutes, pause, reset, seconds, totalMilliseconds, totalSeconds } =
+    stopwatch;
 
-  const displayClockKey = `${activeGameData?.gameId ?? "none"}:${activeHalf ?? "firstHalf"
-    }`;
+  const displayClockKey = `${activeGameData?.gameId ?? "none"}:${
+    activeHalf ?? "firstHalf"
+  }`;
   const previousDisplayClockKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -389,6 +384,7 @@ export function useServerMatchClock({
       }
 
       pauseTogglesCollection.insert({
+        id: crypto.randomUUID(),
         gameId: activeGameData.gameId,
         half,
       });

@@ -5,7 +5,6 @@ import type {
   ActiveGame,
   Game,
   PauseToggle,
-  PauseToggleDeleteKey,
   PlayerEvent,
   Team,
   TeamPlayer,
@@ -40,25 +39,6 @@ import {
 } from "@/server/api/client";
 
 const queryClient = new QueryClient();
-
-export function getPauseToggleKey(toggle: {
-  gameId: number;
-  toggledAtMs: number;
-}) {
-  return `${toggle.gameId}:${toggle.toggledAtMs}`;
-}
-
-function parsePauseToggleKey(key: string): PauseToggleDeleteKey {
-  const [gameIdRaw, toggledAtMsRaw] = key.split(":");
-  const gameId = Number(gameIdRaw);
-  const toggledAtMs = Number(toggledAtMsRaw);
-
-  if (!Number.isFinite(gameId) || !Number.isFinite(toggledAtMs)) {
-    throw new Error(`Invalid pause toggle key: ${key}`);
-  }
-
-  return { gameId, toggledAtMs };
-}
 
 export const playerEventsCollection = createCollection(
   queryCollectionOptions({
@@ -150,27 +130,22 @@ export const pauseTogglesCollection = createCollection(
     queryKey: ["pause-toggles"],
     queryClient,
     schema: pauseToggleSchema,
-    getKey: (item: PauseToggle) => getPauseToggleKey(item),
+    getKey: (item: PauseToggle) => item.id,
     queryFn: listPauseTogglesQuery,
     // TODO: use `Promise.all` or similar to run these in parallel instead of sequentially
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
-      for (const item of newItems) {
-        if (item.toggledAtMs !== -1) {
-          // TODO: is returning an error here fine?
-          throw new Error(
-            `Invalid pause toggle: toggledAtMs must be set to -1, the default value, when inserting, got ${item.toggledAtMs}`,
-          );
-        }
-      }
-      await Promise.all(
+      const results = await Promise.all(
         newItems.map((item) => upsertPauseToggleMutation(item)),
       );
+      results.forEach((result, index) => {
+        transaction.mutations[index].modified = result;
+      });
     },
     // TODO: use `Promise.all` or similar to run these in parallel instead of sequentially
     onDelete: async ({ transaction }) => {
-      const keys = transaction.mutations.map((m) => parsePauseToggleKey(m.key));
-      await Promise.all(keys.map((key) => deletePauseToggleMutation(key)));
+      const ids = transaction.mutations.map((m) => m.key);
+      await Promise.all(ids.map((id) => deletePauseToggleMutation(id)));
     },
   }),
 );

@@ -282,25 +282,14 @@ export const gameSchema = z.object({
 });
 export type Game = z.infer<typeof gameSchema>;
 
-export const insertPauseToggleSchema = z.object({
-  gameId: z.number(),
-  half: matchHalfSchema,
-});
-export type InsertPauseToggle = z.infer<typeof insertPauseToggleSchema>;
-
 export const pauseToggleSchema = z.object({
+  id: z.uuid(),
   gameId: z.number(),
   half: matchHalfSchema,
   // TODO: use z.date() for this.
   toggledAtMs: z.number().default(-1),
 });
 export type PauseToggle = z.infer<typeof pauseToggleSchema>;
-
-export const pauseToggleDeleteKeySchema = z.object({
-  gameId: z.number(),
-  toggledAtMs: z.number(),
-});
-export type PauseToggleDeleteKey = z.infer<typeof pauseToggleDeleteKeySchema>;
 
 export const matchClockSnapshotSchema = z.object({
   gameId: z.number(),
