@@ -1,4 +1,8 @@
+
 import z from "zod";
+
+export const matchHalfSchema = z.enum(["firstHalf", "secondHalf"]);
+export type MatchHalf = z.infer<typeof matchHalfSchema>;
 
 export const shotPosition = z.enum([
   "9m+",
@@ -91,6 +95,7 @@ export const basePlayerEventSchema = z.object({
   player: playerSchema,
   game_id: z.number(),
   ellapsed_seconds: z.number(),
+  half: matchHalfSchema,
 });
 export type BasePlayerEvent = z.infer<typeof basePlayerEventSchema>;
 
@@ -252,8 +257,6 @@ export const eventGroupSchema = z.enum(
 );
 export type EventGroup = z.infer<typeof eventGroupSchema>;
 
-export const matchHalfSchema = z.enum(["firstHalf", "secondHalf"]);
-export type MatchHalf = z.infer<typeof matchHalfSchema>;
 
 function withBase<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
   return basePlayerEventSchema.extend(schema.shape);

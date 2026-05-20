@@ -24,6 +24,7 @@ interface UseServerMatchClockResult {
   minutes: number;
   seconds: number;
   isRunning: boolean;
+  activeHalf: "firstHalf" | "secondHalf" | null;
   eventElapsedSeconds: number;
   activeGamePauseToggles: PauseToggle[];
   startFirstHalf: () => void;
@@ -257,6 +258,7 @@ export function useServerMatchClock({
     minutes,
     seconds,
     isRunning,
+    activeHalf,
     eventElapsedSeconds: totalSeconds,
     activeGamePauseToggles,
     startFirstHalf,

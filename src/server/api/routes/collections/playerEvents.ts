@@ -25,28 +25,35 @@ export const playerEventsRoutes = new Hono()
 
     const nowMs = Date.now();
     const uniqueGameIds = [...new Set(items.map((item) => item.game_id))];
-    const elapsedSecondsByGameId = new Map<number, number>();
 
+
+    // Get both elapsed seconds and active half for each game
+    const elapsedAndHalfByGameId = new Map<number, { elapsed: number; half: string | null }>();
     await Promise.all(
       uniqueGameIds.map(async (gameId) => {
-        const { activeElapsedSeconds } = await getMatchClockSnapshot(
+        const { activeElapsedSeconds, activeHalf } = await getMatchClockSnapshot(
           userId,
           gameId,
           nowMs,
         );
-        elapsedSecondsByGameId.set(gameId, activeElapsedSeconds);
+        elapsedAndHalfByGameId.set(gameId, { elapsed: activeElapsedSeconds, half: activeHalf });
       }),
     );
 
-    const rowsWithServerElapsed = items.map((item) =>
-      playerEventToDbRow(
+    const rowsWithServerElapsed = items.map((item) => {
+      const { elapsed, half } = elapsedAndHalfByGameId.get(item.game_id) ?? { elapsed: 0, half: null };
+      if (!half) {
+        throw new Error("Cannot create player event: match half is not active");
+      }
+      return playerEventToDbRow(
         {
           ...item,
-          ellapsed_seconds: elapsedSecondsByGameId.get(item.game_id) ?? 0,
+          ellapsed_seconds: elapsed,
+          half: half as import("@/datamodel").MatchHalf,
         },
         userId,
-      ),
-    );
+      );
+    });
 
     const inserted = await db
       .insert(schema.playerEvents)

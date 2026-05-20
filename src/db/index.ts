@@ -36,6 +36,7 @@ const dbPlayerEventToDomainSchema = dbPlayerEventSchema
       player: row.player,
       game_id: row.gameLocalId,
       ellapsed_seconds: row.ellapsedSeconds,
+      half: row.half,
     };
 
     if (row.eventType === "shot") {
@@ -96,6 +97,7 @@ export function playerEventToDbRow(
     ellapsedSeconds: event.ellapsed_seconds,
     eventType: event.eventType,
     eventGroup: event.eventGroup,
+    half: event.half,
     shotGoal: null as boolean | null,
     shotDirection: null as string | null,
     shotAim: null as string | null,

@@ -113,6 +113,7 @@ function InGame() {
 
   const {
     activeGamePauseToggles,
+    activeHalf,
     clearClockState,
     eventElapsedSeconds,
     isRunning,
@@ -157,12 +158,17 @@ function InGame() {
       return;
     }
 
+    if (!activeHalf) {
+      return;
+    }
+
     send({
       type: "START",
       eventGroup,
       ellapsed_seconds: eventElapsedSeconds,
       game_id: activeGame.data.gameId,
       id: nextEventId,
+      half: activeHalf,
     });
   };
 

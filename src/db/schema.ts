@@ -130,6 +130,7 @@ export const playerEvents = sqliteTable(
     ellapsedSeconds: integer("ellapsed_seconds").notNull(),
     eventType: text("event_type").notNull(),
     eventGroup: text("event_group").notNull(),
+    half: text("half").notNull(),
     shotGoal: integer("shot_goal", { mode: "boolean" }),
     shotDirection: text("shot_direction"),
     shotAim: text("shot_aim"),
@@ -143,6 +144,10 @@ export const playerEvents = sqliteTable(
       columns: [table.userId, table.gameLocalId],
       foreignColumns: [games.userId, games.localId],
     }),
+    check(
+      "player_events_half_check",
+      sql.raw(`\`${table.half.name}\` IN ('firstHalf', 'secondHalf')`),
+    ),
     check(
       "shot_direction_required_for_shot",
       sql.raw(
