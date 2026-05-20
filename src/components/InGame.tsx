@@ -377,6 +377,11 @@ function InGame() {
         players={selectedTeamPlayers}
         activePlayerNumbers={activePlayerNumbers}
         prioritizeActive={true}
+        selectionMode={
+          state.context.playerEvent.eventType === "substitution"
+            ? "onCourtOnly"
+            : "all"
+        }
         title={
           state.context.playerEvent.eventType === "substitution"
             ? "Pick Player Leaving"
@@ -393,11 +398,10 @@ function InGame() {
       />
       <PickPlayerFullscreenDialog
         open={state.matches("pickingSubstitutionPlayerIn")}
-        players={selectedTeamPlayers.filter(
-          (p) => p.number !== state.context.playerEvent.player,
-        )}
+        players={selectedTeamPlayers}
         activePlayerNumbers={activePlayerNumbers}
         prioritizeActive={false}
+        selectionMode="benchOnly"
         title="Pick Player Entering"
         onPickPlayer={(pickedPlayer) => {
           if (pickedPlayer) {
@@ -694,6 +698,7 @@ const PickPlayerFullscreenDialog = ({
   players,
   activePlayerNumbers,
   prioritizeActive = true,
+  selectionMode = "all",
   open,
   title = "Pick a Player",
   onPickPlayer,
@@ -701,6 +706,7 @@ const PickPlayerFullscreenDialog = ({
   players: TeamPlayer[];
   activePlayerNumbers: Set<number>;
   prioritizeActive?: boolean;
+  selectionMode?: "all" | "onCourtOnly" | "benchOnly";
   open: boolean;
   title?: string;
   onPickPlayer: (pickedPlayer: number | null) => void;
@@ -725,6 +731,12 @@ const PickPlayerFullscreenDialog = ({
         text: `#${player.number} ${player.name}`,
         key: `${player.number}`,
         value: player.number,
+        disabled:
+          selectionMode === "onCourtOnly"
+            ? !activePlayerNumbers.has(player.number)
+            : selectionMode === "benchOnly"
+              ? activePlayerNumbers.has(player.number)
+              : false,
         group: hasStartingLineup
           ? activePlayerNumbers.has(player.number)
             ? "On Court"
@@ -1014,6 +1026,7 @@ interface Option<T> {
   key: string;
   value: T;
   group?: string;
+  disabled?: boolean;
 }
 
 function ListSelectionDialog<T>({
@@ -1051,6 +1064,7 @@ function ListSelectionDialog<T>({
                 <Button
                   key={option.key}
                   variant="contained"
+                  disabled={option.disabled}
                   onClick={() => {
                     onPickOption(option.value);
                   }}
@@ -1081,6 +1095,7 @@ function ListSelectionDialog<T>({
                           <Button
                             key={option.key}
                             variant="contained"
+                            disabled={option.disabled}
                             onClick={() => {
                               onPickOption(option.value);
                             }}
