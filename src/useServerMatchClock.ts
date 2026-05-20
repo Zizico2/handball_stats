@@ -1,5 +1,4 @@
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
-import { v4 as uuidv4 } from 'uuid';
 import {
   type Dispatch,
   type SetStateAction,
@@ -8,6 +7,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { v4 as uuidv4 } from "uuid";
 import { gamesCollection, pauseTogglesCollection } from "@/collections";
 import type { ActiveGame, Game, PauseToggle } from "@/datamodel";
 import type { MatchStatus } from "@/inGameControlsAtoms";
