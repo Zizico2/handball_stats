@@ -1,4 +1,5 @@
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
+import { v4 as uuidv4 } from 'uuid';
 import {
   type Dispatch,
   type SetStateAction,
@@ -201,7 +202,7 @@ export function useServerMatchClock({
       }
 
       pauseTogglesCollection.insert({
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         gameId: activeGameData.gameId,
         half,
         toggledAtMs: Date.now() + serverOffsetMs,
