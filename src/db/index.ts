@@ -6,6 +6,7 @@ import type {
   MatchHalf,
   PauseToggle,
   PlayerEvent,
+  QuickSubPair,
   Team,
   TeamPlayer,
 } from "@/datamodel";
@@ -18,6 +19,8 @@ export type DbTeam = typeof schema.teams.$inferSelect;
 export type DbTeamInsert = typeof schema.teams.$inferInsert;
 export type DbTeamPlayer = typeof schema.teamPlayers.$inferSelect;
 export type DbTeamPlayerInsert = typeof schema.teamPlayers.$inferInsert;
+export type DbQuickSubPair = typeof schema.quickSubPairs.$inferSelect;
+export type DbQuickSubPairInsert = typeof schema.quickSubPairs.$inferInsert;
 export type DbGame = typeof schema.games.$inferSelect;
 export type DbGameInsert = typeof schema.games.$inferInsert;
 export type DbActiveGame = typeof schema.activeGame.$inferSelect;
@@ -156,6 +159,28 @@ export function teamPlayerToDbRow(
     teamLocalId: player.teamId,
     name: player.name,
     number: player.number,
+  };
+}
+
+export function dbRowToQuickSubPair(row: DbQuickSubPair): QuickSubPair {
+  return {
+    id: row.localId,
+    teamId: row.teamLocalId,
+    playerNumberA: row.playerNumberA,
+    playerNumberB: row.playerNumberB,
+  };
+}
+
+export function quickSubPairToDbRow(
+  pair: QuickSubPair,
+  userId: string,
+): DbQuickSubPairInsert {
+  return {
+    userId,
+    localId: pair.id,
+    teamLocalId: pair.teamId,
+    playerNumberA: pair.playerNumberA,
+    playerNumberB: pair.playerNumberB,
   };
 }
 

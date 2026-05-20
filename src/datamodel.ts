@@ -296,6 +296,14 @@ export const teamPlayerSchema = z.object({
 });
 export type TeamPlayer = z.infer<typeof teamPlayerSchema>;
 
+export const quickSubPairSchema = z.object({
+  id: z.number(),
+  teamId: z.number(),
+  playerNumberA: z.number(),
+  playerNumberB: z.number(),
+});
+export type QuickSubPair = z.infer<typeof quickSubPairSchema>;
+
 export const gameSchema = z.object({
   id: z.number(),
   homeTeamId: z.number(),

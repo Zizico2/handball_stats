@@ -46,6 +46,28 @@ export const teamPlayers = sqliteTable(
   ],
 );
 
+export const quickSubPairs = sqliteTable(
+  "quick_sub_pairs",
+  {
+    id: integer().primaryKey(),
+    userId: text("user_id").notNull(),
+    localId: integer("local_id").notNull(),
+    teamLocalId: integer("team_local_id").notNull(),
+    playerNumberA: integer("player_number_a").notNull(),
+    playerNumberB: integer("player_number_b").notNull(),
+  },
+  (table) => [
+    uniqueIndex("quick_sub_pairs_user_id_local_id_uq").on(
+      table.userId,
+      table.localId,
+    ),
+    foreignKey({
+      columns: [table.userId, table.teamLocalId],
+      foreignColumns: [teams.userId, teams.localId],
+    }),
+  ],
+);
+
 export const games = sqliteTable(
   "games",
   {

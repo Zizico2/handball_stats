@@ -4,6 +4,7 @@ import { gamesRoutes } from "./games";
 import { matchClockRoutes } from "./matchClock";
 import { pauseTogglesRoutes } from "./pauseToggles";
 import { playerEventsRoutes } from "./playerEvents";
+import { quickSubPairsRoutes } from "./quickSubPairs";
 import { teamPlayersRoutes } from "./teamPlayers";
 import { teamsRoutes } from "./teams";
 
@@ -11,6 +12,7 @@ export const collectionsRoutes = new Hono()
   .route("/player-events", playerEventsRoutes)
   .route("/teams", teamsRoutes)
   .route("/team-players", teamPlayersRoutes)
+  .route("/quick-sub-pairs", quickSubPairsRoutes)
   .route("/games", gamesRoutes)
   .route("/match-clock", matchClockRoutes)
   .route("/pause-toggles", pauseTogglesRoutes)

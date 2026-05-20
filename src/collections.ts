@@ -6,6 +6,7 @@ import type {
   Game,
   PauseToggle,
   PlayerEvent,
+  QuickSubPair,
   Team,
   TeamPlayer,
 } from "@/datamodel";
@@ -14,23 +15,27 @@ import {
   gameSchema,
   pauseToggleSchema,
   playerEventSchema,
+  quickSubPairSchema,
   teamPlayerSchema,
   teamSchema,
 } from "@/datamodel";
 import {
   createGamesMutation,
   createPlayerEventsMutation,
+  createQuickSubPairsMutation,
   createTeamPlayersMutation,
   createTeamsMutation,
   deleteActiveGameMutation,
   deletePauseToggleMutation,
   deletePlayerEventsMutation,
+  deleteQuickSubPairsMutation,
   deleteTeamPlayersMutation,
   deleteTeamsMutation,
   listActiveGameQuery,
   listGamesQuery,
   listPauseTogglesQuery,
   listPlayerEventsQuery,
+  listQuickSubPairsQuery,
   listTeamPlayersQuery,
   listTeamsQuery,
   upsertActiveGameMutation,
@@ -99,6 +104,25 @@ export const teamPlayersCollection = createCollection(
     onDelete: async ({ transaction }) => {
       const ids = transaction.mutations.map((m) => m.key);
       await deleteTeamPlayersMutation(ids);
+    },
+  }),
+);
+
+export const quickSubPairsCollection = createCollection(
+  queryCollectionOptions({
+    id: "quick-sub-pairs",
+    queryKey: ["quick-sub-pairs"],
+    queryClient,
+    schema: quickSubPairSchema,
+    getKey: (item: QuickSubPair) => item.id,
+    queryFn: listQuickSubPairsQuery,
+    onInsert: async ({ transaction }) => {
+      const newItems = transaction.mutations.map((m) => m.modified);
+      await createQuickSubPairsMutation(newItems);
+    },
+    onDelete: async ({ transaction }) => {
+      const ids = transaction.mutations.map((m) => m.key);
+      await deleteQuickSubPairsMutation(ids);
     },
   }),
 );
