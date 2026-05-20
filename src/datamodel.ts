@@ -290,7 +290,7 @@ export const pauseToggleSchema = z.object({
   gameId: z.number(),
   half: matchHalfSchema,
   // TODO: use z.date() for this.
-  toggledAtMs: z.number().default(-1),
+  toggledAtMs: z.number(),
 });
 export type PauseToggle = z.infer<typeof pauseToggleSchema>;
 
