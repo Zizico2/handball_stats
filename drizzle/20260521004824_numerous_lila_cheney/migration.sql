@@ -15,6 +15,7 @@ CREATE TABLE `games` (
 	`home_team_local_id` integer NOT NULL,
 	`created_at` text NOT NULL,
 	`first_half_started_at_ms` integer,
+	`halftime_started_at_ms` integer,
 	`second_half_started_at_ms` integer,
 	CONSTRAINT `fk_games_user_id_home_team_local_id_teams_user_id_local_id_fk` FOREIGN KEY (`user_id`,`home_team_local_id`) REFERENCES `teams`(`user_id`,`local_id`)
 );
@@ -49,6 +50,16 @@ CREATE TABLE `player_events` (
 	CONSTRAINT "shot_direction_required_for_shot" CHECK(`event_type` != 'shot' OR `shot_direction` IS NOT NULL)
 );
 --> statement-breakpoint
+CREATE TABLE `quick_sub_pairs` (
+	`id` integer PRIMARY KEY,
+	`user_id` text NOT NULL,
+	`local_id` integer NOT NULL,
+	`team_local_id` integer NOT NULL,
+	`player_number_a` integer NOT NULL,
+	`player_number_b` integer NOT NULL,
+	CONSTRAINT `fk_quick_sub_pairs_user_id_team_local_id_teams_user_id_local_id_fk` FOREIGN KEY (`user_id`,`team_local_id`) REFERENCES `teams`(`user_id`,`local_id`)
+);
+--> statement-breakpoint
 CREATE TABLE `team_players` (
 	`id` integer PRIMARY KEY,
 	`user_id` text NOT NULL,
@@ -70,5 +81,6 @@ CREATE UNIQUE INDEX `active_game_user_id_local_id_uq` ON `active_game` (`user_id
 CREATE UNIQUE INDEX `games_user_id_local_id_uq` ON `games` (`user_id`,`local_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `pause_toggles_client_id_uq` ON `pause_toggles` (`user_id`,`client_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `player_events_user_id_local_id_uq` ON `player_events` (`user_id`,`local_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `quick_sub_pairs_user_id_local_id_uq` ON `quick_sub_pairs` (`user_id`,`local_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `team_players_user_id_local_id_uq` ON `team_players` (`user_id`,`local_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `teams_user_id_local_id_uq` ON `teams` (`user_id`,`local_id`);
