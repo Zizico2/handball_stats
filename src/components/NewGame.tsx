@@ -7,6 +7,7 @@ import {
   InputLabel,
   MenuItem,
   Select,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
@@ -105,11 +106,39 @@ function NewGame() {
       >
         <Typography variant="h4">New Game</Typography>
         {activeGame.data ? (
-          <Typography variant="body2" color="text.secondary">
-            Active game: #{activeGame.data.gameId}
-            {activeTeamName ? ` (${activeTeamName})` : ""}. Starting a new one
-            will replace it.
-          </Typography>
+          // TODO: refactor this into a separate component. It is also used in "in game" when a starting 7 hasn't been set.
+          <Box
+            sx={{
+              bgcolor: "rgba(211, 47, 47, 0.08)",
+              border: "1px solid",
+              borderColor: "rgba(211, 47, 47, 0.3)",
+              borderRadius: 2,
+              p: 2,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 1.5,
+            }}
+          >
+            <Typography
+              variant="body2"
+              color="error.main"
+              fontWeight="medium"
+              textAlign="center"
+            >
+              Active game #{activeGame.data.gameId}
+              {activeTeamName ? ` (${activeTeamName})` : ""} is currently in
+              progress. You must end it before you can start a new game.
+            </Typography>
+            <Button
+              href="/in-game"
+              variant="outlined"
+              color="error"
+              size="small"
+            >
+              Go to Active Game
+            </Button>
+          </Box>
         ) : null}
         <FormControl fullWidth disabled={teams.data.length === 0}>
           <InputLabel id="home-team-select-label">Home Team</InputLabel>
@@ -133,13 +162,25 @@ function NewGame() {
             )}
           </Select>
         </FormControl>
-        <Button
-          variant="contained"
-          onClick={handleStartNewGame}
-          disabled={selectedTeamId === null}
+        <Tooltip
+          title={
+            activeGame.data
+              ? "Cannot start a new game while an active game exists. End the active match first."
+              : ""
+          }
+          arrow
         >
-          Start Game
-        </Button>
+          <span style={{ display: "block", width: "100%" }}>
+            <Button
+              variant="contained"
+              onClick={handleStartNewGame}
+              disabled={selectedTeamId === null || !!activeGame.data}
+              fullWidth
+            >
+              Start Game
+            </Button>
+          </span>
+        </Tooltip>
       </Box>
     </Box>
   );
