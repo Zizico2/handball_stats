@@ -32,7 +32,6 @@ import z from "zod";
 import {
   activeGameCollection,
   gamesCollection,
-  pauseTogglesCollection,
   playerEventsCollection,
   quickSubPairsCollection,
   teamPlayersCollection,
@@ -53,7 +52,7 @@ import {
 import { eventMachine } from "@/event_form_fsm";
 import {
   inGameControlsAtom,
-  initialInGameControlsState,
+  initialActiveGameControlsState,
   type MatchStatus,
 } from "@/inGameControlsAtoms";
 import { useServerMatchClock } from "@/useServerMatchClock";
@@ -72,8 +71,8 @@ function insertPlayerEvent(partialEvent: unknown): void {
   }
 }
 
-function InGame() {
-  const setInGameControls = useSetAtom(inGameControlsAtom);
+function ActiveGame() {
+  const setActiveGameControls = useSetAtom(inGameControlsAtom);
 
   const playerEvents = useLiveSuspenseQuery((q) =>
     q.from({ event: playerEventsCollection }),
@@ -238,7 +237,7 @@ function InGame() {
   };
 
   useEffect(() => {
-    setInGameControls({
+    setActiveGameControls({
       hasActiveGame: activeGameData !== null,
       matchStatus,
       isRunning,
@@ -252,7 +251,7 @@ function InGame() {
     });
 
     return () => {
-      setInGameControls(initialInGameControlsState);
+      setActiveGameControls(initialActiveGameControlsState);
     };
   }, [
     activeGameData,
@@ -261,7 +260,7 @@ function InGame() {
     matchStatus,
     firstHalfStartingPlayerNumbers.length,
     secondHalfStartingPlayerNumbers.length,
-    setInGameControls,
+    setActiveGameControls,
     startFirstHalf,
     startHalftime,
     startSecondHalf,
@@ -545,7 +544,7 @@ function InGame() {
   );
 }
 
-export default InGame;
+export default ActiveGame;
 
 function MatchClock({
   minutes,

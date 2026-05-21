@@ -2,7 +2,7 @@ import { atom } from "jotai";
 
 export type MatchStatus = "firstHalf" | "halftime" | "secondHalf";
 
-interface InGameControlActions {
+interface ActiveGameControlActions {
   onEndMatch: () => void;
   onStartFirstHalf: () => void;
   onStartSecondHalf: () => void;
@@ -10,7 +10,7 @@ interface InGameControlActions {
   onTogglePause: () => void;
 }
 
-export interface InGameControlsState extends InGameControlActions {
+export interface ActiveGameControlsState extends ActiveGameControlActions {
   hasActiveGame: boolean;
   matchStatus: MatchStatus | null;
   isRunning: boolean;
@@ -20,7 +20,7 @@ export interface InGameControlsState extends InGameControlActions {
 
 const noop = () => {};
 
-export const initialInGameControlsState: InGameControlsState = {
+export const initialActiveGameControlsState: ActiveGameControlsState = {
   hasActiveGame: false,
   matchStatus: null,
   isRunning: false,
@@ -33,6 +33,6 @@ export const initialInGameControlsState: InGameControlsState = {
   onTogglePause: noop,
 };
 
-export const inGameControlsAtom = atom<InGameControlsState>(
-  initialInGameControlsState,
+export const inGameControlsAtom = atom<ActiveGameControlsState>(
+  initialActiveGameControlsState,
 );

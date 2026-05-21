@@ -5,10 +5,10 @@ import dynamic from "next/dynamic";
 // TODO: TanstackDB doesn't support SSR yet
 // remove dynamic import and ssr: false once it does
 // remove "use client" directive once SSR is supported
-const NoSSRInGame = dynamic(() => import("../../components/InGame"), {
+const NoSSRActiveGame = dynamic(() => import("../../components/ActiveGame"), {
   ssr: false,
 });
 
-export default function InGamePage() {
-  return <NoSSRInGame />;
+export default function ActiveGamePage() {
+  return <NoSSRActiveGame />;
 }

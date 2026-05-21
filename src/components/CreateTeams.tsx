@@ -530,7 +530,7 @@ function AddQuickSubPairDialog({
       <DialogContent>
         <Stack spacing={3} sx={{ pt: 1 }}>
           <Typography variant="body2" color="text.secondary">
-            Choose two players. In-game you'll be able to swap them with one
+            Choose two players. In the active game you'll be able to swap them with one
             tap.
           </Typography>
 

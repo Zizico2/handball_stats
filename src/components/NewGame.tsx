@@ -90,7 +90,7 @@ function NewGame() {
       homeTeamId: selectedTeamId,
     });
 
-    router.push("/in-game");
+    router.push("/active-game");
   };
 
   return (
@@ -106,7 +106,7 @@ function NewGame() {
       >
         <Typography variant="h4">New Game</Typography>
         {activeGame.data ? (
-          // TODO: refactor this into a separate component. It is also used in "in game" when a starting 7 hasn't been set.
+          // TODO: refactor this into a separate component. It is also used in "active game" when a starting 7 hasn't been set.
           <Box
             sx={{
               bgcolor: "rgba(211, 47, 47, 0.08)",
@@ -131,7 +131,7 @@ function NewGame() {
               progress. You must end it before you can start a new game.
             </Typography>
             <Button
-              href="/in-game"
+              href="/active-game"
               variant="outlined"
               color="error"
               size="small"

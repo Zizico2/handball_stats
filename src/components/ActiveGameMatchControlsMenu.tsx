@@ -8,7 +8,7 @@ import { useAtomValue } from "jotai";
 import { useState } from "react";
 import { inGameControlsAtom } from "@/inGameControlsAtoms";
 
-export default function InGameMatchControlsMenu() {
+export default function ActiveGameMatchControlsMenu() {
   const inGameControls = useAtomValue(inGameControlsAtom);
   const [controlsAnchorEl, setControlsAnchorEl] = useState<HTMLElement | null>(
     null,
