@@ -50,7 +50,10 @@ export default function InGameMatchControlsMenu() {
       >
         <MenuItem
           onClick={() => runActionAndCloseMenu(inGameControls.onStartFirstHalf)}
-          disabled={inGameControls.matchStatus !== null}
+          disabled={
+            inGameControls.matchStatus !== null ||
+            inGameControls.disableStartFirstHalf
+          }
         >
           Start First Half
         </MenuItem>
@@ -64,7 +67,10 @@ export default function InGameMatchControlsMenu() {
           onClick={() =>
             runActionAndCloseMenu(inGameControls.onStartSecondHalf)
           }
-          disabled={inGameControls.matchStatus !== "halftime"}
+          disabled={
+            inGameControls.matchStatus !== "halftime" ||
+            inGameControls.disableStartSecondHalf
+          }
         >
           Start Second Half
         </MenuItem>

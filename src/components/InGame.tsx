@@ -213,6 +213,13 @@ function InGame() {
       e.eventType === "startingPlayer" && e.half === currentHalfForStarting,
   );
   const startingPlayerNumbers = startingEvents.map((e) => e.player);
+  const firstHalfStartingPlayerNumbers = activeGameEvents
+    .filter((e) => e.eventType === "startingPlayer" && e.half === "firstHalf")
+    .map((e) => e.player);
+  const secondHalfStartingPlayerNumbers = activeGameEvents
+    .filter((e) => e.eventType === "startingPlayer" && e.half === "secondHalf")
+    .map((e) => e.player);
+
   const activePlayerNumbers = getActivePlayers(activeGameEvents);
 
   const handleSaveStarting7 = (numbers: number[]) => {
@@ -248,6 +255,8 @@ function InGame() {
     setInGameControls({
       matchStatus,
       isRunning,
+      disableStartFirstHalf: firstHalfStartingPlayerNumbers.length === 0,
+      disableStartSecondHalf: secondHalfStartingPlayerNumbers.length === 0,
       onClearGame: handleClearGame,
       onStartFirstHalf: startFirstHalf,
       onStartSecondHalf: startSecondHalf,
@@ -262,6 +271,8 @@ function InGame() {
     handleClearGame,
     isRunning,
     matchStatus,
+    firstHalfStartingPlayerNumbers.length,
+    secondHalfStartingPlayerNumbers.length,
     setInGameControls,
     startFirstHalf,
     startHalftime,
