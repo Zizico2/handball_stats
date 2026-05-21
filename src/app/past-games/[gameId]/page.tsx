@@ -1,8 +1,12 @@
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { Box, Button, Chip, Stack, Typography } from "@mui/material";
 import { notFound } from "next/navigation";
+import { PastGameCsvDownloadButton } from "@/components/PastGameCsvDownloadButton";
 import { PastGameEventLog } from "@/components/PastGameEventLog";
-import { getPastGameLog } from "@/server/gameHistory";
+import {
+  getPastGameLog,
+  getPastGamePlayerEventsCsv,
+} from "@/server/gameHistory";
 
 interface PastGameDetailPageProps {
   params: Promise<{
@@ -27,7 +31,10 @@ export default async function PastGameDetailPage({
     notFound();
   }
 
-  const gameLog = await getPastGameLog(gameId);
+  const [gameLog, csvPayload] = await Promise.all([
+    getPastGameLog(gameId),
+    getPastGamePlayerEventsCsv(gameId),
+  ]);
 
   if (!gameLog) {
     notFound();
@@ -63,6 +70,13 @@ export default async function PastGameDetailPage({
             variant="outlined"
           />
         </Stack>
+
+        <PastGameCsvDownloadButton
+          csv={csvPayload?.csv ?? ""}
+          fileName={
+            csvPayload?.fileName ?? `game-${gameLog.game.id}-player-events.csv`
+          }
+        />
 
         <PastGameEventLog events={gameLog.events} players={gameLog.players} />
       </Stack>

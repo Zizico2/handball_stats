@@ -1,8 +1,28 @@
 import { auth } from "@clerk/nextjs/server";
 import { and, desc, eq } from "drizzle-orm";
+import { createSelectSchema } from "drizzle-orm/zod";
 import { dbRowToPlayerEvent } from "@/db";
 import * as schema from "@/db/schema";
 import { getDb } from "@/server/db";
+
+const playerEventSelectSchema = createSelectSchema(schema.playerEvents);
+export const PLAYER_EVENTS_CSV_COLUMN_KEYS = Object.keys(
+  playerEventSelectSchema.shape,
+) as Array<keyof typeof schema.playerEvents.$inferSelect>;
+
+function toCsvCell(value: unknown) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  const text = String(value);
+
+  if (/[",\n\r]/.test(text)) {
+    return `"${text.replaceAll('"', '""')}"`;
+  }
+
+  return text;
+}
 
 export interface PastGameSummary {
   id: number;
@@ -171,5 +191,62 @@ export async function getPastGameLog(
     },
     players: playerRows,
     events: eventRows.map(dbRowToPlayerEvent),
+  };
+}
+
+export async function getPastGamePlayerEventsTableRows(
+  gameId: number,
+): Promise<(typeof schema.playerEvents.$inferSelect)[] | null> {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return null;
+  }
+
+  const db = await getDb();
+  const gameRows = await db
+    .select({ localId: schema.games.localId })
+    .from(schema.games)
+    .where(
+      and(eq(schema.games.userId, userId), eq(schema.games.localId, gameId)),
+    )
+    .limit(1);
+
+  if (!gameRows[0]) {
+    return null;
+  }
+
+  return db
+    .select()
+    .from(schema.playerEvents)
+    .where(
+      and(
+        eq(schema.playerEvents.userId, userId),
+        eq(schema.playerEvents.gameLocalId, gameId),
+      ),
+    );
+}
+
+export async function getPastGamePlayerEventsCsv(
+  gameId: number,
+): Promise<{ fileName: string; csv: string } | null> {
+  const rows = await getPastGamePlayerEventsTableRows(gameId);
+
+  if (rows === null) {
+    return null;
+  }
+
+  const headers = PLAYER_EVENTS_CSV_COLUMN_KEYS.map((key) => String(key));
+  const csvRows = [headers.join(",")];
+
+  for (const row of rows) {
+    csvRows.push(
+      PLAYER_EVENTS_CSV_COLUMN_KEYS.map((key) => toCsvCell(row[key])).join(","),
+    );
+  }
+
+  return {
+    fileName: `game-${gameId}-player-events.csv`,
+    csv: `${csvRows.join("\n")}\n`,
   };
 }
