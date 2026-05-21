@@ -13,6 +13,8 @@ interface InGameControlActions {
 export interface InGameControlsState extends InGameControlActions {
   matchStatus: MatchStatus | null;
   isRunning: boolean;
+  disableStartFirstHalf: boolean;
+  disableStartSecondHalf: boolean;
 }
 
 const noop = () => {};
@@ -20,6 +22,8 @@ const noop = () => {};
 export const initialInGameControlsState: InGameControlsState = {
   matchStatus: null,
   isRunning: false,
+  disableStartFirstHalf: true,
+  disableStartSecondHalf: true,
   onClearGame: noop,
   onStartFirstHalf: noop,
   onStartSecondHalf: noop,

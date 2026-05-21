@@ -7,6 +7,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { v4 as uuidv4 } from "uuid";
 import { gamesCollection, pauseTogglesCollection } from "@/collections";
 import type { ActiveGame, Game, PauseToggle } from "@/datamodel";
 import type { MatchStatus } from "@/inGameControlsAtoms";
@@ -139,11 +140,17 @@ export function useServerMatchClock({
       return;
     }
 
+    if (activeGameRecord?.halftimeStartedAtMs != null) {
+      setMatchStatus("halftime");
+      return;
+    }
+
     if (activeGameRecord?.firstHalfStartedAtMs != null) {
       setMatchStatus("firstHalf");
     }
   }, [
     activeGameRecord?.firstHalfStartedAtMs,
+    activeGameRecord?.halftimeStartedAtMs,
     activeGameRecord?.secondHalfStartedAtMs,
     matchStatus,
     setMatchStatus,
@@ -201,7 +208,7 @@ export function useServerMatchClock({
       }
 
       pauseTogglesCollection.insert({
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         gameId: activeGameData.gameId,
         half,
         toggledAtMs: Date.now() + serverOffsetMs,
@@ -236,11 +243,26 @@ export function useServerMatchClock({
   }, [activeGameRecord, serverOffsetMs, setMatchStatus]);
 
   const startHalftime = useCallback(() => {
+    if (activeGameRecord) {
+      gamesCollection.update(activeGameRecord.id, (draft) => {
+        draft.halftimeStartedAtMs =
+          draft.halftimeStartedAtMs ?? Date.now() + serverOffsetMs;
+      });
+    }
+
     if (activeHalf === "firstHalf" && !paused) {
       appendPauseToggle("firstHalf");
     }
+
     setMatchStatus("halftime");
-  }, [activeHalf, appendPauseToggle, paused, setMatchStatus]);
+  }, [
+    activeGameRecord,
+    activeHalf,
+    appendPauseToggle,
+    paused,
+    serverOffsetMs,
+    setMatchStatus,
+  ]);
 
   const togglePause = useCallback(() => {
     if (activeHalf === "firstHalf") {

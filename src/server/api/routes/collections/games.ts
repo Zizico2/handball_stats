@@ -52,6 +52,9 @@ export const gamesRoutes = new Hono()
           firstHalfStartedAtMs: sql.raw(
             `excluded.${gameColumns.firstHalfStartedAtMs.name}`,
           ),
+          halftimeStartedAtMs: sql.raw(
+            `excluded.${gameColumns.halftimeStartedAtMs.name}`,
+          ),
           secondHalfStartedAtMs: sql.raw(
             `excluded.${gameColumns.secondHalfStartedAtMs.name}`,
           ),

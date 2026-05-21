@@ -223,6 +223,25 @@ export const shotEventSchema = withBase(
 );
 export type ShotEvent = z.infer<typeof shotEventSchema>;
 
+export const substitutionEventSchema = withBase(
+  z.object({
+    eventType: z.literal("substitution"),
+    eventGroup: z.literal("substitution"),
+    event: z.object({
+      playerIn: playerSchema,
+    }),
+  }),
+);
+export type SubstitutionEvent = z.infer<typeof substitutionEventSchema>;
+
+export const startingPlayerEventSchema = withBase(
+  z.object({
+    eventType: z.literal("startingPlayer"),
+    eventGroup: z.literal("substitution"),
+  }),
+);
+export type StartingPlayerEvent = z.infer<typeof startingPlayerEventSchema>;
+
 export const playerEventSchema = z.discriminatedUnion("eventType", [
   // attack events
   shotEventSchema,
@@ -242,6 +261,9 @@ export const playerEventSchema = z.discriminatedUnion("eventType", [
   redCardEventSchema,
   yellowCardEventSchema,
   twoMinuteSuspensionEventSchema,
+  // substitution events
+  substitutionEventSchema,
+  startingPlayerEventSchema,
 ]);
 
 export type PlayerEvent = z.infer<typeof playerEventSchema>;
@@ -274,11 +296,20 @@ export const teamPlayerSchema = z.object({
 });
 export type TeamPlayer = z.infer<typeof teamPlayerSchema>;
 
+export const quickSubPairSchema = z.object({
+  id: z.number(),
+  teamId: z.number(),
+  playerNumberA: z.number(),
+  playerNumberB: z.number(),
+});
+export type QuickSubPair = z.infer<typeof quickSubPairSchema>;
+
 export const gameSchema = z.object({
   id: z.number(),
   homeTeamId: z.number(),
   createdAt: z.iso.datetime(),
   firstHalfStartedAtMs: z.number().nullable().optional(),
+  halftimeStartedAtMs: z.number().nullable().optional(),
   secondHalfStartedAtMs: z.number().nullable().optional(),
 });
 export type Game = z.infer<typeof gameSchema>;

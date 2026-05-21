@@ -44,10 +44,7 @@ export const pauseTogglesRoutes = new Hono()
           ),
         )
         .onConflictDoNothing({
-          target: [
-            schema.pauseToggles.userId,
-            schema.pauseToggles.clientId,
-          ],
+          target: [schema.pauseToggles.userId, schema.pauseToggles.clientId],
         })
         .returning();
 

@@ -6,6 +6,7 @@ import type {
   MatchHalf,
   PauseToggle,
   PlayerEvent,
+  QuickSubPair,
   Team,
   TeamPlayer,
 } from "@/datamodel";
@@ -18,6 +19,8 @@ export type DbTeam = typeof schema.teams.$inferSelect;
 export type DbTeamInsert = typeof schema.teams.$inferInsert;
 export type DbTeamPlayer = typeof schema.teamPlayers.$inferSelect;
 export type DbTeamPlayerInsert = typeof schema.teamPlayers.$inferInsert;
+export type DbQuickSubPair = typeof schema.quickSubPairs.$inferSelect;
+export type DbQuickSubPairInsert = typeof schema.quickSubPairs.$inferInsert;
 export type DbGame = typeof schema.games.$inferSelect;
 export type DbGameInsert = typeof schema.games.$inferInsert;
 export type DbActiveGame = typeof schema.activeGame.$inferSelect;
@@ -48,6 +51,20 @@ const dbPlayerEventToDomainSchema = dbPlayerEventSchema
           goal: row.shotGoal ?? false,
           direction: row.shotDirection,
           ...(row.shotAim !== null ? { aim: row.shotAim } : {}),
+        },
+      };
+    }
+
+    if (row.eventType === "substitution") {
+      if (row.substitutionPlayerIn === null) {
+        throw new Error("Missing substitutionPlayerIn in DB row");
+      }
+      return {
+        ...base,
+        eventType: row.eventType,
+        eventGroup: row.eventGroup,
+        event: {
+          playerIn: row.substitutionPlayerIn,
         },
       };
     }
@@ -101,6 +118,7 @@ export function playerEventToDbRow(
     shotGoal: null as boolean | null,
     shotDirection: null as string | null,
     shotAim: null as string | null,
+    substitutionPlayerIn: null as number | null,
   };
 
   if (event.eventType === "shot") {
@@ -109,6 +127,13 @@ export function playerEventToDbRow(
       shotGoal: event.event.goal,
       shotDirection: event.event.direction,
       shotAim: event.event.aim ?? null,
+    };
+  }
+
+  if (event.eventType === "substitution") {
+    return {
+      ...base,
+      substitutionPlayerIn: event.event.playerIn,
     };
   }
 
@@ -137,12 +162,35 @@ export function teamPlayerToDbRow(
   };
 }
 
+export function dbRowToQuickSubPair(row: DbQuickSubPair): QuickSubPair {
+  return {
+    id: row.localId,
+    teamId: row.teamLocalId,
+    playerNumberA: row.playerNumberA,
+    playerNumberB: row.playerNumberB,
+  };
+}
+
+export function quickSubPairToDbRow(
+  pair: QuickSubPair,
+  userId: string,
+): DbQuickSubPairInsert {
+  return {
+    userId,
+    localId: pair.id,
+    teamLocalId: pair.teamId,
+    playerNumberA: pair.playerNumberA,
+    playerNumberB: pair.playerNumberB,
+  };
+}
+
 export function dbRowToGame(row: DbGame): Game {
   return {
     id: row.localId,
     homeTeamId: row.homeTeamLocalId,
     createdAt: row.createdAt,
     firstHalfStartedAtMs: row.firstHalfStartedAtMs,
+    halftimeStartedAtMs: row.halftimeStartedAtMs,
     secondHalfStartedAtMs: row.secondHalfStartedAtMs,
   };
 }
@@ -154,6 +202,7 @@ export function gameToDbRow(game: Game, userId: string): DbGameInsert {
     homeTeamLocalId: game.homeTeamId,
     createdAt: game.createdAt,
     firstHalfStartedAtMs: game.firstHalfStartedAtMs ?? null,
+    halftimeStartedAtMs: game.halftimeStartedAtMs ?? null,
     secondHalfStartedAtMs: game.secondHalfStartedAtMs ?? null,
   };
 }

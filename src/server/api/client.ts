@@ -5,6 +5,7 @@ import type {
   MatchClockSnapshot,
   PauseToggle,
   PlayerEvent,
+  QuickSubPair,
   Team,
   TeamPlayer,
 } from "@/datamodel";
@@ -106,6 +107,28 @@ export async function createTeamPlayersMutation(items: TeamPlayer[]) {
 
 export async function deleteTeamPlayersMutation(ids: number[]) {
   const response = await apiClient.api.collections["team-players"].$delete({
+    json: ids,
+  });
+
+  await assertSuccessfulResponse(response);
+}
+
+export async function listQuickSubPairsQuery() {
+  const response = await apiClient.api.collections["quick-sub-pairs"].$get();
+
+  return parseJsonResponse<QuickSubPair[]>(response);
+}
+
+export async function createQuickSubPairsMutation(items: QuickSubPair[]) {
+  const response = await apiClient.api.collections["quick-sub-pairs"].$post({
+    json: items,
+  });
+
+  return parseJsonResponse<QuickSubPair[]>(response);
+}
+
+export async function deleteQuickSubPairsMutation(ids: number[]) {
+  const response = await apiClient.api.collections["quick-sub-pairs"].$delete({
     json: ids,
   });
 

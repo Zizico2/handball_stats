@@ -1,13 +1,23 @@
 "use client";
+import BoltIcon from "@mui/icons-material/Bolt";
 import CloseIcon from "@mui/icons-material/Close";
+import ShieldIcon from "@mui/icons-material/Shield";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
+import WarningIcon from "@mui/icons-material/Warning";
 import {
   AppBar,
   Box,
   Button,
+  Checkbox,
+  Chip,
   Dialog,
   DialogContent,
+  Divider,
   Grid,
   IconButton,
+  List,
+  ListItemButton,
+  ListItemText,
   Stack,
   Toolbar,
   Typography,
@@ -24,6 +34,7 @@ import {
   gamesCollection,
   pauseTogglesCollection,
   playerEventsCollection,
+  quickSubPairsCollection,
   teamPlayersCollection,
 } from "@/collections";
 import {
@@ -31,6 +42,7 @@ import {
   type EventType,
   type PlayerEvent,
   playerEventSchema,
+  type QuickSubPair,
   type ShotAim,
   type ShotDirectionFields,
   type ShotPosition,
@@ -45,6 +57,7 @@ import {
   type MatchStatus,
 } from "@/inGameControlsAtoms";
 import { useServerMatchClock } from "@/useServerMatchClock";
+import { EventLog } from "./EventLog";
 
 function insertPlayerEvent(partialEvent: unknown): void {
   try {
@@ -86,6 +99,10 @@ function InGame() {
       .findOne(),
   );
 
+  const quickSubPairs = useLiveSuspenseQuery((q) =>
+    q.from({ pair: quickSubPairsCollection }),
+  );
+
   const activeGameData = activeGame.data ?? null;
 
   const activeGameRecord = activeGameData
@@ -93,6 +110,8 @@ function InGame() {
     : null;
 
   const [matchStatus, setMatchStatus] = useState<MatchStatus | null>(null);
+  const [starting7DialogOpen, setStarting7DialogOpen] = useState(false);
+  const [quickSubDialogOpen, setQuickSubDialogOpen] = useState(false);
 
   const [state, send] = useMachine(
     eventMachine.provide({
@@ -162,6 +181,12 @@ function InGame() {
       return;
     }
 
+    // Substitution opens the quick-sub pre-step dialog instead of the FSM directly
+    if (eventGroup === "substitution") {
+      setQuickSubDialogOpen(true);
+      return;
+    }
+
     send({
       type: "START",
       eventGroup,
@@ -178,10 +203,60 @@ function InGame() {
       )
     : [];
 
+  const currentHalfForStarting =
+    matchStatus === "secondHalf" || matchStatus === "halftime"
+      ? "secondHalf"
+      : "firstHalf";
+
+  const startingEvents = activeGameEvents.filter(
+    (e) =>
+      e.eventType === "startingPlayer" && e.half === currentHalfForStarting,
+  );
+  const startingPlayerNumbers = startingEvents.map((e) => e.player);
+  const firstHalfStartingPlayerNumbers = activeGameEvents
+    .filter((e) => e.eventType === "startingPlayer" && e.half === "firstHalf")
+    .map((e) => e.player);
+  const secondHalfStartingPlayerNumbers = activeGameEvents
+    .filter((e) => e.eventType === "startingPlayer" && e.half === "secondHalf")
+    .map((e) => e.player);
+
+  const activePlayerNumbers = getActivePlayers(activeGameEvents);
+
+  const handleSaveStarting7 = (numbers: number[]) => {
+    if (!activeGameData) return;
+
+    // 1. Delete all existing startingPlayer events for this game and current half
+    const existingStarting = activeGameEvents.filter(
+      (e) =>
+        e.eventType === "startingPlayer" && e.half === currentHalfForStarting,
+    );
+    for (const event of existingStarting) {
+      playerEventsCollection.delete(event.id);
+    }
+
+    // 2. Insert new startingPlayer events
+    numbers.forEach((num, index) => {
+      const eventId = nextEventId + index;
+      insertPlayerEvent({
+        id: eventId,
+        player: num,
+        game_id: activeGameData.gameId,
+        ellapsed_seconds: 0,
+        half: currentHalfForStarting,
+        eventType: "startingPlayer",
+        eventGroup: "substitution",
+      });
+    });
+
+    setStarting7DialogOpen(false);
+  };
+
   useEffect(() => {
     setInGameControls({
       matchStatus,
       isRunning,
+      disableStartFirstHalf: firstHalfStartingPlayerNumbers.length === 0,
+      disableStartSecondHalf: secondHalfStartingPlayerNumbers.length === 0,
       onClearGame: handleClearGame,
       onStartFirstHalf: startFirstHalf,
       onStartSecondHalf: startSecondHalf,
@@ -196,12 +271,24 @@ function InGame() {
     handleClearGame,
     isRunning,
     matchStatus,
+    firstHalfStartingPlayerNumbers.length,
+    secondHalfStartingPlayerNumbers.length,
     setInGameControls,
     startFirstHalf,
     startHalftime,
     startSecondHalf,
     togglePause,
   ]);
+
+  const getPlayerLabel = useCallback(
+    (number: number) => {
+      const player = teamPlayers.data.find(
+        (p) => p.number === number && p.teamId === activeGameData?.homeTeamId,
+      );
+      return player ? `#${player.number} ${player.name}` : `#${number}`;
+    },
+    [teamPlayers.data, activeGameData?.homeTeamId],
+  );
 
   return (
     <>
@@ -225,17 +312,106 @@ function InGame() {
                 Go to New Game
               </Button>
             </Box>
-          ) : null}
+          ) : startingPlayerNumbers.length === 0 ? (
+            <Box
+              sx={{
+                bgcolor: "rgba(237, 108, 2, 0.08)",
+                border: "1px solid",
+                borderColor: "rgba(237, 108, 2, 0.3)",
+                borderRadius: 2,
+                p: 2,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 1.5,
+                maxWidth: 400,
+                mx: "auto",
+              }}
+            >
+              <Typography
+                variant="body2"
+                color="warning.dark"
+                fontWeight="medium"
+                textAlign="center"
+              >
+                Starting lineup is not defined yet. Set the starting players to
+                enable accurate tracking of who is on court.
+              </Typography>
+              <Button
+                variant="contained"
+                color="warning"
+                onClick={() => setStarting7DialogOpen(true)}
+                size="small"
+              >
+                Set Starting Lineup
+              </Button>
+            </Box>
+          ) : (
+            <Box sx={{ width: "100%", maxWidth: 400, mx: "auto", my: 1 }}>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{ mb: 1 }}
+              >
+                <Typography
+                  variant="subtitle2"
+                  color="text.secondary"
+                  fontWeight="bold"
+                >
+                  On Court ({activePlayerNumbers.size})
+                </Typography>
+              </Stack>
+              <Stack
+                direction="row"
+                spacing={1}
+                flexWrap="wrap"
+                useFlexGap
+                sx={{ gap: 1 }}
+              >
+                {Array.from(activePlayerNumbers).map((num) => {
+                  const p = selectedTeamPlayers.find(
+                    (player) => player.number === num,
+                  );
+                  return (
+                    <Chip
+                      key={num}
+                      label={`#${num} ${p ? p.name.split(" ")[0] : ""}`}
+                      size="small"
+                      color="secondary"
+                      variant="outlined"
+                    />
+                  );
+                })}
+              </Stack>
+            </Box>
+          )}
           <EventGroupButtons
             onRecordEvent={handleStartEvent}
-            disabled={!activeGame.data || selectedTeamPlayers.length === 0}
+            disabled={
+              !activeGame.data ||
+              selectedTeamPlayers.length === 0 ||
+              startingPlayerNumbers.length === 0
+            }
           />
         </Box>
-        <EventLog events={activeGameEvents} />
+        <EventLog events={activeGameEvents} getPlayerLabel={getPlayerLabel} />
       </Box>
       <PickPlayerFullscreenDialog
         open={state.matches("pickingPlayer")}
         players={selectedTeamPlayers}
+        activePlayerNumbers={activePlayerNumbers}
+        prioritizeActive={true}
+        selectionMode={
+          state.context.playerEvent.eventType === "substitution"
+            ? "onCourtOnly"
+            : "all"
+        }
+        title={
+          state.context.playerEvent.eventType === "substitution"
+            ? "Pick Player Leaving"
+            : "Pick a Player"
+        }
         onPickPlayer={(pickedPlayer) => {
           if (pickedPlayer) {
             console.log("Picked player:", pickedPlayer);
@@ -245,6 +421,71 @@ function InGame() {
           }
         }}
       />
+      <PickPlayerFullscreenDialog
+        open={state.matches("pickingSubstitutionPlayerIn")}
+        players={selectedTeamPlayers}
+        activePlayerNumbers={activePlayerNumbers}
+        prioritizeActive={false}
+        selectionMode="benchOnly"
+        title="Pick Player Entering"
+        onPickPlayer={(pickedPlayer) => {
+          if (pickedPlayer) {
+            console.log("Picked entering player:", pickedPlayer);
+            send({ type: "PICK_PLAYER", player: pickedPlayer });
+          } else {
+            send({ type: "CANCEL" });
+          }
+        }}
+      />
+      {starting7DialogOpen && (
+        <PickStarting7Dialog
+          open={starting7DialogOpen}
+          players={selectedTeamPlayers}
+          currentStartingNumbers={startingPlayerNumbers}
+          onSave={handleSaveStarting7}
+          onClose={() => setStarting7DialogOpen(false)}
+        />
+      )}
+      {quickSubDialogOpen &&
+        activeHalf &&
+        activeGame.data &&
+        (() => {
+          const gameId = activeGame.data.gameId;
+          const homeTeamId = activeGame.data.homeTeamId;
+          return (
+            <QuickSubDialog
+              open={quickSubDialogOpen}
+              pairs={quickSubPairs.data.filter((p) => p.teamId === homeTeamId)}
+              players={selectedTeamPlayers}
+              activePlayerNumbers={activePlayerNumbers}
+              onQuickSub={(playerOut, playerIn) => {
+                insertPlayerEvent({
+                  id: nextEventId,
+                  player: playerOut,
+                  game_id: gameId,
+                  ellapsed_seconds: eventElapsedSeconds,
+                  half: activeHalf,
+                  eventType: "substitution",
+                  eventGroup: "substitution",
+                  event: { playerIn },
+                });
+                setQuickSubDialogOpen(false);
+              }}
+              onPickManually={() => {
+                setQuickSubDialogOpen(false);
+                send({
+                  type: "START",
+                  eventGroup: "substitution",
+                  ellapsed_seconds: eventElapsedSeconds,
+                  game_id: gameId,
+                  id: nextEventId,
+                  half: activeHalf,
+                });
+              }}
+              onClose={() => setQuickSubDialogOpen(false)}
+            />
+          );
+        })()}
       <PickShotDirectionDialog
         open={state.matches("pickingShotDirection")}
         onPick={(pick) => {
@@ -342,55 +583,98 @@ function EventGroupButtons({
   disabled: boolean;
 }) {
   return (
-    <>
-      <Button
-        variant="contained"
-        onClick={() => onRecordEvent("attack")}
-        disabled={disabled}
-      >
-        Attack
-      </Button>
-      <Button
-        variant="contained"
-        onClick={() => onRecordEvent("defense")}
-        disabled={disabled}
-      >
-        Defense
-      </Button>
-      <Button
-        variant="contained"
-        onClick={() => onRecordEvent("sanction")}
-        disabled={disabled}
-      >
-        Sanction
-      </Button>
-    </>
-  );
-}
-
-function EventLog({ events }: { events: PlayerEvent[] }) {
-  return (
-    <Box>
-      <Typography variant="h5">Player Events</Typography>
-      {events.map((event) => (
-        <Box key={event.id} sx={{ border: "1px solid black", padding: 1 }}>
-          <div>Event ID: {event.id}</div>
-          <div>Player: {event.player}</div>
-          <div>Game ID: {event.game_id}</div>
-          <div>Elapsed Seconds: {event.ellapsed_seconds}</div>
-          <div>Event Type: {event.eventType}</div>
-          {"event" in event && event.eventType === "shot" && (
-            <>
-              <div>Goal: {event.event.goal ? "Yes" : "No"}</div>
-              <div>Direction: {event.event.direction ?? "Not specified"}</div>
-              <div>Aim: {event.event.aim ?? "Not specified"}</div>
-            </>
-          )}
-        </Box>
-      ))}
+    <Box sx={{ width: "100%", mt: 1 }}>
+      <Grid container spacing={2}>
+        <Grid size={6}>
+          <Button
+            fullWidth
+            variant="contained"
+            startIcon={<BoltIcon />}
+            onClick={() => onRecordEvent("attack")}
+            disabled={disabled}
+            sx={{
+              bgcolor: "warning.main",
+              color: "warning.contrastText",
+              "&:hover": { bgcolor: "warning.dark" },
+              textTransform: "none",
+              py: 1.5,
+              fontSize: "1rem",
+              borderRadius: 2,
+              boxShadow: 3,
+            }}
+          >
+            Attack
+          </Button>
+        </Grid>
+        <Grid size={6}>
+          <Button
+            fullWidth
+            variant="contained"
+            startIcon={<ShieldIcon />}
+            onClick={() => onRecordEvent("defense")}
+            disabled={disabled}
+            sx={{
+              bgcolor: "primary.main",
+              color: "primary.contrastText",
+              "&:hover": { bgcolor: "primary.dark" },
+              textTransform: "none",
+              py: 1.5,
+              fontSize: "1rem",
+              borderRadius: 2,
+              boxShadow: 3,
+            }}
+          >
+            Defense
+          </Button>
+        </Grid>
+        <Grid size={6}>
+          <Button
+            fullWidth
+            variant="contained"
+            startIcon={<WarningIcon />}
+            onClick={() => onRecordEvent("sanction")}
+            disabled={disabled}
+            sx={{
+              bgcolor: "error.main",
+              color: "error.contrastText",
+              "&:hover": { bgcolor: "error.dark" },
+              textTransform: "none",
+              py: 1.5,
+              fontSize: "1rem",
+              borderRadius: 2,
+              boxShadow: 3,
+            }}
+          >
+            Sanction
+          </Button>
+        </Grid>
+        <Grid size={6}>
+          <Button
+            fullWidth
+            variant="contained"
+            startIcon={<SwapHorizIcon />}
+            onClick={() => onRecordEvent("substitution")}
+            disabled={disabled}
+            sx={{
+              bgcolor: "success.main",
+              color: "success.contrastText",
+              "&:hover": { bgcolor: "success.dark" },
+              textTransform: "none",
+              py: 1.5,
+              fontSize: "1rem",
+              borderRadius: 2,
+              boxShadow: 3,
+            }}
+          >
+            Substitution
+          </Button>
+        </Grid>
+      </Grid>
     </Box>
   );
 }
+
+// EventLog component is imported from ./EventLog
 
 const PickAttackEventTypeDialog = ({
   open,
@@ -479,24 +763,139 @@ const PickSanctionEventTypeDialog = ({
 
 const PickPlayerFullscreenDialog = ({
   players,
+  activePlayerNumbers,
+  prioritizeActive = true,
+  selectionMode = "all",
   open,
+  title = "Pick a Player",
   onPickPlayer,
 }: {
   players: TeamPlayer[];
+  activePlayerNumbers: Set<number>;
+  prioritizeActive?: boolean;
+  selectionMode?: "all" | "onCourtOnly" | "benchOnly";
   open: boolean;
+  title?: string;
   onPickPlayer: (pickedPlayer: number | null) => void;
 }) => {
+  const hasStartingLineup = activePlayerNumbers.size > 0;
+
+  const sortedPlayers = [...players].sort((a, b) => {
+    if (hasStartingLineup) {
+      const aActive = activePlayerNumbers.has(a.number);
+      const bActive = activePlayerNumbers.has(b.number);
+      if (aActive && !bActive) return prioritizeActive ? -1 : 1;
+      if (!aActive && bActive) return prioritizeActive ? 1 : -1;
+    }
+    return a.number - b.number;
+  });
+
   return (
     <ListSelectionDialog
       open={open}
-      title="Pick a Player"
-      options={players.map((player) => ({
+      title={title}
+      options={sortedPlayers.map((player) => ({
         text: `#${player.number} ${player.name}`,
         key: `${player.number}`,
         value: player.number,
+        disabled:
+          selectionMode === "onCourtOnly"
+            ? !activePlayerNumbers.has(player.number)
+            : selectionMode === "benchOnly"
+              ? activePlayerNumbers.has(player.number)
+              : false,
+        group: hasStartingLineup
+          ? activePlayerNumbers.has(player.number)
+            ? "On Court"
+            : "Bench"
+          : undefined,
       }))}
       onPickOption={onPickPlayer}
     />
+  );
+};
+
+const PickStarting7Dialog = ({
+  open,
+  players,
+  currentStartingNumbers,
+  onSave,
+  onClose,
+}: {
+  open: boolean;
+  players: TeamPlayer[];
+  currentStartingNumbers: number[];
+  onSave: (numbers: number[]) => void;
+  onClose: () => void;
+}) => {
+  const [selected, setSelected] = useState<number[]>(currentStartingNumbers);
+
+  const handleToggle = (number: number) => {
+    setSelected((prev) =>
+      prev.includes(number)
+        ? prev.filter((n) => n !== number)
+        : [...prev, number],
+    );
+  };
+
+  const targetCount = Math.min(7, players.length);
+  const isValid = selected.length === targetCount;
+
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
+      <DialogContent>
+        <Stack spacing={2} sx={{ py: 1 }}>
+          <Typography variant="h6" fontWeight="bold">
+            Define Starting Lineup
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Select {targetCount} starting players.
+            {selected.length !== targetCount &&
+              ` (Currently selected: ${selected.length})`}
+          </Typography>
+
+          <Box
+            sx={{
+              maxHeight: 300,
+              overflowY: "auto",
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 1,
+            }}
+          >
+            <List>
+              {players.map((player) => {
+                const isChecked = selected.includes(player.number);
+                return (
+                  <ListItemButton
+                    key={player.number}
+                    onClick={() => handleToggle(player.number)}
+                  >
+                    <Checkbox checked={isChecked} edge="start" disableRipple />
+                    <ListItemText
+                      primary={`#${player.number} ${player.name}`}
+                    />
+                  </ListItemButton>
+                );
+              })}
+            </List>
+          </Box>
+
+          <Stack direction="row" spacing={2} justifyContent="flex-end">
+            <Button onClick={onClose} color="inherit">
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => onSave(selected)}
+              disabled={!isValid}
+            >
+              Save Lineup
+            </Button>
+          </Stack>
+        </Stack>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -669,11 +1068,188 @@ const PickShotPositionDialog = ({
   );
 };
 
+const QuickSubDialog = ({
+  open,
+  pairs,
+  players,
+  activePlayerNumbers,
+  onQuickSub,
+  onPickManually,
+  onClose,
+}: {
+  open: boolean;
+  pairs: QuickSubPair[];
+  players: TeamPlayer[];
+  activePlayerNumbers: Set<number>;
+  onQuickSub: (playerOut: number, playerIn: number) => void;
+  onPickManually: () => void;
+  onClose: () => void;
+}) => {
+  const getPlayerLabel = (num: number) => {
+    const p = players.find((pl) => pl.number === num);
+    return p ? `#${num} ${p.name}` : `#${num}`;
+  };
+
+  return (
+    <Dialog fullScreen open={open}>
+      <AppBar sx={{ position: "relative" }}>
+        <Toolbar>
+          <IconButton
+            edge="start"
+            color="inherit"
+            onClick={onClose}
+            aria-label="close"
+          >
+            <CloseIcon />
+          </IconButton>
+          <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
+            Substitution
+          </Typography>
+        </Toolbar>
+      </AppBar>
+      <DialogContent>
+        <Stack spacing={2} sx={{ pt: 1 }}>
+          {pairs.length > 0 && (
+            <>
+              <Typography
+                variant="subtitle2"
+                fontWeight="bold"
+                color="text.secondary"
+              >
+                Quick Substitutions
+              </Typography>
+              <Stack spacing={1.5}>
+                {pairs.map((pair) => {
+                  const aOnCourt = activePlayerNumbers.has(pair.playerNumberA);
+                  const bOnCourt = activePlayerNumbers.has(pair.playerNumberB);
+
+                  let playerOut: number | null = null;
+                  let playerIn: number | null = null;
+                  let disabledReason: string | null = null;
+
+                  if (aOnCourt && bOnCourt) {
+                    disabledReason = "Both on court";
+                  } else if (!aOnCourt && !bOnCourt) {
+                    disabledReason = "Both on bench";
+                  } else if (aOnCourt) {
+                    playerOut = pair.playerNumberA;
+                    playerIn = pair.playerNumberB;
+                  } else {
+                    playerOut = pair.playerNumberB;
+                    playerIn = pair.playerNumberA;
+                  }
+
+                  const isDisabled = disabledReason !== null;
+
+                  return (
+                    <Button
+                      key={pair.id}
+                      variant={isDisabled ? "outlined" : "contained"}
+                      color="success"
+                      disabled={isDisabled}
+                      onClick={() => {
+                        if (playerOut !== null && playerIn !== null) {
+                          onQuickSub(playerOut, playerIn);
+                        }
+                      }}
+                      sx={{
+                        py: 2.5,
+                        px: 2,
+                        borderRadius: 3,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 0.5,
+                        textTransform: "none",
+                      }}
+                    >
+                      <Stack
+                        direction="row"
+                        alignItems="center"
+                        spacing={1.5}
+                        justifyContent="center"
+                      >
+                        <Typography
+                          variant="body1"
+                          fontWeight="bold"
+                          sx={{ color: isDisabled ? "inherit" : "error.light" }}
+                        >
+                          {getPlayerLabel(pair.playerNumberA)}
+                        </Typography>
+                        <SwapHorizIcon />
+                        <Typography
+                          variant="body1"
+                          fontWeight="bold"
+                          sx={{
+                            color: isDisabled ? "inherit" : "success.light",
+                          }}
+                        >
+                          {getPlayerLabel(pair.playerNumberB)}
+                        </Typography>
+                      </Stack>
+                      {disabledReason && (
+                        <Typography variant="caption" color="text.secondary">
+                          {disabledReason}
+                        </Typography>
+                      )}
+                      {!disabledReason &&
+                        playerOut !== null &&
+                        playerIn !== null && (
+                          <Typography variant="caption" sx={{ opacity: 0.85 }}>
+                            {getPlayerLabel(playerOut)} out /{" "}
+                            {getPlayerLabel(playerIn)} in
+                          </Typography>
+                        )}
+                    </Button>
+                  );
+                })}
+              </Stack>
+              <Divider>
+                <Typography variant="caption" color="text.secondary">
+                  or
+                </Typography>
+              </Divider>
+            </>
+          )}
+          <Button
+            variant="outlined"
+            size="large"
+            onClick={onPickManually}
+            sx={{ py: 2, borderRadius: 3, textTransform: "none" }}
+          >
+            Pick players manually →
+          </Button>
+        </Stack>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export function getActivePlayers(events: PlayerEvent[]): Set<number> {
+  const active = new Set<number>();
+  const sorted = [...events].sort((a, b) => a.id - b.id);
+  let clearedForSecondHalf = false;
+  for (const e of sorted) {
+    if (e.eventType === "startingPlayer") {
+      if (e.half === "secondHalf" && !clearedForSecondHalf) {
+        active.clear();
+        clearedForSecondHalf = true;
+      }
+      active.add(e.player);
+    } else if (e.eventType === "substitution") {
+      active.delete(e.player);
+      active.add(e.event.playerIn);
+    }
+  }
+  return active;
+}
+
 // Abstracted list style dialog, since the 3 dialogs are very similar, only differing in the options they show and the type of data they return.
 interface Option<T> {
   text: string;
   key: string;
   value: T;
+  group?: string;
+  disabled?: boolean;
 }
 
 function ListSelectionDialog<T>({
@@ -706,17 +1282,54 @@ function ListSelectionDialog<T>({
       </AppBar>
       <DialogContent>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {options.map((option) => (
-            <Button
-              key={option.key}
-              variant="contained"
-              onClick={() => {
-                onPickOption(option.value);
-              }}
-            >
-              {option.text}
-            </Button>
-          ))}
+          {options.every((o) => !o.group)
+            ? options.map((option) => (
+                <Button
+                  key={option.key}
+                  variant="contained"
+                  disabled={option.disabled}
+                  onClick={() => {
+                    onPickOption(option.value);
+                  }}
+                >
+                  {option.text}
+                </Button>
+              ))
+            : Array.from(new Set(options.map((o) => o.group || ""))).map(
+                (groupName) => (
+                  <Box
+                    key={groupName}
+                    sx={{ display: "flex", flexDirection: "column", gap: 1 }}
+                  >
+                    {groupName && (
+                      <Typography
+                        variant="subtitle2"
+                        color="text.secondary"
+                        fontWeight="bold"
+                        sx={{ mt: 1 }}
+                      >
+                        {groupName}
+                      </Typography>
+                    )}
+                    <Stack spacing={1.5}>
+                      {options
+                        .filter((o) => (o.group || "") === groupName)
+                        .map((option) => (
+                          <Button
+                            key={option.key}
+                            variant="contained"
+                            disabled={option.disabled}
+                            onClick={() => {
+                              onPickOption(option.value);
+                            }}
+                          >
+                            {option.text}
+                          </Button>
+                        ))}
+                    </Stack>
+                  </Box>
+                ),
+              )}
         </Box>
       </DialogContent>
     </Dialog>

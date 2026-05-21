@@ -1,0 +1,1 @@
+ALTER TABLE `games` ADD `halftime_started_at_ms` integer;

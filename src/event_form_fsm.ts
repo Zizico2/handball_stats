@@ -102,6 +102,19 @@ export const eventMachine = setup({
           target: "startingSanction",
           guard: ({ context }) => context.playerEvent.eventGroup === "sanction",
         },
+        {
+          target: "pickingPlayer",
+          guard: ({ context }) =>
+            context.playerEvent.eventGroup === "substitution",
+          actions: assign(({ context }) => {
+            return {
+              playerEvent: {
+                ...context.playerEvent,
+                eventType: "substitution",
+              },
+            };
+          }),
+        },
       ],
     },
     startingSanction: {
@@ -255,7 +268,34 @@ export const eventMachine = setup({
               };
             }),
           },
+          {
+            target: "pickingSubstitutionPlayerIn",
+            guard: ({ context }) =>
+              context.playerEvent.eventType === "substitution",
+            actions: assign(({ context, event }) => {
+              return {
+                playerEvent: { ...context.playerEvent, player: event.player },
+              };
+            }),
+          },
         ],
+      },
+    },
+    pickingSubstitutionPlayerIn: {
+      on: {
+        PICK_PLAYER: {
+          target: "finished",
+          actions: assign(({ context, event }) => {
+            return {
+              playerEvent: {
+                ...context.playerEvent,
+                event: {
+                  playerIn: event.player,
+                },
+              },
+            };
+          }),
+        },
       },
     },
     pickingShotPosition: {
