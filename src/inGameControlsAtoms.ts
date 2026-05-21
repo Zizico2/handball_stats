@@ -3,7 +3,6 @@ import { atom } from "jotai";
 export type MatchStatus = "firstHalf" | "halftime" | "secondHalf";
 
 interface InGameControlActions {
-  onClearGame: () => void;
   onEndMatch: () => void;
   onStartFirstHalf: () => void;
   onStartSecondHalf: () => void;
@@ -27,7 +26,6 @@ export const initialInGameControlsState: InGameControlsState = {
   isRunning: false,
   disableStartFirstHalf: true,
   disableStartSecondHalf: true,
-  onClearGame: noop,
   onEndMatch: noop,
   onStartFirstHalf: noop,
   onStartSecondHalf: noop,

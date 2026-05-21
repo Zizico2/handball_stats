@@ -149,29 +149,6 @@ function InGame() {
     setMatchStatus,
   });
 
-  const handleClearGame = useCallback(() => {
-    if (activeGameData) {
-      for (const event of playerEvents.data.filter(
-        (item) => item.game_id === activeGameData.gameId,
-      )) {
-        playerEventsCollection.delete(event.id);
-      }
-
-      for (const toggle of activeGamePauseToggles) {
-        pauseTogglesCollection.delete(toggle.id);
-      }
-
-      activeGameCollection.delete(activeGameData.id);
-    }
-
-    clearClockState();
-  }, [
-    activeGameData,
-    activeGamePauseToggles,
-    clearClockState,
-    playerEvents.data,
-  ]);
-
   const handleEndMatch = useCallback(() => {
     if (!activeGameData) {
       return;
@@ -267,7 +244,6 @@ function InGame() {
       isRunning,
       disableStartFirstHalf: firstHalfStartingPlayerNumbers.length === 0,
       disableStartSecondHalf: secondHalfStartingPlayerNumbers.length === 0,
-      onClearGame: handleClearGame,
       onEndMatch: handleEndMatch,
       onStartFirstHalf: startFirstHalf,
       onStartSecondHalf: startSecondHalf,
@@ -280,7 +256,6 @@ function InGame() {
     };
   }, [
     activeGameData,
-    handleClearGame,
     handleEndMatch,
     isRunning,
     matchStatus,
