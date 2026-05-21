@@ -77,6 +77,7 @@ export const games = sqliteTable(
     homeTeamLocalId: integer("home_team_local_id").notNull(),
     createdAt: text("created_at").notNull(),
     firstHalfStartedAtMs: integer("first_half_started_at_ms"),
+    halftimeStartedAtMs: integer("halftime_started_at_ms"),
     secondHalfStartedAtMs: integer("second_half_started_at_ms"),
   },
   (table) => [

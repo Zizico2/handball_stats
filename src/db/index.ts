@@ -190,6 +190,7 @@ export function dbRowToGame(row: DbGame): Game {
     homeTeamId: row.homeTeamLocalId,
     createdAt: row.createdAt,
     firstHalfStartedAtMs: row.firstHalfStartedAtMs,
+    halftimeStartedAtMs: row.halftimeStartedAtMs,
     secondHalfStartedAtMs: row.secondHalfStartedAtMs,
   };
 }
@@ -201,6 +202,7 @@ export function gameToDbRow(game: Game, userId: string): DbGameInsert {
     homeTeamLocalId: game.homeTeamId,
     createdAt: game.createdAt,
     firstHalfStartedAtMs: game.firstHalfStartedAtMs ?? null,
+    halftimeStartedAtMs: game.halftimeStartedAtMs ?? null,
     secondHalfStartedAtMs: game.secondHalfStartedAtMs ?? null,
   };
 }

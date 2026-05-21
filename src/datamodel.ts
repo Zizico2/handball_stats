@@ -309,6 +309,7 @@ export const gameSchema = z.object({
   homeTeamId: z.number(),
   createdAt: z.iso.datetime(),
   firstHalfStartedAtMs: z.number().nullable().optional(),
+  halftimeStartedAtMs: z.number().nullable().optional(),
   secondHalfStartedAtMs: z.number().nullable().optional(),
 });
 export type Game = z.infer<typeof gameSchema>;
