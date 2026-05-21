@@ -1,7 +1,15 @@
 "use client";
 import { createTheme } from "@mui/material/styles";
+import Link from "next/link";
 
 const theme = createTheme({
+  components: {
+    MuiButtonBase: {
+      defaultProps: {
+        LinkComponent: Link,
+      },
+    },
+  },
   // 1. Enable CSS variables and map them to the "data" attribute
   cssVariables: {
     colorSchemeSelector: "data",

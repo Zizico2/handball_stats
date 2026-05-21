@@ -56,6 +56,7 @@ export default function ResponsiveDrawer({
           { text: "Home", href: "/" },
           { text: "New Game", href: "/new-game" },
           { text: "In Game", href: "/in-game" },
+          { text: "Past Games", href: "/past-games" },
           { text: "Create Teams", href: "/create-teams" },
           // { text: "Inbox", href: "/inbox" },
           // { text: "Starred", href: "/starred" },

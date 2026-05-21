@@ -84,7 +84,14 @@ export default function InGameMatchControlsMenu() {
           {inGameControls.isRunning ? "Pause Match" : "Resume Match"}
         </MenuItem>
         <MenuItem
+          onClick={() => runActionAndCloseMenu(inGameControls.onEndMatch)}
+          disabled={!inGameControls.hasActiveGame}
+        >
+          End Match
+        </MenuItem>
+        <MenuItem
           onClick={() => runActionAndCloseMenu(inGameControls.onClearGame)}
+          disabled={!inGameControls.hasActiveGame}
         >
           Clear Game
         </MenuItem>

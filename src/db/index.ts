@@ -28,7 +28,7 @@ export type DbActiveGameInsert = typeof schema.activeGame.$inferInsert;
 export type DbPauseToggle = typeof schema.pauseToggles.$inferSelect;
 export type DbPauseToggleInsert = typeof schema.pauseToggles.$inferInsert;
 
-const dbPlayerEventSchema = createSelectSchema(schema.playerEvents);
+export const dbPlayerEventSchema = createSelectSchema(schema.playerEvents);
 
 // TODO: handle the possibility of the DB having corrupted/outdated data that doesn't parse correctly.
 // TODO: This is fine for now since, in alpha, I'm wiping the DB on every change

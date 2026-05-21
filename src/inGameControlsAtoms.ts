@@ -4,6 +4,7 @@ export type MatchStatus = "firstHalf" | "halftime" | "secondHalf";
 
 interface InGameControlActions {
   onClearGame: () => void;
+  onEndMatch: () => void;
   onStartFirstHalf: () => void;
   onStartSecondHalf: () => void;
   onStartHalftime: () => void;
@@ -11,6 +12,7 @@ interface InGameControlActions {
 }
 
 export interface InGameControlsState extends InGameControlActions {
+  hasActiveGame: boolean;
   matchStatus: MatchStatus | null;
   isRunning: boolean;
   disableStartFirstHalf: boolean;
@@ -20,11 +22,13 @@ export interface InGameControlsState extends InGameControlActions {
 const noop = () => {};
 
 export const initialInGameControlsState: InGameControlsState = {
+  hasActiveGame: false,
   matchStatus: null,
   isRunning: false,
   disableStartFirstHalf: true,
   disableStartSecondHalf: true,
   onClearGame: noop,
+  onEndMatch: noop,
   onStartFirstHalf: noop,
   onStartSecondHalf: noop,
   onStartHalftime: noop,
