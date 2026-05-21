@@ -13,22 +13,22 @@ import type { ApiApp } from "@/server/api/app";
 
 const apiClient = hc<ApiApp>("/");
 
-type JsonResponseLike<T> = {
+type JsonResponseLike = {
   ok: boolean;
   status: number;
-  json: () => Promise<T>;
+  json: () => Promise<unknown>;
 };
 
-async function parseJsonResponse<T>(response: JsonResponseLike<T>) {
+async function parseJsonResponse<T>(response: JsonResponseLike): Promise<T> {
   if (!response.ok) {
     throw new Error(`Request failed with status ${response.status}`);
   }
 
-  return response.json();
+  return (await response.json()) as T;
 }
 
 async function assertSuccessfulResponse(
-  response: Pick<JsonResponseLike<unknown>, "ok" | "status">,
+  response: Pick<JsonResponseLike, "ok" | "status">,
 ) {
   if (!response.ok) {
     throw new Error(`Request failed with status ${response.status}`);

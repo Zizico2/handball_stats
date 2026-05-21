@@ -214,8 +214,8 @@ function CreateTeams() {
                 >
                   <Typography
                     variant="body2"
-                    fontWeight="bold"
                     color="text.secondary"
+                    sx={{ fontWeight: "bold" }}
                   >
                     Quick Sub Pairs
                   </Typography>
@@ -530,8 +530,8 @@ function AddQuickSubPairDialog({
       <DialogContent>
         <Stack spacing={3} sx={{ pt: 1 }}>
           <Typography variant="body2" color="text.secondary">
-            Choose two players. In the active game you'll be able to swap them with one
-            tap.
+            Choose two players. In the active game you'll be able to swap them
+            with one tap.
           </Typography>
 
           <FormControl fullWidth>

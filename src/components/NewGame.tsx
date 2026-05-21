@@ -123,8 +123,7 @@ function NewGame() {
             <Typography
               variant="body2"
               color="error.main"
-              fontWeight="medium"
-              textAlign="center"
+              sx={{ fontWeight: "medium", textAlign: "center" }}
             >
               Active game #{activeGame.data.gameId}
               {activeTeamName ? ` (${activeTeamName})` : ""} is currently in

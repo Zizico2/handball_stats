@@ -146,8 +146,7 @@ export function EventLog({ events, getPlayerLabel }: EventLogProps) {
           {sortedItems.length === 0 ? (
             <Typography
               color="text.secondary"
-              textAlign="center"
-              sx={{ py: 4 }}
+              sx={{ py: 4, textAlign: "center" }}
             >
               No events recorded yet.
             </Typography>
@@ -170,14 +169,16 @@ export function EventLog({ events, getPlayerLabel }: EventLogProps) {
                     >
                       <Stack
                         direction="row"
-                        justifyContent="space-between"
-                        alignItems="center"
                         spacing={2}
+                        sx={{
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
                       >
                         <Stack
                           direction="row"
-                          alignItems="center"
                           spacing={1.5}
+                          sx={{ alignItems: "center" }}
                         >
                           <Typography
                             variant="body2"
@@ -233,11 +234,17 @@ export function EventLog({ events, getPlayerLabel }: EventLogProps) {
                   >
                     <Stack
                       direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
                       spacing={2}
+                      sx={{
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
                     >
-                      <Stack direction="row" alignItems="center" spacing={1.5}>
+                      <Stack
+                        direction="row"
+                        spacing={1.5}
+                        sx={{ alignItems: "center" }}
+                      >
                         <Typography
                           variant="body2"
                           sx={{
@@ -270,9 +277,8 @@ export function EventLog({ events, getPlayerLabel }: EventLogProps) {
                     {event.eventType === "substitution" ? (
                       <Stack
                         direction="row"
-                        alignItems="center"
                         spacing={1}
-                        sx={{ mt: 0.5 }}
+                        sx={{ mt: 0.5, alignItems: "center" }}
                       >
                         <Typography
                           variant="body1"

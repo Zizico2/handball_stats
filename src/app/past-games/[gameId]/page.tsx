@@ -62,7 +62,7 @@ export default async function PastGameDetailPage({
           </Typography>
         </Box>
 
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+        <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
           <Chip label={`${score} goals`} color="success" />
           <Chip label={`${gameLog.events.length} logged events`} />
           <Chip

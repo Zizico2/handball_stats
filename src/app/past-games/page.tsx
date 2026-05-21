@@ -24,7 +24,7 @@ export default async function PastGamesPage() {
   return (
     <Box sx={{ px: { xs: 2, sm: 3 }, py: 3 }}>
       <Stack spacing={1} sx={{ mb: 3 }}>
-        <Stack direction="row" spacing={1.5} alignItems="center">
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
           <HistoryIcon color="action" />
           <Typography variant="h4">Past Games</Typography>
         </Stack>
@@ -51,8 +51,10 @@ export default async function PastGamesPage() {
                   <Stack
                     direction={{ xs: "column", sm: "row" }}
                     spacing={2}
-                    justifyContent="space-between"
-                    alignItems={{ xs: "flex-start", sm: "center" }}
+                    sx={{
+                      justifyContent: "space-between",
+                      alignItems: { xs: "flex-start", sm: "center" },
+                    }}
                   >
                     <Box>
                       <Typography variant="h6">{game.homeTeamName}</Typography>
@@ -63,9 +65,8 @@ export default async function PastGamesPage() {
                     <Stack
                       direction="row"
                       spacing={1}
-                      alignItems="center"
-                      flexWrap="wrap"
                       useFlexGap
+                      sx={{ alignItems: "center", flexWrap: "wrap" }}
                     >
                       <Chip label={`${game.score} goals`} color="success" />
                       <Chip
