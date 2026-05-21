@@ -404,7 +404,8 @@ function InGame() {
             disabled={
               !activeGame.data ||
               selectedTeamPlayers.length === 0 ||
-              startingPlayerNumbers.length === 0
+              startingPlayerNumbers.length === 0 ||
+              !(matchStatus === "firstHalf" || matchStatus === "secondHalf")
             }
           />
         </Box>
