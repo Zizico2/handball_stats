@@ -361,7 +361,9 @@ function CreateTeamDialog({
             onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
             autoFocus
             error={hasDuplicateName}
-            helperText={hasDuplicateName ? "Team name already exists" : undefined}
+            helperText={
+              hasDuplicateName ? "Team name already exists" : undefined
+            }
             fullWidth
           />
           <Button

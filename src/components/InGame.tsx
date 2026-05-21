@@ -172,6 +172,15 @@ function InGame() {
     playerEvents.data,
   ]);
 
+  const handleEndMatch = useCallback(() => {
+    if (!activeGameData) {
+      return;
+    }
+
+    activeGameCollection.delete(activeGameData.id);
+    clearClockState();
+  }, [activeGameData, clearClockState]);
+
   const handleStartEvent = (eventGroup: EventGroup) => {
     if (!activeGame.data) {
       return;
@@ -253,11 +262,13 @@ function InGame() {
 
   useEffect(() => {
     setInGameControls({
+      hasActiveGame: activeGameData !== null,
       matchStatus,
       isRunning,
       disableStartFirstHalf: firstHalfStartingPlayerNumbers.length === 0,
       disableStartSecondHalf: secondHalfStartingPlayerNumbers.length === 0,
       onClearGame: handleClearGame,
+      onEndMatch: handleEndMatch,
       onStartFirstHalf: startFirstHalf,
       onStartSecondHalf: startSecondHalf,
       onStartHalftime: startHalftime,
@@ -268,7 +279,9 @@ function InGame() {
       setInGameControls(initialInGameControlsState);
     };
   }, [
+    activeGameData,
     handleClearGame,
+    handleEndMatch,
     isRunning,
     matchStatus,
     firstHalfStartingPlayerNumbers.length,
