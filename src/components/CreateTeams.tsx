@@ -15,6 +15,7 @@ import {
   MenuItem,
   Select,
   Stack,
+  TextField,
   Toolbar,
   Typography,
 } from "@mui/material";
@@ -353,20 +354,16 @@ function CreateTeamDialog({
       </AppBar>
       <DialogContent>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <input
-            type="text"
-            placeholder="Team Name"
+          <TextField
+            label="Team Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
             autoFocus
-            style={{ fontSize: 16, padding: 8 }}
+            error={hasDuplicateName}
+            helperText={hasDuplicateName ? "Team name already exists" : undefined}
+            fullWidth
           />
-          {hasDuplicateName && (
-            <Typography color="error" variant="caption">
-              Team name already exists
-            </Typography>
-          )}
           <Button
             variant="contained"
             onClick={handleSubmit}
@@ -436,27 +433,27 @@ function AddPlayerDialog({
       </AppBar>
       <DialogContent>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <input
-            type="text"
-            placeholder="Player Name"
+          <TextField
+            label="Player Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoFocus
-            style={{ fontSize: 16, padding: 8 }}
+            fullWidth
           />
-          <input
+          <TextField
+            label="Player Number"
             type="number"
-            placeholder="Player Number"
             value={number}
             onChange={(e) => setNumber(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-            style={{ fontSize: 16, padding: 8 }}
+            error={hasDuplicateNumber}
+            helperText={
+              hasDuplicateNumber
+                ? "Player number already exists on this team"
+                : undefined
+            }
+            fullWidth
           />
-          {hasDuplicateNumber && (
-            <Typography color="error" variant="caption">
-              Player number already exists on this team
-            </Typography>
-          )}
           <Button
             variant="contained"
             onClick={handleSubmit}
