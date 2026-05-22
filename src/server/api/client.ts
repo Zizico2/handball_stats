@@ -45,9 +45,7 @@ export async function deletePlayerEventsMutation(ids: number[]) {
 }
 
 export async function createTeamsMutation(items: Team[]) {
-  return parseResponse(
-    apiClient.api.collections.teams.$post({ json: items }),
-  );
+  return parseResponse(apiClient.api.collections.teams.$post({ json: items }));
 }
 
 export async function deleteTeamsMutation(ids: number[]) {
@@ -83,9 +81,7 @@ export async function deleteQuickSubPairsMutation(ids: number[]) {
 }
 
 export async function createGamesMutation(items: Game[]) {
-  return parseResponse(
-    apiClient.api.collections.games.$post({ json: items }),
-  );
+  return parseResponse(apiClient.api.collections.games.$post({ json: items }));
 }
 
 export async function upsertGamesMutation(items: Game[]) {

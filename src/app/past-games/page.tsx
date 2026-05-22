@@ -28,17 +28,25 @@ export default async function PastGamesPage() {
           <HistoryIcon color="action" />
           <Typography variant="h4">Past Games</Typography>
         </Stack>
-        <Typography color="text.secondary">
+        <Typography
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           Open any finished game to inspect its event log.
         </Typography>
       </Stack>
-
       <Stack spacing={2} sx={{ maxWidth: 720 }}>
         {games.length === 0 ? (
           <Card variant="outlined">
             <CardContent>
               <Typography variant="h6">No past games yet</Typography>
-              <Typography color="text.secondary" sx={{ mt: 1 }}>
+              <Typography
+                sx={{
+                  color: "text.secondary",
+                  mt: 1,
+                }}
+              >
                 Start and replace an active game to build up match history here.
               </Typography>
             </CardContent>
@@ -58,7 +66,12 @@ export default async function PastGamesPage() {
                   >
                     <Box>
                       <Typography variant="h6">{game.homeTeamName}</Typography>
-                      <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+                      <Typography
+                        sx={{
+                          color: "text.secondary",
+                          mt: 0.5,
+                        }}
+                      >
                         Game #{game.id} · {formatGameDate(game.createdAt)}
                       </Typography>
                     </Box>

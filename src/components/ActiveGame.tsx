@@ -291,7 +291,11 @@ function ActiveGame() {
           <MatchClock minutes={minutes} seconds={seconds} />
           {!activeGame.data ? (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <Typography color="text.secondary">
+              <Typography
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 No active game. Choose a home team first.
               </Typography>
               <Button component={NextLink} href="/new-game" variant="outlined">
@@ -316,8 +320,11 @@ function ActiveGame() {
             >
               <Typography
                 variant="body2"
-                color="warning.dark"
-                sx={{ fontWeight: "medium", textAlign: "center" }}
+                align="center"
+                sx={{
+                  color: "warning.dark",
+                  fontWeight: "medium",
+                }}
               >
                 Starting lineup is not defined yet. Set the starting players to
                 enable accurate tracking of who is on court.
@@ -343,8 +350,10 @@ function ActiveGame() {
               >
                 <Typography
                   variant="subtitle2"
-                  color="text.secondary"
-                  sx={{ fontWeight: "bold" }}
+                  sx={{
+                    color: "text.secondary",
+                    fontWeight: "bold",
+                  }}
                 >
                   On Court ({activePlayerNumbers.size})
                 </Typography>
@@ -353,7 +362,7 @@ function ActiveGame() {
                 direction="row"
                 spacing={1}
                 useFlexGap
-                sx={{ gap: 1, flexWrap: "wrap" }}
+                sx={{ flexWrap: "wrap" }}
               >
                 {Array.from(activePlayerNumbers).map((num) => {
                   const p = selectedTeamPlayers.find(
@@ -835,7 +844,12 @@ const PickStarting7Dialog = ({
           <Typography variant="h6" sx={{ fontWeight: "bold" }}>
             Define Starting Lineup
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             Select {targetCount} starting players.
             {selected.length !== targetCount &&
               ` (Currently selected: ${selected.length})`}
@@ -930,8 +944,10 @@ const PickShotDirectionDialog = ({
         <Stack spacing={2} sx={{ pt: 1, alignItems: "center" }}>
           <Typography
             variant="body2"
-            color="text.secondary"
-            sx={{ textAlign: "center" }}
+            align="center"
+            sx={{
+              color: "text.secondary",
+            }}
           >
             Tap the zone on the goal. Handball goals are wider than they are
             tall—this frame matches that shape.
@@ -1107,8 +1123,10 @@ const QuickSubDialog = ({
             <>
               <Typography
                 variant="subtitle2"
-                color="text.secondary"
-                sx={{ fontWeight: "bold" }}
+                sx={{
+                  color: "text.secondary",
+                  fontWeight: "bold",
+                }}
               >
                 Quick Substitutions
               </Typography>
@@ -1182,7 +1200,12 @@ const QuickSubDialog = ({
                         </Typography>
                       </Stack>
                       {disabledReason && (
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: "text.secondary",
+                          }}
+                        >
                           {disabledReason}
                         </Typography>
                       )}
@@ -1199,7 +1222,12 @@ const QuickSubDialog = ({
                 })}
               </Stack>
               <Divider>
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
                   or
                 </Typography>
               </Divider>
@@ -1299,8 +1327,11 @@ function ListSelectionDialog<T>({
                     {groupName && (
                       <Typography
                         variant="subtitle2"
-                        color="text.secondary"
-                        sx={{ mt: 1, fontWeight: "bold" }}
+                        sx={{
+                          color: "text.secondary",
+                          mt: 1,
+                          fontWeight: "bold",
+                        }}
                       >
                         {groupName}
                       </Typography>

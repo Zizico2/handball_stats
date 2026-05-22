@@ -172,7 +172,6 @@ function CreateTeams() {
                     Delete Team
                   </Button>
                 </Box>
-
                 {/* Players section */}
                 <Button
                   variant="outlined"
@@ -206,7 +205,6 @@ function CreateTeams() {
                     </Box>
                   ))}
                 </Box>
-
                 {/* Quick Sub Pairs section */}
                 <Divider sx={{ my: 1.5 }} />
                 <Box
@@ -214,8 +212,10 @@ function CreateTeams() {
                 >
                   <Typography
                     variant="body2"
-                    color="text.secondary"
-                    sx={{ fontWeight: "bold" }}
+                    sx={{
+                      color: "text.secondary",
+                      fontWeight: "bold",
+                    }}
                   >
                     Quick Sub Pairs
                   </Typography>
@@ -229,7 +229,12 @@ function CreateTeams() {
                   </Button>
                 </Box>
                 {pairs.length === 0 ? (
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                    }}
+                  >
                     No quick sub pairs defined.
                   </Typography>
                 ) : (
@@ -529,7 +534,12 @@ function AddQuickSubPairDialog({
       </AppBar>
       <DialogContent>
         <Stack spacing={3} sx={{ pt: 1 }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             Choose two players. In the active game you'll be able to swap them
             with one tap.
           </Typography>

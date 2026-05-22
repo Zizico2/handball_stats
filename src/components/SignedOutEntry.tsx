@@ -44,13 +44,24 @@ export default function SignedOutEntry() {
       >
         <Stack spacing={3}>
           <Box>
-            <Typography variant="overline" color="text.secondary">
+            <Typography
+              variant="overline"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               Arcazzi alpha
             </Typography>
             <Typography variant="h4" sx={{ mt: 0.5 }}>
               Handball stats, minus the ceremony.
             </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mt: 1.5 }}>
+            <Typography
+              variant="body1"
+              sx={{
+                color: "text.secondary",
+                mt: 1.5,
+              }}
+            >
               Sign in if you already have access, or create an account and start
               poking at the edges.
             </Typography>

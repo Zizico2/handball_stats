@@ -57,7 +57,12 @@ export default async function PastGameDetailPage({
 
         <Box>
           <Typography variant="h4">{gameLog.game.homeTeamName}</Typography>
-          <Typography color="text.secondary" sx={{ mt: 1 }}>
+          <Typography
+            sx={{
+              color: "text.secondary",
+              mt: 1,
+            }}
+          >
             Game #{gameLog.game.id} · {formatGameDate(gameLog.game.createdAt)}
           </Typography>
         </Box>
