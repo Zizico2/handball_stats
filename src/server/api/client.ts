@@ -1,8 +1,7 @@
-import { hc } from "hono/client";
+import { hc, parseResponse } from "hono/client";
 import type {
   ActiveGame,
   Game,
-  MatchClockSnapshot,
   PauseToggle,
   PlayerEvent,
   QuickSubPair,
@@ -13,196 +12,126 @@ import type { ApiApp } from "@/server/api/app";
 
 const apiClient = hc<ApiApp>("/");
 
-type JsonResponseLike = {
-  ok: boolean;
-  status: number;
-  json: () => Promise<unknown>;
-};
-
-async function parseJsonResponse<T>(response: JsonResponseLike): Promise<T> {
-  if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
-  }
-
-  return (await response.json()) as T;
-}
-
-async function assertSuccessfulResponse(
-  response: Pick<JsonResponseLike, "ok" | "status">,
-) {
-  if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
-  }
-}
-
 export async function listPlayerEventsQuery() {
-  const response = await apiClient.api.collections["player-events"].$get();
-
-  return parseJsonResponse<PlayerEvent[]>(response);
+  return parseResponse(apiClient.api.collections["player-events"].$get());
 }
 
 export async function listTeamsQuery() {
-  const response = await apiClient.api.collections.teams.$get();
-
-  return parseJsonResponse<Team[]>(response);
+  return parseResponse(apiClient.api.collections.teams.$get());
 }
 
 export async function listTeamPlayersQuery() {
-  const response = await apiClient.api.collections["team-players"].$get();
-
-  return parseJsonResponse<TeamPlayer[]>(response);
+  return parseResponse(apiClient.api.collections["team-players"].$get());
 }
 
 export async function listGamesQuery() {
-  const response = await apiClient.api.collections.games.$get();
-
-  return parseJsonResponse<Game[]>(response);
+  return parseResponse(apiClient.api.collections.games.$get());
 }
 
 export async function listActiveGameQuery() {
-  const response = await apiClient.api.collections["active-game"].$get();
-
-  return parseJsonResponse<ActiveGame[]>(response);
+  return parseResponse(apiClient.api.collections["active-game"].$get());
 }
 
 export async function createPlayerEventsMutation(items: PlayerEvent[]) {
-  const response = await apiClient.api.collections["player-events"].$post({
-    json: items,
-  });
-
-  return parseJsonResponse<PlayerEvent[]>(response);
+  return parseResponse(
+    apiClient.api.collections["player-events"].$post({ json: items }),
+  );
 }
 
 export async function deletePlayerEventsMutation(ids: number[]) {
-  const response = await apiClient.api.collections["player-events"].$delete({
-    json: ids,
-  });
-
-  await assertSuccessfulResponse(response);
+  await parseResponse(
+    apiClient.api.collections["player-events"].$delete({ json: ids }),
+  );
 }
 
 export async function createTeamsMutation(items: Team[]) {
-  const response = await apiClient.api.collections.teams.$post({
-    json: items,
-  });
-
-  return parseJsonResponse<Team[]>(response);
+  return parseResponse(
+    apiClient.api.collections.teams.$post({ json: items }),
+  );
 }
 
 export async function deleteTeamsMutation(ids: number[]) {
-  const response = await apiClient.api.collections.teams.$delete({
-    json: ids,
-  });
-
-  await assertSuccessfulResponse(response);
+  await parseResponse(apiClient.api.collections.teams.$delete({ json: ids }));
 }
 
 export async function createTeamPlayersMutation(items: TeamPlayer[]) {
-  const response = await apiClient.api.collections["team-players"].$post({
-    json: items,
-  });
-
-  return parseJsonResponse<TeamPlayer[]>(response);
+  return parseResponse(
+    apiClient.api.collections["team-players"].$post({ json: items }),
+  );
 }
 
 export async function deleteTeamPlayersMutation(ids: number[]) {
-  const response = await apiClient.api.collections["team-players"].$delete({
-    json: ids,
-  });
-
-  await assertSuccessfulResponse(response);
+  await parseResponse(
+    apiClient.api.collections["team-players"].$delete({ json: ids }),
+  );
 }
 
 export async function listQuickSubPairsQuery() {
-  const response = await apiClient.api.collections["quick-sub-pairs"].$get();
-
-  return parseJsonResponse<QuickSubPair[]>(response);
+  return parseResponse(apiClient.api.collections["quick-sub-pairs"].$get());
 }
 
 export async function createQuickSubPairsMutation(items: QuickSubPair[]) {
-  const response = await apiClient.api.collections["quick-sub-pairs"].$post({
-    json: items,
-  });
-
-  return parseJsonResponse<QuickSubPair[]>(response);
+  return parseResponse(
+    apiClient.api.collections["quick-sub-pairs"].$post({ json: items }),
+  );
 }
 
 export async function deleteQuickSubPairsMutation(ids: number[]) {
-  const response = await apiClient.api.collections["quick-sub-pairs"].$delete({
-    json: ids,
-  });
-
-  await assertSuccessfulResponse(response);
+  await parseResponse(
+    apiClient.api.collections["quick-sub-pairs"].$delete({ json: ids }),
+  );
 }
 
 export async function createGamesMutation(items: Game[]) {
-  const response = await apiClient.api.collections.games.$post({
-    json: items,
-  });
-
-  return parseJsonResponse<Game[]>(response);
+  return parseResponse(
+    apiClient.api.collections.games.$post({ json: items }),
+  );
 }
 
 export async function upsertGamesMutation(items: Game[]) {
-  const response = await apiClient.api.collections.games.$put({
-    json: items,
-  });
-
-  return parseJsonResponse<Game[]>(response);
+  return parseResponse(apiClient.api.collections.games.$put({ json: items }));
 }
 
 export async function upsertActiveGameMutation(items: ActiveGame[]) {
-  const response = await apiClient.api.collections["active-game"].$put({
-    json: items,
-  });
-
-  return parseJsonResponse<ActiveGame[]>(response);
+  return parseResponse(
+    apiClient.api.collections["active-game"].$put({ json: items }),
+  );
 }
 
 export async function deleteActiveGameMutation(ids: number[]) {
-  const response = await apiClient.api.collections["active-game"].$delete({
-    json: ids,
-  });
-
-  await assertSuccessfulResponse(response);
+  await parseResponse(
+    apiClient.api.collections["active-game"].$delete({ json: ids }),
+  );
 }
 
 export async function listPauseTogglesQuery() {
-  const response = await apiClient.api.collections["pause-toggles"].$get();
-
-  return parseJsonResponse<PauseToggle[]>(response);
+  return parseResponse(apiClient.api.collections["pause-toggles"].$get());
 }
 
 export async function upsertPauseToggleMutation(item: PauseToggle) {
-  const response = await apiClient.api.collections["pause-toggles"][
-    ":pauseToggleId"
-  ].$put({
-    param: { pauseToggleId: item.id },
-    json: {
-      gameId: item.gameId,
-      half: item.half,
-    },
-  });
-
-  return parseJsonResponse<PauseToggle>(response);
+  return parseResponse(
+    apiClient.api.collections["pause-toggles"][":pauseToggleId"].$put({
+      param: { pauseToggleId: item.id },
+      json: {
+        gameId: item.gameId,
+        half: item.half,
+      },
+    }),
+  );
 }
 
 export async function deletePauseToggleMutation(id: string) {
-  const response = await apiClient.api.collections["pause-toggles"][
-    ":pauseToggleId"
-  ].$delete({
-    param: { pauseToggleId: id },
-  });
-
-  await assertSuccessfulResponse(response);
+  await parseResponse(
+    apiClient.api.collections["pause-toggles"][":pauseToggleId"].$delete({
+      param: { pauseToggleId: id },
+    }),
+  );
 }
 
 export async function getMatchClockSnapshotQuery(gameId: number) {
-  const response = await apiClient.api.collections["match-clock"][
-    ":gameId"
-  ].$get({
-    param: { gameId: String(gameId) },
-  });
-
-  return parseJsonResponse<MatchClockSnapshot>(response);
+  return parseResponse(
+    apiClient.api.collections["match-clock"][":gameId"].$get({
+      param: { gameId: String(gameId) },
+    }),
+  );
 }
