@@ -130,7 +130,6 @@ function ActiveGame() {
     .sort((left, right) => left.number - right.number);
 
   const {
-    activeGamePauseToggles,
     activeHalf,
     clearClockState,
     eventElapsedSeconds,
@@ -292,7 +291,11 @@ function ActiveGame() {
           <MatchClock minutes={minutes} seconds={seconds} />
           {!activeGame.data ? (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <Typography color="text.secondary">
+              <Typography
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 No active game. Choose a home team first.
               </Typography>
               <Button component={NextLink} href="/new-game" variant="outlined">
@@ -317,9 +320,11 @@ function ActiveGame() {
             >
               <Typography
                 variant="body2"
-                color="warning.dark"
-                fontWeight="medium"
-                textAlign="center"
+                align="center"
+                sx={{
+                  color: "warning.dark",
+                  fontWeight: "medium",
+                }}
               >
                 Starting lineup is not defined yet. Set the starting players to
                 enable accurate tracking of who is on court.
@@ -337,14 +342,18 @@ function ActiveGame() {
             <Box sx={{ width: "100%", maxWidth: 400, mx: "auto", my: 1 }}>
               <Stack
                 direction="row"
-                justifyContent="space-between"
-                alignItems="center"
-                sx={{ mb: 1 }}
+                sx={{
+                  mb: 1,
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
               >
                 <Typography
                   variant="subtitle2"
-                  color="text.secondary"
-                  fontWeight="bold"
+                  sx={{
+                    color: "text.secondary",
+                    fontWeight: "bold",
+                  }}
                 >
                   On Court ({activePlayerNumbers.size})
                 </Typography>
@@ -352,9 +361,8 @@ function ActiveGame() {
               <Stack
                 direction="row"
                 spacing={1}
-                flexWrap="wrap"
                 useFlexGap
-                sx={{ gap: 1 }}
+                sx={{ flexWrap: "wrap" }}
               >
                 {Array.from(activePlayerNumbers).map((num) => {
                   const p = selectedTeamPlayers.find(
@@ -833,10 +841,15 @@ const PickStarting7Dialog = ({
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
       <DialogContent>
         <Stack spacing={2} sx={{ py: 1 }}>
-          <Typography variant="h6" fontWeight="bold">
+          <Typography variant="h6" sx={{ fontWeight: "bold" }}>
             Define Starting Lineup
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             Select {targetCount} starting players.
             {selected.length !== targetCount &&
               ` (Currently selected: ${selected.length})`}
@@ -869,7 +882,11 @@ const PickStarting7Dialog = ({
             </List>
           </Box>
 
-          <Stack direction="row" spacing={2} justifyContent="flex-end">
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{ justifyContent: "flex-end" }}
+          >
             <Button onClick={onClose} color="inherit">
               Cancel
             </Button>
@@ -924,13 +941,19 @@ const PickShotDirectionDialog = ({
         </Toolbar>
       </AppBar>
       <DialogContent>
-        <Stack spacing={2} alignItems="center" sx={{ pt: 1 }}>
-          <Typography variant="body2" color="text.secondary" textAlign="center">
+        <Stack spacing={2} sx={{ pt: 1, alignItems: "center" }}>
+          <Typography
+            variant="body2"
+            align="center"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             Tap the zone on the goal. Handball goals are wider than they are
             tall—this frame matches that shape.
           </Typography>
           <Box sx={{ width: "100%", maxWidth: 380 }}>
-            <Stack alignItems="flex-end" sx={{ mb: 0.5 }}>
+            <Stack sx={{ mb: 0.5, alignItems: "flex-end" }}>
               <Button
                 variant="outlined"
                 color="error"
@@ -981,8 +1004,7 @@ const PickShotDirectionDialog = ({
           <Stack
             direction={{ xs: "column", sm: "row" }}
             spacing={1}
-            width="100%"
-            maxWidth={380}
+            sx={{ width: "100%", maxWidth: 380 }}
           >
             <Button
               fullWidth
@@ -1101,8 +1123,10 @@ const QuickSubDialog = ({
             <>
               <Typography
                 variant="subtitle2"
-                fontWeight="bold"
-                color="text.secondary"
+                sx={{
+                  color: "text.secondary",
+                  fontWeight: "bold",
+                }}
               >
                 Quick Substitutions
               </Typography>
@@ -1152,22 +1176,23 @@ const QuickSubDialog = ({
                     >
                       <Stack
                         direction="row"
-                        alignItems="center"
                         spacing={1.5}
-                        justifyContent="center"
+                        sx={{ alignItems: "center", justifyContent: "center" }}
                       >
                         <Typography
                           variant="body1"
-                          fontWeight="bold"
-                          sx={{ color: isDisabled ? "inherit" : "error.light" }}
+                          sx={{
+                            fontWeight: "bold",
+                            color: isDisabled ? "inherit" : "error.light",
+                          }}
                         >
                           {getPlayerLabel(pair.playerNumberA)}
                         </Typography>
                         <SwapHorizIcon />
                         <Typography
                           variant="body1"
-                          fontWeight="bold"
                           sx={{
+                            fontWeight: "bold",
                             color: isDisabled ? "inherit" : "success.light",
                           }}
                         >
@@ -1175,7 +1200,12 @@ const QuickSubDialog = ({
                         </Typography>
                       </Stack>
                       {disabledReason && (
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: "text.secondary",
+                          }}
+                        >
                           {disabledReason}
                         </Typography>
                       )}
@@ -1192,7 +1222,12 @@ const QuickSubDialog = ({
                 })}
               </Stack>
               <Divider>
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
                   or
                 </Typography>
               </Divider>
@@ -1292,9 +1327,11 @@ function ListSelectionDialog<T>({
                     {groupName && (
                       <Typography
                         variant="subtitle2"
-                        color="text.secondary"
-                        fontWeight="bold"
-                        sx={{ mt: 1 }}
+                        sx={{
+                          color: "text.secondary",
+                          mt: 1,
+                          fontWeight: "bold",
+                        }}
                       >
                         {groupName}
                       </Typography>

@@ -57,12 +57,17 @@ export default async function PastGameDetailPage({
 
         <Box>
           <Typography variant="h4">{gameLog.game.homeTeamName}</Typography>
-          <Typography color="text.secondary" sx={{ mt: 1 }}>
+          <Typography
+            sx={{
+              color: "text.secondary",
+              mt: 1,
+            }}
+          >
             Game #{gameLog.game.id} · {formatGameDate(gameLog.game.createdAt)}
           </Typography>
         </Box>
 
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+        <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
           <Chip label={`${score} goals`} color="success" />
           <Chip label={`${gameLog.events.length} logged events`} />
           <Chip
