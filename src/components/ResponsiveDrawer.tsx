@@ -50,7 +50,7 @@ export default function ResponsiveDrawer({
   trailingActions,
 }: {
   children: React.ReactNode;
-  trailingActions?: React.ReactNode;
+  trailingActions: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -84,20 +84,22 @@ export default function ResponsiveDrawer({
           className="shrink-0 border-b border-separator"
           variant="default"
         >
-          <Toolbar className="flex min-h-14 items-center gap-2 px-2">
+          <Toolbar className="flex w-full min-h-14 items-center gap-2 px-2">
             <Button
               isIconOnly
               aria-label="Open navigation"
-              className="sm:hidden"
+              className="shrink-0 sm:hidden"
               variant="ghost"
               onPress={() => setMobileOpen(true)}
             >
               <Menu className="size-5" />
             </Button>
-            <Typography.Heading level={4} className="flex-1 truncate">
+            <Typography.Heading level={4} className="min-w-0 flex-1 truncate">
               Arcazzi
             </Typography.Heading>
-            {trailingActions}
+            <div className="ml-auto flex shrink-0 items-center">
+              {trailingActions}
+            </div>
           </Toolbar>
         </Surface>
 
