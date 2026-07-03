@@ -1,6 +1,7 @@
-"use client";
-
-import { EventLog } from "@/components/EventLog";
+import {
+  buildEventLogPlayerLabels,
+  EventLog,
+} from "@/components/event-log/EventLog";
 import type { PlayerEvent } from "@/datamodel";
 
 interface PastGameEventLogProps {
@@ -12,16 +13,10 @@ interface PastGameEventLogProps {
 }
 
 export function PastGameEventLog({ events, players }: PastGameEventLogProps) {
-  const playerNameByNumber = new Map(
-    players.map((player) => [player.number, player.name]),
-  );
-
   return (
     <EventLog
       events={events}
-      getPlayerLabel={(playerNumber) =>
-        playerNameByNumber.get(playerNumber) ?? `#${playerNumber}`
-      }
+      playerLabels={buildEventLogPlayerLabels(players)}
     />
   );
 }

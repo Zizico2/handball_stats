@@ -5,7 +5,6 @@ import {
   Label,
   ListBox,
   Select,
-  Surface,
   Tooltip,
   Typography,
 } from "@heroui/react";
@@ -13,26 +12,15 @@ import { useLiveSuspenseQuery } from "@tanstack/react-db";
 import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import {
-  activeGameCollection,
-  gamesCollection,
-  teamsCollection,
-} from "@/collections";
+import { activeGameCollection, teamsCollection } from "@/collections";
+import { useNewGameForm } from "@/components/new-game/hooks/useNewGameForm";
+import { AlertCallout } from "@/components/ui/AlertCallout";
 
 function NewGame() {
   const router = useRouter();
-
   const teams = useLiveSuspenseQuery((q) => q.from({ team: teamsCollection }));
-
   const activeGame = useLiveSuspenseQuery((q) =>
     q.from({ activeGame: activeGameCollection }).findOne(),
-  );
-
-  const lastGame = useLiveSuspenseQuery((q) =>
-    q
-      .from({ game: gamesCollection })
-      .orderBy(({ game }) => game.id, "desc")
-      .findOne(),
   );
 
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
@@ -65,52 +53,29 @@ function NewGame() {
     );
   }, [activeGame.data, teams.data]);
 
-  const handleStartNewGame = () => {
-    if (selectedTeamId === null) {
-      return;
-    }
-
-    const nextGameId = (lastGame.data?.id ?? 0) + 1;
-
-    gamesCollection.insert({
-      id: nextGameId,
-      homeTeamId: selectedTeamId,
-      createdAt: new Date().toISOString(),
-      firstHalfStartedAtMs: null,
-      secondHalfStartedAtMs: null,
-    });
-
-    if (activeGame.data) {
-      activeGameCollection.delete(activeGame.data.id);
-    }
-
-    activeGameCollection.insert({
-      id: 1,
-      gameId: nextGameId,
-      homeTeamId: selectedTeamId,
-    });
-
-    router.push("/active-game");
-  };
+  const { handleStartNewGame } = useNewGameForm({
+    activeGameData: activeGame.data,
+    selectedTeamId,
+    onStarted: () => router.push("/active-game"),
+  });
 
   return (
     <div className="flex justify-center p-6">
       <div className="flex w-full max-w-[560px] flex-col gap-4">
         <Typography.Heading level={3}>New Game</Typography.Heading>
         {activeGame.data ? (
-          <Surface
-            className="flex flex-col items-center gap-3 rounded-xl border border-danger/30 bg-danger/10 p-4"
-            variant="secondary"
+          <AlertCallout
+            variant="danger"
+            action={
+              <NextLink className="link text-danger" href="/active-game">
+                Go to Active Game
+              </NextLink>
+            }
           >
-            <Typography.Paragraph className="text-center font-medium text-danger">
-              Active game #{activeGame.data.gameId}
-              {activeTeamName ? ` (${activeTeamName})` : ""} is currently in
-              progress. You must end it before you can start a new game.
-            </Typography.Paragraph>
-            <NextLink className="link text-danger" href="/active-game">
-              Go to Active Game
-            </NextLink>
-          </Surface>
+            Active game #{activeGame.data.gameId}
+            {activeTeamName ? ` (${activeTeamName})` : ""} is currently in
+            progress. You must end it before you can start a new game.
+          </AlertCallout>
         ) : null}
         <Select
           fullWidth

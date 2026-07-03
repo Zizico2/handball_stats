@@ -1,14 +1,9 @@
-import { Card, Chip, Typography } from "@heroui/react";
+import { Card, Typography } from "@heroui/react";
 import { ChevronRight } from "lucide-react";
 import NextLink from "next/link";
+import { GameMetaLine } from "@/components/game/GameMetaLine";
+import { GameStatChips } from "@/components/game/GameStatChips";
 import { listPastGames } from "@/server/gameHistory";
-
-function formatGameDate(value: string) {
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
 
 export async function PastGamesList() {
   const games = await listPastGames();
@@ -41,15 +36,17 @@ export async function PastGamesList() {
                   <Typography.Heading level={5}>
                     {game.homeTeamName}
                   </Typography.Heading>
-                  <Typography.Paragraph color="muted" className="mt-1">
-                    Game #{game.id} · {formatGameDate(game.createdAt)}
-                  </Typography.Paragraph>
+                  <GameMetaLine
+                    className="mt-1"
+                    createdAt={game.createdAt}
+                    gameId={game.id}
+                  />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Chip color="success" variant="secondary">
-                    {game.score} goals
-                  </Chip>
-                  <Chip variant="secondary">{game.eventCount} events</Chip>
+                  <GameStatChips
+                    eventCount={game.eventCount}
+                    score={game.score}
+                  />
                   <ChevronRight className="size-5 text-muted" />
                 </div>
               </div>

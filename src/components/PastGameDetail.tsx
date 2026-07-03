@@ -1,20 +1,16 @@
-import { Chip, Typography } from "@heroui/react";
+import { Typography } from "@heroui/react";
 import { ArrowLeft } from "lucide-react";
 import NextLink from "next/link";
 import { notFound } from "next/navigation";
+import { GameMetaLine } from "@/components/game/GameMetaLine";
+import { GameStatChips } from "@/components/game/GameStatChips";
 import { PastGameCsvDownloadButton } from "@/components/PastGameCsvDownloadButton";
 import { PastGameEventLog } from "@/components/PastGameEventLog";
+import { countGoals } from "@/lib/display/countGoals";
 import {
   getPastGameLog,
   getPastGamePlayerEventsCsv,
 } from "@/server/gameHistory";
-
-function formatGameDate(value: string) {
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "full",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
 
 export async function PastGameDetailContent({
   params,
@@ -37,9 +33,7 @@ export async function PastGameDetailContent({
     notFound();
   }
 
-  const score = gameLog.events.filter(
-    (event) => event.eventType === "shot" && event.event.goal,
-  ).length;
+  const score = countGoals(gameLog.events);
 
   return (
     <>
@@ -47,19 +41,21 @@ export async function PastGameDetailContent({
         <Typography.Heading level={3}>
           {gameLog.game.homeTeamName}
         </Typography.Heading>
-        <Typography.Paragraph color="muted" className="mt-2">
-          Game #{gameLog.game.id} · {formatGameDate(gameLog.game.createdAt)}
-        </Typography.Paragraph>
+        <GameMetaLine
+          className="mt-2"
+          createdAt={gameLog.game.createdAt}
+          dateStyle="full"
+          gameId={gameLog.game.id}
+        />
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Chip color="success" variant="secondary">
-          {score} goals
-        </Chip>
-        <Chip variant="secondary">{gameLog.events.length} logged events</Chip>
-        <Chip variant="secondary">
-          {gameLog.players.length} rostered players
-        </Chip>
+        <GameStatChips
+          eventCount={gameLog.events.length}
+          eventLabel="logged events"
+          playerCount={gameLog.players.length}
+          score={score}
+        />
       </div>
 
       <PastGameCsvDownloadButton
