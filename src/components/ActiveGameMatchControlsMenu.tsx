@@ -1,95 +1,92 @@
 "use client";
 
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import IconButton from "@mui/material/IconButton";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
+import { Button, Dropdown, Label } from "@heroui/react";
 import { useAtomValue } from "jotai";
-import { useState } from "react";
+import { MoreVertical } from "lucide-react";
 import { inGameControlsAtom } from "@/inGameControlsAtoms";
 
 export default function ActiveGameMatchControlsMenu() {
   const inGameControls = useAtomValue(inGameControlsAtom);
-  const [controlsAnchorEl, setControlsAnchorEl] = useState<HTMLElement | null>(
-    null,
-  );
 
-  const isControlsMenuOpen = controlsAnchorEl !== null;
+  const disabledKeys = new Set<string>();
 
-  const handleOpenControlsMenu = (event: React.MouseEvent<HTMLElement>) => {
-    setControlsAnchorEl(event.currentTarget);
-  };
-
-  const handleCloseControlsMenu = () => {
-    setControlsAnchorEl(null);
-  };
-
-  const runActionAndCloseMenu = (action: () => void) => {
-    action();
-    handleCloseControlsMenu();
-  };
+  if (
+    inGameControls.matchStatus !== null ||
+    inGameControls.disableStartFirstHalf
+  ) {
+    disabledKeys.add("start-first-half");
+  }
+  if (inGameControls.matchStatus !== "firstHalf") {
+    disabledKeys.add("start-halftime");
+  }
+  if (
+    inGameControls.matchStatus !== "halftime" ||
+    inGameControls.disableStartSecondHalf
+  ) {
+    disabledKeys.add("start-second-half");
+  }
+  if (
+    inGameControls.matchStatus === null ||
+    inGameControls.matchStatus === "halftime"
+  ) {
+    disabledKeys.add("toggle-pause");
+  }
+  if (!inGameControls.hasActiveGame) {
+    disabledKeys.add("end-match");
+  }
 
   return (
-    <>
-      <IconButton
-        color="inherit"
-        aria-label="match controls"
-        aria-controls={isControlsMenuOpen ? "match-controls-menu" : undefined}
-        aria-haspopup="true"
-        aria-expanded={isControlsMenuOpen ? "true" : undefined}
-        onClick={handleOpenControlsMenu}
-      >
-        <MoreVertIcon />
-      </IconButton>
-      <Menu
-        id="match-controls-menu"
-        anchorEl={controlsAnchorEl}
-        open={isControlsMenuOpen}
-        onClose={handleCloseControlsMenu}
-        keepMounted
-      >
-        <MenuItem
-          onClick={() => runActionAndCloseMenu(inGameControls.onStartFirstHalf)}
-          disabled={
-            inGameControls.matchStatus !== null ||
-            inGameControls.disableStartFirstHalf
-          }
+    <Dropdown>
+      <Button isIconOnly aria-label="Match controls" variant="ghost">
+        <MoreVertical className="size-5" />
+      </Button>
+      <Dropdown.Popover>
+        <Dropdown.Menu
+          disabledKeys={disabledKeys}
+          onAction={(key) => {
+            switch (key) {
+              case "start-first-half":
+                inGameControls.onStartFirstHalf();
+                break;
+              case "start-halftime":
+                inGameControls.onStartHalftime();
+                break;
+              case "start-second-half":
+                inGameControls.onStartSecondHalf();
+                break;
+              case "toggle-pause":
+                inGameControls.onTogglePause();
+                break;
+              case "end-match":
+                inGameControls.onEndMatch();
+                break;
+            }
+          }}
         >
-          Start First Half
-        </MenuItem>
-        <MenuItem
-          onClick={() => runActionAndCloseMenu(inGameControls.onStartHalftime)}
-          disabled={inGameControls.matchStatus !== "firstHalf"}
-        >
-          Start Halftime
-        </MenuItem>
-        <MenuItem
-          onClick={() =>
-            runActionAndCloseMenu(inGameControls.onStartSecondHalf)
-          }
-          disabled={
-            inGameControls.matchStatus !== "halftime" ||
-            inGameControls.disableStartSecondHalf
-          }
-        >
-          Start Second Half
-        </MenuItem>
-        <MenuItem
-          onClick={() => runActionAndCloseMenu(inGameControls.onTogglePause)}
-          disabled={
-            inGameControls.matchStatus === null ||
-            inGameControls.matchStatus === "halftime"
-          }
-        >
-          {inGameControls.isRunning ? "Pause Match" : "Resume Match"}
-        </MenuItem>
-        <MenuItem
-          onClick={() => runActionAndCloseMenu(inGameControls.onEndMatch)}
-          disabled={!inGameControls.hasActiveGame}
-        >
-          End Match
-        </MenuItem>
-      </Menu>
-    </>
+          <Dropdown.Item id="start-first-half" textValue="Start First Half">
+            <Label>Start First Half</Label>
+          </Dropdown.Item>
+          <Dropdown.Item id="start-halftime" textValue="Start Halftime">
+            <Label>Start Halftime</Label>
+          </Dropdown.Item>
+          <Dropdown.Item id="start-second-half" textValue="Start Second Half">
+            <Label>Start Second Half</Label>
+          </Dropdown.Item>
+          <Dropdown.Item
+            id="toggle-pause"
+            textValue={
+              inGameControls.isRunning ? "Pause Match" : "Resume Match"
+            }
+          >
+            <Label>
+              {inGameControls.isRunning ? "Pause Match" : "Resume Match"}
+            </Label>
+          </Dropdown.Item>
+          <Dropdown.Item id="end-match" textValue="End Match" variant="danger">
+            <Label>End Match</Label>
+          </Dropdown.Item>
+        </Dropdown.Menu>
+      </Dropdown.Popover>
+    </Dropdown>
   );
 }

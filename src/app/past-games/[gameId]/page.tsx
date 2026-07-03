@@ -1,5 +1,6 @@
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import { Box, Button, Chip, Stack, Typography } from "@mui/material";
+import { Chip, Typography } from "@heroui/react";
+import { ArrowLeft } from "lucide-react";
+import NextLink from "next/link";
 import { notFound } from "next/navigation";
 import { PastGameCsvDownloadButton } from "@/components/PastGameCsvDownloadButton";
 import { PastGameEventLog } from "@/components/PastGameEventLog";
@@ -45,36 +46,34 @@ export default async function PastGameDetailPage({
   ).length;
 
   return (
-    <Box sx={{ px: { xs: 2, sm: 3 }, py: 3 }}>
-      <Stack spacing={2} sx={{ maxWidth: 900 }}>
-        <Button
+    <div className="px-4 py-6 sm:px-6">
+      <div className="flex max-w-[900px] flex-col gap-4">
+        <NextLink
+          className="link inline-flex items-center gap-2 self-start"
           href="/past-games"
-          startIcon={<ArrowBackIcon />}
-          sx={{ alignSelf: "flex-start" }}
         >
+          <ArrowLeft className="size-4" />
           Back to past games
-        </Button>
+        </NextLink>
 
-        <Box>
-          <Typography variant="h4">{gameLog.game.homeTeamName}</Typography>
-          <Typography
-            sx={{
-              color: "text.secondary",
-              mt: 1,
-            }}
-          >
+        <div>
+          <Typography.Heading level={3}>
+            {gameLog.game.homeTeamName}
+          </Typography.Heading>
+          <Typography.Paragraph color="muted" className="mt-2">
             Game #{gameLog.game.id} · {formatGameDate(gameLog.game.createdAt)}
-          </Typography>
-        </Box>
+          </Typography.Paragraph>
+        </div>
 
-        <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
-          <Chip label={`${score} goals`} color="success" />
-          <Chip label={`${gameLog.events.length} logged events`} />
-          <Chip
-            label={`${gameLog.players.length} rostered players`}
-            variant="outlined"
-          />
-        </Stack>
+        <div className="flex flex-wrap gap-2">
+          <Chip color="success" variant="secondary">
+            {score} goals
+          </Chip>
+          <Chip variant="secondary">{gameLog.events.length} logged events</Chip>
+          <Chip variant="secondary">
+            {gameLog.players.length} rostered players
+          </Chip>
+        </div>
 
         <PastGameCsvDownloadButton
           csv={csvPayload?.csv ?? ""}
@@ -84,7 +83,7 @@ export default async function PastGameDetailPage({
         />
 
         <PastGameEventLog events={gameLog.events} players={gameLog.players} />
-      </Stack>
-    </Box>
+      </div>
+    </div>
   );
 }

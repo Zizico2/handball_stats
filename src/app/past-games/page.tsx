@@ -1,14 +1,6 @@
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import HistoryIcon from "@mui/icons-material/History";
-import {
-  Box,
-  Card,
-  CardActionArea,
-  CardContent,
-  Chip,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Card, Chip, Typography } from "@heroui/react";
+import { ChevronRight, History } from "lucide-react";
+import NextLink from "next/link";
 import { listPastGames } from "@/server/gameHistory";
 
 function formatGameDate(value: string) {
@@ -22,79 +14,60 @@ export default async function PastGamesPage() {
   const games = await listPastGames();
 
   return (
-    <Box sx={{ px: { xs: 2, sm: 3 }, py: 3 }}>
-      <Stack spacing={1} sx={{ mb: 3 }}>
-        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-          <HistoryIcon color="action" />
-          <Typography variant="h4">Past Games</Typography>
-        </Stack>
-        <Typography
-          sx={{
-            color: "text.secondary",
-          }}
-        >
+    <div className="px-4 py-6 sm:px-6">
+      <div className="mb-6 flex flex-col gap-2">
+        <div className="flex items-center gap-3">
+          <History className="size-6 text-muted" />
+          <Typography.Heading level={3}>Past Games</Typography.Heading>
+        </div>
+        <Typography.Paragraph color="muted">
           Open any finished game to inspect its event log.
-        </Typography>
-      </Stack>
-      <Stack spacing={2} sx={{ maxWidth: 720 }}>
+        </Typography.Paragraph>
+      </div>
+      <div className="flex max-w-[720px] flex-col gap-4">
         {games.length === 0 ? (
-          <Card variant="outlined">
-            <CardContent>
-              <Typography variant="h6">No past games yet</Typography>
-              <Typography
-                sx={{
-                  color: "text.secondary",
-                  mt: 1,
-                }}
-              >
+          <Card className="border border-separator">
+            <Card.Content className="p-4">
+              <Typography.Heading level={5}>
+                No past games yet
+              </Typography.Heading>
+              <Typography.Paragraph color="muted" className="mt-2">
                 Start and replace an active game to build up match history here.
-              </Typography>
-            </CardContent>
+              </Typography.Paragraph>
+            </Card.Content>
           </Card>
         ) : (
           games.map((game) => (
-            <Card key={game.id} variant="outlined">
-              <CardActionArea href={`/past-games/${game.id}`}>
-                <CardContent>
-                  <Stack
-                    direction={{ xs: "column", sm: "row" }}
-                    spacing={2}
-                    sx={{
-                      justifyContent: "space-between",
-                      alignItems: { xs: "flex-start", sm: "center" },
-                    }}
-                  >
-                    <Box>
-                      <Typography variant="h6">{game.homeTeamName}</Typography>
-                      <Typography
-                        sx={{
-                          color: "text.secondary",
-                          mt: 0.5,
-                        }}
-                      >
+            <NextLink
+              key={game.id}
+              className="no-underline"
+              href={`/past-games/${game.id}`}
+            >
+              <Card className="border border-separator transition-colors hover:bg-surface-secondary">
+                <Card.Content className="p-4">
+                  <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+                    <div>
+                      <Typography.Heading level={5}>
+                        {game.homeTeamName}
+                      </Typography.Heading>
+                      <Typography.Paragraph color="muted" className="mt-1">
                         Game #{game.id} · {formatGameDate(game.createdAt)}
-                      </Typography>
-                    </Box>
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      useFlexGap
-                      sx={{ alignItems: "center", flexWrap: "wrap" }}
-                    >
-                      <Chip label={`${game.score} goals`} color="success" />
-                      <Chip
-                        label={`${game.eventCount} events`}
-                        variant="outlined"
-                      />
-                      <ChevronRightIcon color="action" />
-                    </Stack>
-                  </Stack>
-                </CardContent>
-              </CardActionArea>
-            </Card>
+                      </Typography.Paragraph>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Chip color="success" variant="secondary">
+                        {game.score} goals
+                      </Chip>
+                      <Chip variant="secondary">{game.eventCount} events</Chip>
+                      <ChevronRight className="size-5 text-muted" />
+                    </div>
+                  </div>
+                </Card.Content>
+              </Card>
+            </NextLink>
           ))
         )}
-      </Stack>
-    </Box>
+      </div>
+    </div>
   );
 }

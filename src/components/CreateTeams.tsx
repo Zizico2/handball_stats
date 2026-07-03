@@ -1,31 +1,26 @@
 "use client";
-import CloseIcon from "@mui/icons-material/Close";
-import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import {
-  AppBar,
-  Box,
   Button,
   Chip,
-  Dialog,
-  DialogContent,
-  Divider,
-  FormControl,
-  IconButton,
-  InputLabel,
-  MenuItem,
+  FieldError,
+  Input,
+  Label,
+  ListBox,
   Select,
-  Stack,
+  Separator,
+  Surface,
   TextField,
-  Toolbar,
   Typography,
-} from "@mui/material";
+} from "@heroui/react";
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
+import { ArrowLeftRight } from "lucide-react";
 import { useState } from "react";
 import {
   quickSubPairsCollection,
   teamPlayersCollection,
   teamsCollection,
 } from "@/collections";
+import { FullscreenModal } from "@/components/ui/FullscreenModal";
 import type { QuickSubPair, Team, TeamPlayer } from "@/datamodel";
 
 function CreateTeams() {
@@ -138,17 +133,9 @@ function CreateTeams() {
 
   return (
     <>
-      <Box sx={{ height: "100%", width: "100%" }}>
-        <Box
-          sx={{
-            display: "flex",
-            gap: 2,
-            flexDirection: "column",
-            margin: "auto",
-            width: "fit-content",
-          }}
-        >
-          <Button variant="contained" onClick={() => setCreateTeamOpen(true)}>
+      <div className="h-full w-full">
+        <div className="mx-auto flex w-fit flex-col gap-4">
+          <Button variant="primary" onPress={() => setCreateTeamOpen(true)}>
             Create Team
           </Button>
           {teams.data.map((team) => {
@@ -160,85 +147,68 @@ function CreateTeams() {
             );
 
             return (
-              <Box key={team.id} sx={{ border: "1px solid black", padding: 1 }}>
-                <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
-                  <Typography variant="h6">{team.name}</Typography>
+              <Surface
+                key={team.id}
+                className="border border-separator p-3"
+                variant="secondary"
+              >
+                <div className="flex items-center gap-2">
+                  <Typography.Heading level={5}>{team.name}</Typography.Heading>
                   <Button
-                    color="error"
-                    variant="outlined"
-                    size="small"
-                    onClick={() => handleDeleteTeam(team)}
+                    size="sm"
+                    variant="outline"
+                    onPress={() => handleDeleteTeam(team)}
                   >
                     Delete Team
                   </Button>
-                </Box>
-                {/* Players section */}
+                </div>
                 <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => setAddPlayerTeamId(team.id)}
+                  className="mt-2"
+                  size="sm"
+                  variant="outline"
+                  onPress={() => setAddPlayerTeamId(team.id)}
                 >
                   Add Player
                 </Button>
-                <Box sx={{ marginTop: 1 }}>
+                <div className="mt-2 flex flex-col gap-1">
                   {players.map((player) => (
-                    <Box
+                    <div
                       key={player.id}
-                      sx={{
-                        display: "flex",
-                        gap: 1,
-                        alignItems: "center",
-                        padding: "2px 0",
-                      }}
+                      className="flex items-center gap-2 py-0.5"
                     >
-                      <div>
+                      <Typography.Paragraph>
                         #{player.number} {player.name}
-                      </div>
+                      </Typography.Paragraph>
                       <Button
-                        color="error"
-                        variant="outlined"
-                        size="small"
-                        onClick={() => handleDeletePlayer(player)}
+                        size="sm"
+                        variant="outline"
+                        onPress={() => handleDeletePlayer(player)}
                       >
                         Remove
                       </Button>
-                    </Box>
+                    </div>
                   ))}
-                </Box>
-                {/* Quick Sub Pairs section */}
-                <Divider sx={{ my: 1.5 }} />
-                <Box
-                  sx={{ display: "flex", gap: 1, alignItems: "center", mb: 1 }}
-                >
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: "text.secondary",
-                      fontWeight: "bold",
-                    }}
-                  >
+                </div>
+                <Separator className="my-3" />
+                <div className="mb-2 flex items-center gap-2">
+                  <Typography.Paragraph color="muted" className="font-bold">
                     Quick Sub Pairs
-                  </Typography>
+                  </Typography.Paragraph>
                   <Button
-                    variant="outlined"
-                    size="small"
-                    disabled={players.length < 2}
-                    onClick={() => setAddQuickSubTeamId(team.id)}
+                    isDisabled={players.length < 2}
+                    size="sm"
+                    variant="outline"
+                    onPress={() => setAddQuickSubTeamId(team.id)}
                   >
                     Add Pair
                   </Button>
-                </Box>
+                </div>
                 {pairs.length === 0 ? (
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      color: "text.secondary",
-                    }}
-                  >
+                  <Typography.Paragraph color="muted" className="text-xs">
                     No quick sub pairs defined.
-                  </Typography>
+                  </Typography.Paragraph>
                 ) : (
-                  <Stack spacing={0.5}>
+                  <div className="flex flex-col gap-1">
                     {pairs.map((pair) => {
                       const pA = players.find(
                         (p) => p.number === pair.playerNumberA,
@@ -247,56 +217,46 @@ function CreateTeams() {
                         (p) => p.number === pair.playerNumberB,
                       );
                       return (
-                        <Box
-                          key={pair.id}
-                          sx={{ display: "flex", gap: 1, alignItems: "center" }}
-                        >
-                          <Chip
-                            size="small"
-                            label={`#${pair.playerNumberA} ${pA?.name ?? ""}`}
-                            variant="outlined"
-                            color="primary"
-                          />
-                          <SwapHorizIcon fontSize="small" color="action" />
-                          <Chip
-                            size="small"
-                            label={`#${pair.playerNumberB} ${pB?.name ?? ""}`}
-                            variant="outlined"
-                            color="primary"
-                          />
+                        <div key={pair.id} className="flex items-center gap-2">
+                          <Chip color="accent" size="sm" variant="secondary">
+                            #{pair.playerNumberA} {pA?.name ?? ""}
+                          </Chip>
+                          <ArrowLeftRight className="size-4 text-muted" />
+                          <Chip color="accent" size="sm" variant="secondary">
+                            #{pair.playerNumberB} {pB?.name ?? ""}
+                          </Chip>
                           <Button
-                            color="error"
-                            variant="outlined"
-                            size="small"
-                            onClick={() => handleDeleteQuickSubPair(pair)}
+                            size="sm"
+                            variant="outline"
+                            onPress={() => handleDeleteQuickSubPair(pair)}
                           >
                             Remove
                           </Button>
-                        </Box>
+                        </div>
                       );
                     })}
-                  </Stack>
+                  </div>
                 )}
-              </Box>
+              </Surface>
             );
           })}
-        </Box>
-      </Box>
+        </div>
+      </div>
       <CreateTeamDialog
-        open={createTeamOpen}
+        isOpen={createTeamOpen}
         existingTeamNames={normalizedTeamNames}
         onCreateTeam={handleCreateTeam}
         onCancel={() => setCreateTeamOpen(false)}
       />
       <AddPlayerDialog
-        open={addPlayerTeamId !== null}
+        isOpen={addPlayerTeamId !== null}
         existingPlayerNumbers={existingPlayerNumbersForSelectedTeam}
         onAddPlayer={handleAddPlayer}
         onCancel={() => setAddPlayerTeamId(null)}
       />
       {addQuickSubTeamId !== null && (
         <AddQuickSubPairDialog
-          open={true}
+          isOpen
           players={teamPlayers.data.filter(
             (p) => p.teamId === addQuickSubTeamId,
           )}
@@ -314,12 +274,12 @@ function CreateTeams() {
 export default CreateTeams;
 
 function CreateTeamDialog({
-  open,
+  isOpen,
   existingTeamNames,
   onCreateTeam,
   onCancel,
 }: {
-  open: boolean;
+  isOpen: boolean;
   existingTeamNames: Set<string>;
   onCreateTeam: (name: string) => void;
   onCancel: () => void;
@@ -341,56 +301,44 @@ function CreateTeamDialog({
   };
 
   return (
-    <Dialog fullScreen open={open}>
-      <AppBar sx={{ position: "relative" }}>
-        <Toolbar>
-          <IconButton
-            edge="start"
-            color="inherit"
-            onClick={handleCancel}
-            aria-label="cancel"
-          >
-            <CloseIcon />
-          </IconButton>
-          <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
-            Create Team
-          </Typography>
-        </Toolbar>
-      </AppBar>
-      <DialogContent>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <TextField
-            label="Team Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-            autoFocus
-            error={hasDuplicateName}
-            helperText={
-              hasDuplicateName ? "Team name already exists" : undefined
+    <FullscreenModal isOpen={isOpen} onClose={handleCancel} title="Create Team">
+      <TextField
+        fullWidth
+        isInvalid={hasDuplicateName}
+        value={name}
+        onChange={setName}
+      >
+        <Label>Team Name</Label>
+        <Input
+          autoFocus
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              handleSubmit();
             }
-            fullWidth
-          />
-          <Button
-            variant="contained"
-            onClick={handleSubmit}
-            disabled={!trimmedName || hasDuplicateName}
-          >
-            Create
-          </Button>
-        </Box>
-      </DialogContent>
-    </Dialog>
+          }}
+        />
+        {hasDuplicateName ? (
+          <FieldError>Team name already exists</FieldError>
+        ) : null}
+      </TextField>
+      <Button
+        isDisabled={!trimmedName || hasDuplicateName}
+        variant="primary"
+        onPress={handleSubmit}
+      >
+        Create
+      </Button>
+    </FullscreenModal>
   );
 }
 
 function AddPlayerDialog({
-  open,
+  isOpen,
   existingPlayerNumbers,
   onAddPlayer,
   onCancel,
 }: {
-  open: boolean;
+  isOpen: boolean;
   existingPlayerNumbers: Set<number>;
   onAddPlayer: (name: string, number: number) => void;
   onCancel: () => void;
@@ -422,66 +370,45 @@ function AddPlayerDialog({
     trimmedName !== "" && !Number.isNaN(parsedNumber) && !hasDuplicateNumber;
 
   return (
-    <Dialog fullScreen open={open}>
-      <AppBar sx={{ position: "relative" }}>
-        <Toolbar>
-          <IconButton
-            edge="start"
-            color="inherit"
-            onClick={handleCancel}
-            aria-label="cancel"
-          >
-            <CloseIcon />
-          </IconButton>
-          <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
-            Add Player
-          </Typography>
-        </Toolbar>
-      </AppBar>
-      <DialogContent>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <TextField
-            label="Player Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            autoFocus
-            fullWidth
-          />
-          <TextField
-            label="Player Number"
-            type="number"
-            value={number}
-            onChange={(e) => setNumber(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-            error={hasDuplicateNumber}
-            helperText={
-              hasDuplicateNumber
-                ? "Player number already exists on this team"
-                : undefined
+    <FullscreenModal isOpen={isOpen} onClose={handleCancel} title="Add Player">
+      <TextField fullWidth value={name} onChange={setName}>
+        <Label>Player Name</Label>
+        <Input autoFocus />
+      </TextField>
+      <TextField
+        fullWidth
+        isInvalid={hasDuplicateNumber}
+        value={number}
+        onChange={setNumber}
+      >
+        <Label>Player Number</Label>
+        <Input
+          type="number"
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              handleSubmit();
             }
-            fullWidth
-          />
-          <Button
-            variant="contained"
-            onClick={handleSubmit}
-            disabled={!isValid}
-          >
-            Add Player
-          </Button>
-        </Box>
-      </DialogContent>
-    </Dialog>
+          }}
+        />
+        {hasDuplicateNumber ? (
+          <FieldError>Player number already exists on this team</FieldError>
+        ) : null}
+      </TextField>
+      <Button isDisabled={!isValid} variant="primary" onPress={handleSubmit}>
+        Add Player
+      </Button>
+    </FullscreenModal>
   );
 }
 
 function AddQuickSubPairDialog({
-  open,
+  isOpen,
   players,
   existingPairs,
   onAdd,
   onCancel,
 }: {
-  open: boolean;
+  isOpen: boolean;
   players: TeamPlayer[];
   existingPairs: QuickSubPair[];
   onAdd: (numberA: number, numberB: number) => void;
@@ -516,93 +443,83 @@ function AddQuickSubPairDialog({
   };
 
   return (
-    <Dialog fullScreen open={open}>
-      <AppBar sx={{ position: "relative" }}>
-        <Toolbar>
-          <IconButton
-            edge="start"
-            color="inherit"
-            onClick={handleCancel}
-            aria-label="cancel"
-          >
-            <CloseIcon />
-          </IconButton>
-          <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
-            Add Quick Sub Pair
-          </Typography>
-        </Toolbar>
-      </AppBar>
-      <DialogContent>
-        <Stack spacing={3} sx={{ pt: 1 }}>
-          <Typography
-            variant="body2"
-            sx={{
-              color: "text.secondary",
-            }}
-          >
-            Choose two players. In the active game you'll be able to swap them
-            with one tap.
-          </Typography>
+    <FullscreenModal
+      isOpen={isOpen}
+      onClose={handleCancel}
+      title="Add Quick Sub Pair"
+    >
+      <Typography.Paragraph color="muted">
+        Choose two players. In the active game you'll be able to swap them with
+        one tap.
+      </Typography.Paragraph>
 
-          <FormControl fullWidth>
-            <InputLabel id="player-a-label">Player A</InputLabel>
-            <Select
-              labelId="player-a-label"
-              value={playerA ?? ""}
-              label="Player A"
-              onChange={(e) => setPlayerA(e.target.value as number)}
-            >
-              {players.map((p) => (
-                <MenuItem
-                  key={p.id}
-                  value={p.number}
-                  disabled={p.number === playerB}
-                >
-                  #{p.number} {p.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+      <Select
+        fullWidth
+        placeholder="Select player"
+        value={playerA?.toString() ?? null}
+        onChange={(value) => setPlayerA(value ? Number(value) : null)}
+      >
+        <Label>Player A</Label>
+        <Select.Trigger>
+          <Select.Value />
+          <Select.Indicator />
+        </Select.Trigger>
+        <Select.Popover>
+          <ListBox>
+            {players.map((p) => (
+              <ListBox.Item
+                key={p.id}
+                id={p.number.toString()}
+                isDisabled={p.number === playerB}
+                textValue={`#${p.number} ${p.name}`}
+              >
+                #{p.number} {p.name}
+              </ListBox.Item>
+            ))}
+          </ListBox>
+        </Select.Popover>
+      </Select>
 
-          <Box sx={{ display: "flex", justifyContent: "center" }}>
-            <SwapHorizIcon color="action" fontSize="large" />
-          </Box>
+      <div className="flex justify-center">
+        <ArrowLeftRight className="size-6 text-muted" />
+      </div>
 
-          <FormControl fullWidth>
-            <InputLabel id="player-b-label">Player B</InputLabel>
-            <Select
-              labelId="player-b-label"
-              value={playerB ?? ""}
-              label="Player B"
-              onChange={(e) => setPlayerB(e.target.value as number)}
-            >
-              {players.map((p) => (
-                <MenuItem
-                  key={p.id}
-                  value={p.number}
-                  disabled={p.number === playerA}
-                >
-                  #{p.number} {p.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+      <Select
+        fullWidth
+        placeholder="Select player"
+        value={playerB?.toString() ?? null}
+        onChange={(value) => setPlayerB(value ? Number(value) : null)}
+      >
+        <Label>Player B</Label>
+        <Select.Trigger>
+          <Select.Value />
+          <Select.Indicator />
+        </Select.Trigger>
+        <Select.Popover>
+          <ListBox>
+            {players.map((p) => (
+              <ListBox.Item
+                key={p.id}
+                id={p.number.toString()}
+                isDisabled={p.number === playerA}
+                textValue={`#${p.number} ${p.name}`}
+              >
+                #{p.number} {p.name}
+              </ListBox.Item>
+            ))}
+          </ListBox>
+        </Select.Popover>
+      </Select>
 
-          {isDuplicate && (
-            <Typography color="error" variant="caption">
-              This pair already exists.
-            </Typography>
-          )}
+      {isDuplicate ? (
+        <Typography.Paragraph color="muted" className="text-danger">
+          This pair already exists.
+        </Typography.Paragraph>
+      ) : null}
 
-          <Button
-            variant="contained"
-            onClick={handleSubmit}
-            disabled={!isValid}
-          >
-            Add Pair
-          </Button>
-        </Stack>
-      </DialogContent>
-    </Dialog>
+      <Button isDisabled={!isValid} variant="primary" onPress={handleSubmit}>
+        Add Pair
+      </Button>
+    </FullscreenModal>
   );
 }

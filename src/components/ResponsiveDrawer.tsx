@@ -1,26 +1,49 @@
 "use client";
 
 import { Show, UserButton } from "@clerk/nextjs";
-import MailIcon from "@mui/icons-material/Mail";
-import MenuIcon from "@mui/icons-material/Menu";
-import InboxIcon from "@mui/icons-material/MoveToInbox";
-import AppBar from "@mui/material/AppBar";
-import Box from "@mui/material/Box";
-import Divider from "@mui/material/Divider";
-import Drawer from "@mui/material/Drawer";
-import IconButton from "@mui/material/IconButton";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemButton from "@mui/material/ListItemButton";
-import ListItemIcon from "@mui/material/ListItemIcon";
-import ListItemText from "@mui/material/ListItemText";
-import Toolbar from "@mui/material/Toolbar";
-import Typography from "@mui/material/Typography";
+import {
+  Button,
+  Drawer,
+  ScrollShadow,
+  Separator,
+  Surface,
+  Toolbar,
+  Typography,
+} from "@heroui/react";
+import { Menu } from "lucide-react";
 import NextLink from "next/link";
 import type * as React from "react";
 import { useState } from "react";
 
-const drawerWidth = 240;
+const navItems = [
+  { text: "Home", href: "/" },
+  { text: "New Game", href: "/new-game" },
+  { text: "Active Game", href: "/active-game" },
+  { text: "Past Games", href: "/past-games" },
+  { text: "Create Teams", href: "/create-teams" },
+];
+
+function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <nav className="flex flex-col gap-1 p-2">
+      {navItems.map((item) => (
+        <NextLink
+          key={item.href}
+          className="link rounded-lg px-3 py-2 text-foreground no-underline hover:bg-surface-secondary"
+          href={item.href}
+          onClick={onNavigate}
+        >
+          {item.text}
+        </NextLink>
+      ))}
+      <Show when="signed-in">
+        <div className="px-2 pt-2">
+          <UserButton showName />
+        </div>
+      </Show>
+    </nav>
+  );
+}
 
 export default function ResponsiveDrawer({
   children,
@@ -30,188 +53,63 @@ export default function ResponsiveDrawer({
   trailingActions?: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
-
-  const handleDrawerClose = () => {
-    setIsClosing(true);
-    setMobileOpen(false);
-  };
-
-  const handleDrawerTransitionEnd = () => {
-    setIsClosing(false);
-  };
-
-  const handleDrawerToggle = () => {
-    if (!isClosing) {
-      setMobileOpen(!mobileOpen);
-    }
-  };
-
-  const drawer = (
-    <>
-      <Toolbar />
-      <Divider />
-      <List>
-        {[
-          { text: "Home", href: "/" },
-          { text: "New Game", href: "/new-game" },
-          { text: "Active Game", href: "/active-game" },
-          { text: "Past Games", href: "/past-games" },
-          { text: "Create Teams", href: "/create-teams" },
-          // { text: "Inbox", href: "/inbox" },
-          // { text: "Starred", href: "/starred" },
-          // { text: "Send email", href: "/send-email" },
-          // { text: "Drafts", href: "/drafts" },
-        ].map((item, index) => (
-          <ListItem key={item.text} disablePadding>
-            <ListItemButton component={NextLink} href={item.href}>
-              <ListItemIcon>
-                {index % 2 === 0 ? <InboxIcon /> : <MailIcon />}
-              </ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
-        <ListItem disablePadding>
-          <Show when="signed-in">
-            {/* TODO */}
-            <UserButton showName>
-              {/* <ListItemButton>
-                <ListItemIcon>
-                  <InboxIcon />
-                </ListItemIcon>
-                <ListItemText primary="Profile" />
-              </ListItemButton> */}
-            </UserButton>
-          </Show>
-        </ListItem>
-      </List>
-      {/* <Divider />
-      <List>
-        {["All mail", "Trash", "Spam"].map((text, index) => (
-          <ListItem key={text} disablePadding>
-            <ListItemButton>
-              <ListItemIcon>
-                {index % 2 === 0 ? <InboxIcon /> : <MailIcon />}
-              </ListItemIcon>
-              <ListItemText primary={text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List> */}
-    </>
-  );
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "row",
-        width: "100%",
-        height: "100%",
-      }}
-    >
-      <Box
-        component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-        aria-label="mailbox folders"
+    <div className="flex h-full w-full flex-row">
+      <Surface
+        aria-label="Navigation"
+        className="hidden h-full w-60 shrink-0 border-r border-separator sm:block"
+        variant="default"
       >
-        {/* The implementation can be swapped with js to avoid SEO duplication of links. */}
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onTransitionEnd={handleDrawerTransitionEnd}
-          onClose={handleDrawerClose}
-          sx={{
-            display: { xs: "block", sm: "none" },
-            // "& .MuiDrawer-paper": {
-            //   boxSizing: "border-box",
-            //   width: drawerWidth,
-            // },
-          }}
-          slotProps={{
-            root: {
-              keepMounted: true, // Better open performance on mobile.
-            },
-            paper: {
-              sx: {
-                boxSizing: "border-box",
-                width: drawerWidth,
-              },
-            },
-          }}
+        <div className="h-14" />
+        <Separator />
+        <NavLinks />
+      </Surface>
+
+      <Drawer>
+        <Drawer.Backdrop isOpen={mobileOpen} onOpenChange={setMobileOpen}>
+          <Drawer.Content className="w-60 sm:hidden" placement="left">
+            <Drawer.Header>
+              <Drawer.Heading>Arcazzi</Drawer.Heading>
+            </Drawer.Header>
+            <Drawer.Body>
+              <NavLinks onNavigate={() => setMobileOpen(false)} />
+            </Drawer.Body>
+          </Drawer.Content>
+        </Drawer.Backdrop>
+      </Drawer>
+
+      <div className="flex w-full flex-col">
+        <Surface
+          className="shrink-0 border-b border-separator"
+          variant="default"
         >
-          {drawer}
-        </Drawer>
-        <Drawer
-          variant="permanent"
-          slotProps={{
-            paper: {
-              sx: {
-                boxSizing: "border-box",
-                width: drawerWidth,
-              },
-            },
-          }}
-          sx={{
-            display: { xs: "none", sm: "block" },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          width: "100%",
-        }}
-      >
-        <AppBar
-          // position="fixed"
-          //position="absolute"
-          position="static"
-          sx={{
-            // width: { sm: `calc(100% - ${drawerWidth}px)` },
-            // ml: { sm: `${drawerWidth}px` },
-            height: "min-content",
-          }}
-        >
-          <Toolbar>
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              edge="start"
-              onClick={handleDrawerToggle}
-              sx={{ mr: 2, display: { sm: "none" } }}
+          <Toolbar className="flex min-h-14 items-center gap-2 px-2">
+            <Button
+              isIconOnly
+              aria-label="Open navigation"
+              className="sm:hidden"
+              variant="ghost"
+              onPress={() => setMobileOpen(true)}
             >
-              <MenuIcon />
-            </IconButton>
-            <Typography
-              variant="h6"
-              noWrap
-              component="div"
-              sx={{ flexGrow: 1 }}
-            >
+              <Menu className="size-5" />
+            </Button>
+            <Typography.Heading level={4} className="flex-1 truncate">
               Arcazzi
-            </Typography>
+            </Typography.Heading>
             {trailingActions}
           </Toolbar>
-        </AppBar>
+        </Surface>
 
-        <Box
-          component="main"
-          sx={{
-            flexGrow: 1,
-            width: { sm: `calc(100% - ${drawerWidth}px)` },
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          {children}
-        </Box>
-      </Box>
-    </Box>
+        <main className="flex min-h-0 flex-1 flex-col">
+          <ScrollShadow
+            className="flex min-h-0 flex-1 flex-col"
+            orientation="vertical"
+          >
+            {children}
+          </ScrollShadow>
+        </main>
+      </div>
+    </div>
   );
 }

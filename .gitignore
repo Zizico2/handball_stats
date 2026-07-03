@@ -46,3 +46,5 @@ next-env.d.ts
 cloudflare-env.d.ts
 drizzle_flat
 certificates
+# heroui-agents-md
+.heroui-docs/

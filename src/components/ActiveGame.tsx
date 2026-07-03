@@ -1,30 +1,18 @@
 "use client";
-import BoltIcon from "@mui/icons-material/Bolt";
-import CloseIcon from "@mui/icons-material/Close";
-import ShieldIcon from "@mui/icons-material/Shield";
-import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
-import WarningIcon from "@mui/icons-material/Warning";
 import {
-  AppBar,
-  Box,
   Button,
   Checkbox,
   Chip,
-  Dialog,
-  DialogContent,
-  Divider,
-  Grid,
-  IconButton,
-  List,
-  ListItemButton,
-  ListItemText,
-  Stack,
-  Toolbar,
+  Label,
+  Modal,
+  Separator,
+  Surface,
   Typography,
-} from "@mui/material";
+} from "@heroui/react";
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
 import { useMachine } from "@xstate/react";
 import { useSetAtom } from "jotai";
+import { ArrowLeftRight, Bolt, Shield, TriangleAlert } from "lucide-react";
 import NextLink from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { assign } from "xstate";
@@ -36,6 +24,8 @@ import {
   quickSubPairsCollection,
   teamPlayersCollection,
 } from "@/collections";
+import { FullscreenModal } from "@/components/ui/FullscreenModal";
+import { ListSelectionModal } from "@/components/ui/ListSelectionModal";
 import {
   type EventGroup,
   type EventType,
@@ -278,92 +268,41 @@ function ActiveGame() {
 
   return (
     <>
-      <Box sx={{ height: "100%", width: "100%" }}>
-        <Box
-          sx={{
-            display: "flex",
-            gap: 2,
-            flexDirection: "column",
-            margin: "auto",
-            width: "fit-content",
-          }}
-        >
+      <div className="h-full w-full">
+        <div className="mx-auto flex w-fit flex-col gap-4">
           <MatchClock minutes={minutes} seconds={seconds} />
           {!activeGame.data ? (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              <Typography
-                sx={{
-                  color: "text.secondary",
-                }}
-              >
+            <div className="flex flex-col gap-2">
+              <Typography.Paragraph color="muted">
                 No active game. Choose a home team first.
-              </Typography>
-              <Button component={NextLink} href="/new-game" variant="outlined">
+              </Typography.Paragraph>
+              <NextLink className="link" href="/new-game">
                 Go to New Game
-              </Button>
-            </Box>
+              </NextLink>
+            </div>
           ) : startingPlayerNumbers.length === 0 ? (
-            <Box
-              sx={{
-                bgcolor: "rgba(237, 108, 2, 0.08)",
-                border: "1px solid",
-                borderColor: "rgba(237, 108, 2, 0.3)",
-                borderRadius: 2,
-                p: 2,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 1.5,
-                maxWidth: 400,
-                mx: "auto",
-              }}
+            <Surface
+              className="mx-auto flex max-w-[400px] flex-col items-center gap-3 rounded-xl border border-warning/30 bg-warning/10 p-4"
+              variant="secondary"
             >
-              <Typography
-                variant="body2"
-                align="center"
-                sx={{
-                  color: "warning.dark",
-                  fontWeight: "medium",
-                }}
-              >
+              <Typography.Paragraph className="text-center font-medium text-warning">
                 Starting lineup is not defined yet. Set the starting players to
                 enable accurate tracking of who is on court.
-              </Typography>
+              </Typography.Paragraph>
               <Button
-                variant="contained"
-                color="warning"
-                onClick={() => setStarting7DialogOpen(true)}
-                size="small"
+                size="sm"
+                variant="primary"
+                onPress={() => setStarting7DialogOpen(true)}
               >
                 Set Starting Lineup
               </Button>
-            </Box>
+            </Surface>
           ) : (
-            <Box sx={{ width: "100%", maxWidth: 400, mx: "auto", my: 1 }}>
-              <Stack
-                direction="row"
-                sx={{
-                  mb: 1,
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}
-              >
-                <Typography
-                  variant="subtitle2"
-                  sx={{
-                    color: "text.secondary",
-                    fontWeight: "bold",
-                  }}
-                >
-                  On Court ({activePlayerNumbers.size})
-                </Typography>
-              </Stack>
-              <Stack
-                direction="row"
-                spacing={1}
-                useFlexGap
-                sx={{ flexWrap: "wrap" }}
-              >
+            <div className="mx-auto my-2 w-full max-w-[400px]">
+              <Typography.Paragraph color="muted" className="mb-2 font-bold">
+                On Court ({activePlayerNumbers.size})
+              </Typography.Paragraph>
+              <div className="flex flex-wrap gap-2">
                 {Array.from(activePlayerNumbers).map((num) => {
                   const p = selectedTeamPlayers.find(
                     (player) => player.number === num,
@@ -371,15 +310,16 @@ function ActiveGame() {
                   return (
                     <Chip
                       key={num}
-                      label={`#${num} ${p ? p.name.split(" ")[0] : ""}`}
-                      size="small"
-                      color="secondary"
-                      variant="outlined"
-                    />
+                      color="accent"
+                      size="sm"
+                      variant="secondary"
+                    >
+                      #{num} {p ? p.name.split(" ")[0] : ""}
+                    </Chip>
                   );
                 })}
-              </Stack>
-            </Box>
+              </div>
+            </div>
           )}
           <EventGroupButtons
             onRecordEvent={handleStartEvent}
@@ -390,9 +330,9 @@ function ActiveGame() {
               !(matchStatus === "firstHalf" || matchStatus === "secondHalf")
             }
           />
-        </Box>
+        </div>
         <EventLog events={activeGameEvents} getPlayerLabel={getPlayerLabel} />
-      </Box>
+      </div>
       <PickPlayerFullscreenDialog
         open={state.matches("pickingPlayer")}
         players={selectedTeamPlayers}
@@ -562,12 +502,12 @@ function MatchClock({
   seconds: number;
 }) {
   return (
-    <Box>
-      <Typography variant="h4">Match Clock</Typography>
-      <Typography>
+    <div>
+      <Typography.Heading level={4}>Match Clock</Typography.Heading>
+      <Typography.Paragraph>
         {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
-      </Typography>
-    </Box>
+      </Typography.Paragraph>
+    </div>
   );
 }
 
@@ -579,94 +519,46 @@ function EventGroupButtons({
   disabled: boolean;
 }) {
   return (
-    <Box sx={{ width: "100%", mt: 1 }}>
-      <Grid container spacing={2}>
-        <Grid size={6}>
-          <Button
-            fullWidth
-            variant="contained"
-            startIcon={<BoltIcon />}
-            onClick={() => onRecordEvent("attack")}
-            disabled={disabled}
-            sx={{
-              bgcolor: "warning.main",
-              color: "warning.contrastText",
-              "&:hover": { bgcolor: "warning.dark" },
-              textTransform: "none",
-              py: 1.5,
-              fontSize: "1rem",
-              borderRadius: 2,
-              boxShadow: 3,
-            }}
-          >
-            Attack
-          </Button>
-        </Grid>
-        <Grid size={6}>
-          <Button
-            fullWidth
-            variant="contained"
-            startIcon={<ShieldIcon />}
-            onClick={() => onRecordEvent("defense")}
-            disabled={disabled}
-            sx={{
-              bgcolor: "primary.main",
-              color: "primary.contrastText",
-              "&:hover": { bgcolor: "primary.dark" },
-              textTransform: "none",
-              py: 1.5,
-              fontSize: "1rem",
-              borderRadius: 2,
-              boxShadow: 3,
-            }}
-          >
-            Defense
-          </Button>
-        </Grid>
-        <Grid size={6}>
-          <Button
-            fullWidth
-            variant="contained"
-            startIcon={<WarningIcon />}
-            onClick={() => onRecordEvent("sanction")}
-            disabled={disabled}
-            sx={{
-              bgcolor: "error.main",
-              color: "error.contrastText",
-              "&:hover": { bgcolor: "error.dark" },
-              textTransform: "none",
-              py: 1.5,
-              fontSize: "1rem",
-              borderRadius: 2,
-              boxShadow: 3,
-            }}
-          >
-            Sanction
-          </Button>
-        </Grid>
-        <Grid size={6}>
-          <Button
-            fullWidth
-            variant="contained"
-            startIcon={<SwapHorizIcon />}
-            onClick={() => onRecordEvent("substitution")}
-            disabled={disabled}
-            sx={{
-              bgcolor: "success.main",
-              color: "success.contrastText",
-              "&:hover": { bgcolor: "success.dark" },
-              textTransform: "none",
-              py: 1.5,
-              fontSize: "1rem",
-              borderRadius: 2,
-              boxShadow: 3,
-            }}
-          >
-            Substitution
-          </Button>
-        </Grid>
-      </Grid>
-    </Box>
+    <div className="mt-2 w-full">
+      <div className="grid grid-cols-2 gap-4">
+        <Button
+          className="h-auto bg-warning py-3 text-warning-foreground shadow-md"
+          isDisabled={disabled}
+          variant="primary"
+          onPress={() => onRecordEvent("attack")}
+        >
+          <Bolt className="size-4" />
+          Attack
+        </Button>
+        <Button
+          className="h-auto bg-accent py-3 text-accent-foreground shadow-md"
+          isDisabled={disabled}
+          variant="primary"
+          onPress={() => onRecordEvent("defense")}
+        >
+          <Shield className="size-4" />
+          Defense
+        </Button>
+        <Button
+          className="h-auto bg-danger py-3 text-danger-foreground shadow-md"
+          isDisabled={disabled}
+          variant="primary"
+          onPress={() => onRecordEvent("sanction")}
+        >
+          <TriangleAlert className="size-4" />
+          Sanction
+        </Button>
+        <Button
+          className="h-auto bg-success py-3 text-success-foreground shadow-md"
+          isDisabled={disabled}
+          variant="primary"
+          onPress={() => onRecordEvent("substitution")}
+        >
+          <ArrowLeftRight className="size-4" />
+          Substitution
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -680,8 +572,8 @@ const PickAttackEventTypeDialog = ({
   onPickAttackEventType: (eventType: EventType | null) => void;
 }) => {
   return (
-    <ListSelectionDialog
-      open={open}
+    <ListSelectionModal
+      isOpen={open}
       title="Pick Attack Event Type"
       options={[
         { text: "Shot", key: "shot", value: "shot" },
@@ -709,8 +601,8 @@ const PickDefenseEventTypeDialog = ({
   onPickDefenseEventType: (eventType: EventType | null) => void;
 }) => {
   return (
-    <ListSelectionDialog
-      open={open}
+    <ListSelectionModal
+      isOpen={open}
       title="Pick Defense Event Type"
       options={[
         { text: "Interception", key: "interception", value: "interception" },
@@ -740,8 +632,8 @@ const PickSanctionEventTypeDialog = ({
   onPickSanctionEventType: (eventType: EventType | null) => void;
 }) => {
   return (
-    <ListSelectionDialog
-      open={open}
+    <ListSelectionModal
+      isOpen={open}
       title="Pick Sanction Event Type"
       options={[
         { text: "Red Card", key: "redCard", value: "redCard" },
@@ -787,8 +679,8 @@ const PickPlayerFullscreenDialog = ({
   });
 
   return (
-    <ListSelectionDialog
-      open={open}
+    <ListSelectionModal
+      isOpen={open}
       title={title}
       options={sortedPlayers.map((player) => ({
         text: `#${player.number} ${player.name}`,
@@ -838,69 +730,62 @@ const PickStarting7Dialog = ({
   const isValid = selected.length === targetCount;
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
-      <DialogContent>
-        <Stack spacing={2} sx={{ py: 1 }}>
-          <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-            Define Starting Lineup
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{
-              color: "text.secondary",
-            }}
-          >
-            Select {targetCount} starting players.
-            {selected.length !== targetCount &&
-              ` (Currently selected: ${selected.length})`}
-          </Typography>
+    <Modal>
+      <Modal.Backdrop
+        isOpen={open}
+        isDismissable={false}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            onClose();
+          }
+        }}
+      >
+        <Modal.Container size="sm">
+          <Modal.Dialog>
+            <Modal.Header>
+              <Modal.Heading>Define Starting Lineup</Modal.Heading>
+            </Modal.Header>
+            <Modal.Body className="flex flex-col gap-4">
+              <Typography.Paragraph color="muted">
+                Select {targetCount} starting players.
+                {selected.length !== targetCount &&
+                  ` (Currently selected: ${selected.length})`}
+              </Typography.Paragraph>
 
-          <Box
-            sx={{
-              maxHeight: 300,
-              overflowY: "auto",
-              border: "1px solid",
-              borderColor: "divider",
-              borderRadius: 1,
-            }}
-          >
-            <List>
-              {players.map((player) => {
-                const isChecked = selected.includes(player.number);
-                return (
-                  <ListItemButton
-                    key={player.number}
-                    onClick={() => handleToggle(player.number)}
-                  >
-                    <Checkbox checked={isChecked} edge="start" disableRipple />
-                    <ListItemText
-                      primary={`#${player.number} ${player.name}`}
-                    />
-                  </ListItemButton>
-                );
-              })}
-            </List>
-          </Box>
+              <div className="max-h-[300px] overflow-y-auto rounded-lg border border-separator">
+                {players.map((player) => {
+                  const isChecked = selected.includes(player.number);
+                  return (
+                    <button
+                      key={player.number}
+                      type="button"
+                      className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-surface-secondary"
+                      onClick={() => handleToggle(player.number)}
+                    >
+                      <Checkbox isSelected={isChecked} />
+                      <Label>{`#${player.number} ${player.name}`}</Label>
+                    </button>
+                  );
+                })}
+              </div>
 
-          <Stack
-            direction="row"
-            spacing={2}
-            sx={{ justifyContent: "flex-end" }}
-          >
-            <Button onClick={onClose} color="inherit">
-              Cancel
-            </Button>
-            <Button
-              variant="contained"
-              onClick={() => onSave(selected)}
-              disabled={!isValid}
-            >
-              Save Lineup
-            </Button>
-          </Stack>
-        </Stack>
-      </DialogContent>
-    </Dialog>
+              <div className="flex justify-end gap-3">
+                <Button variant="ghost" onPress={onClose}>
+                  Cancel
+                </Button>
+                <Button
+                  isDisabled={!isValid}
+                  variant="primary"
+                  onPress={() => onSave(selected)}
+                >
+                  Save Lineup
+                </Button>
+              </div>
+            </Modal.Body>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+    </Modal>
   );
 };
 
@@ -924,116 +809,65 @@ const PickShotDirectionDialog = ({
   onPick: (pick: ShotDirectionFields | null) => void;
 }) => {
   return (
-    <Dialog fullScreen open={open}>
-      <AppBar sx={{ position: "relative" }}>
-        <Toolbar>
-          <IconButton
-            edge="start"
-            color="inherit"
-            onClick={() => onPick(null)}
-            aria-label="close"
+    <FullscreenModal
+      isOpen={open}
+      onClose={() => onPick(null)}
+      title="Shot target"
+    >
+      <Typography.Paragraph color="muted" className="text-center">
+        Tap the zone on the goal. Handball goals are wider than they are
+        tall—this frame matches that shape.
+      </Typography.Paragraph>
+      <div className="w-full max-w-[380px] self-center">
+        <div className="mb-1 flex justify-end">
+          <Button
+            size="sm"
+            variant="outline"
+            onPress={() => onPick({ direction: "OnTarget" })}
           >
-            <CloseIcon />
-          </IconButton>
-          <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
-            Shot target
-          </Typography>
-        </Toolbar>
-      </AppBar>
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1, alignItems: "center" }}>
-          <Typography
-            variant="body2"
-            align="center"
-            sx={{
-              color: "text.secondary",
-            }}
-          >
-            Tap the zone on the goal. Handball goals are wider than they are
-            tall—this frame matches that shape.
-          </Typography>
-          <Box sx={{ width: "100%", maxWidth: 380 }}>
-            <Stack sx={{ mb: 0.5, alignItems: "flex-end" }}>
+            On target
+          </Button>
+        </div>
+        <div className="aspect-[3/2] w-full rounded-lg border-[3px] border-accent bg-surface-secondary p-1.5">
+          <div className="grid h-full grid-cols-3 gap-1">
+            {shotAimSchema.options.map((aim) => (
               <Button
-                variant="outlined"
-                color="error"
-                size="small"
-                onClick={() => onPick({ direction: "OnTarget" })}
+                key={aim}
+                aria-label={SHOT_AIM_LABELS[aim]}
+                className="h-full min-h-[52px] text-[0.7rem] leading-tight shadow-none"
+                variant="secondary"
+                onPress={() => onPick({ direction: "OnTarget", aim })}
               >
-                On target
+                {SHOT_AIM_LABELS[aim]}
               </Button>
-            </Stack>
-            <Box
-              sx={{
-                width: "100%",
-                aspectRatio: "3 / 2",
-                p: 0.75,
-                border: 3,
-                borderColor: "primary.main",
-                borderRadius: 1,
-                bgcolor: "action.hover",
-              }}
-            >
-              <Grid container columns={3} spacing={0.5} sx={{ height: "100%" }}>
-                {shotAimSchema.options.map((aim) => (
-                  <Grid key={aim} size={1}>
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      color="inherit"
-                      onClick={() => onPick({ direction: "OnTarget", aim })}
-                      aria-label={SHOT_AIM_LABELS[aim]}
-                      sx={{
-                        minHeight: 52,
-                        height: "100%",
-                        p: 0.5,
-                        fontSize: "0.7rem",
-                        lineHeight: 1.2,
-                        textTransform: "none",
-                        color: "text.secondary",
-                        boxShadow: "none",
-                      }}
-                    >
-                      {SHOT_AIM_LABELS[aim]}
-                    </Button>
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-          </Box>
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={1}
-            sx={{ width: "100%", maxWidth: 380 }}
-          >
-            <Button
-              fullWidth
-              variant="outlined"
-              color="secondary"
-              onClick={() => onPick({ direction: "OffTarget" })}
-            >
-              Off target
-            </Button>
-            <Button
-              fullWidth
-              variant="outlined"
-              color="secondary"
-              onClick={() => onPick({ direction: "Blocked" })}
-            >
-              Blocked
-            </Button>
-            <Button
-              fullWidth
-              variant="outlined"
-              color="secondary"
-              onClick={() => onPick({ direction: "Post" })}
-            >
-              Post
-            </Button>
-          </Stack>
-        </Stack>
-      </DialogContent>
-    </Dialog>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="flex w-full max-w-[380px] flex-col gap-2 self-center sm:flex-row">
+        <Button
+          className="flex-1"
+          variant="outline"
+          onPress={() => onPick({ direction: "OffTarget" })}
+        >
+          Off target
+        </Button>
+        <Button
+          className="flex-1"
+          variant="outline"
+          onPress={() => onPick({ direction: "Blocked" })}
+        >
+          Blocked
+        </Button>
+        <Button
+          className="flex-1"
+          variant="outline"
+          onPress={() => onPick({ direction: "Post" })}
+        >
+          Post
+        </Button>
+      </div>
+    </FullscreenModal>
   );
 };
 
@@ -1045,8 +879,8 @@ const PickGoalOrNoGoalDialog = ({
   onPickGoalOrNoGoal: (goal: boolean | null) => void;
 }) => {
   return (
-    <ListSelectionDialog
-      open={open}
+    <ListSelectionModal
+      isOpen={open}
       title="Was it a Goal?"
       options={[
         { text: "Goal", key: "goal", value: true },
@@ -1065,8 +899,8 @@ const PickShotPositionDialog = ({
   onPickShotPosition: (position: ShotPosition | null) => void;
 }) => {
   return (
-    <ListSelectionDialog
-      open={open}
+    <ListSelectionModal
+      isOpen={open}
       title="Pick Shot Position"
       options={shotPosition.options.map((option) => ({
         text: option,
@@ -1101,149 +935,98 @@ const QuickSubDialog = ({
   };
 
   return (
-    <Dialog fullScreen open={open}>
-      <AppBar sx={{ position: "relative" }}>
-        <Toolbar>
-          <IconButton
-            edge="start"
-            color="inherit"
-            onClick={onClose}
-            aria-label="close"
-          >
-            <CloseIcon />
-          </IconButton>
-          <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
-            Substitution
-          </Typography>
-        </Toolbar>
-      </AppBar>
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
-          {pairs.length > 0 && (
-            <>
-              <Typography
-                variant="subtitle2"
-                sx={{
-                  color: "text.secondary",
-                  fontWeight: "bold",
-                }}
-              >
-                Quick Substitutions
-              </Typography>
-              <Stack spacing={1.5}>
-                {pairs.map((pair) => {
-                  const aOnCourt = activePlayerNumbers.has(pair.playerNumberA);
-                  const bOnCourt = activePlayerNumbers.has(pair.playerNumberB);
+    <FullscreenModal isOpen={open} onClose={onClose} title="Substitution">
+      {pairs.length > 0 && (
+        <>
+          <Typography.Paragraph color="muted" className="font-bold">
+            Quick Substitutions
+          </Typography.Paragraph>
+          <div className="flex flex-col gap-3">
+            {pairs.map((pair) => {
+              const aOnCourt = activePlayerNumbers.has(pair.playerNumberA);
+              const bOnCourt = activePlayerNumbers.has(pair.playerNumberB);
 
-                  let playerOut: number | null = null;
-                  let playerIn: number | null = null;
-                  let disabledReason: string | null = null;
+              let playerOut: number | null = null;
+              let playerIn: number | null = null;
+              let disabledReason: string | null = null;
 
-                  if (aOnCourt && bOnCourt) {
-                    disabledReason = "Both on court";
-                  } else if (!aOnCourt && !bOnCourt) {
-                    disabledReason = "Both on bench";
-                  } else if (aOnCourt) {
-                    playerOut = pair.playerNumberA;
-                    playerIn = pair.playerNumberB;
-                  } else {
-                    playerOut = pair.playerNumberB;
-                    playerIn = pair.playerNumberA;
-                  }
+              if (aOnCourt && bOnCourt) {
+                disabledReason = "Both on court";
+              } else if (!aOnCourt && !bOnCourt) {
+                disabledReason = "Both on bench";
+              } else if (aOnCourt) {
+                playerOut = pair.playerNumberA;
+                playerIn = pair.playerNumberB;
+              } else {
+                playerOut = pair.playerNumberB;
+                playerIn = pair.playerNumberA;
+              }
 
-                  const isDisabled = disabledReason !== null;
+              const isDisabled = disabledReason !== null;
 
-                  return (
-                    <Button
-                      key={pair.id}
-                      variant={isDisabled ? "outlined" : "contained"}
-                      color="success"
-                      disabled={isDisabled}
-                      onClick={() => {
-                        if (playerOut !== null && playerIn !== null) {
-                          onQuickSub(playerOut, playerIn);
-                        }
-                      }}
-                      sx={{
-                        py: 2.5,
-                        px: 2,
-                        borderRadius: 3,
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 0.5,
-                        textTransform: "none",
-                      }}
-                    >
-                      <Stack
-                        direction="row"
-                        spacing={1.5}
-                        sx={{ alignItems: "center", justifyContent: "center" }}
-                      >
-                        <Typography
-                          variant="body1"
-                          sx={{
-                            fontWeight: "bold",
-                            color: isDisabled ? "inherit" : "error.light",
-                          }}
-                        >
-                          {getPlayerLabel(pair.playerNumberA)}
-                        </Typography>
-                        <SwapHorizIcon />
-                        <Typography
-                          variant="body1"
-                          sx={{
-                            fontWeight: "bold",
-                            color: isDisabled ? "inherit" : "success.light",
-                          }}
-                        >
-                          {getPlayerLabel(pair.playerNumberB)}
-                        </Typography>
-                      </Stack>
-                      {disabledReason && (
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            color: "text.secondary",
-                          }}
-                        >
-                          {disabledReason}
-                        </Typography>
-                      )}
-                      {!disabledReason &&
-                        playerOut !== null &&
-                        playerIn !== null && (
-                          <Typography variant="caption" sx={{ opacity: 0.85 }}>
-                            {getPlayerLabel(playerOut)} out /{" "}
-                            {getPlayerLabel(playerIn)} in
-                          </Typography>
-                        )}
-                    </Button>
-                  );
-                })}
-              </Stack>
-              <Divider>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: "text.secondary",
+              return (
+                <Button
+                  key={pair.id}
+                  className="flex h-auto flex-col gap-1 rounded-2xl py-5"
+                  isDisabled={isDisabled}
+                  variant={isDisabled ? "outline" : "primary"}
+                  onPress={() => {
+                    if (playerOut !== null && playerIn !== null) {
+                      onQuickSub(playerOut, playerIn);
+                    }
                   }}
                 >
-                  or
-                </Typography>
-              </Divider>
-            </>
-          )}
-          <Button
-            variant="outlined"
-            size="large"
-            onClick={onPickManually}
-            sx={{ py: 2, borderRadius: 3, textTransform: "none" }}
-          >
-            Pick players manually →
-          </Button>
-        </Stack>
-      </DialogContent>
-    </Dialog>
+                  <div className="flex items-center justify-center gap-3">
+                    <Typography.Paragraph
+                      className={`font-bold ${isDisabled ? "" : "text-danger"}`}
+                    >
+                      {getPlayerLabel(pair.playerNumberA)}
+                    </Typography.Paragraph>
+                    <ArrowLeftRight className="size-4" />
+                    <Typography.Paragraph
+                      className={`font-bold ${isDisabled ? "" : "text-success"}`}
+                    >
+                      {getPlayerLabel(pair.playerNumberB)}
+                    </Typography.Paragraph>
+                  </div>
+                  {disabledReason ? (
+                    <Typography.Paragraph color="muted" className="text-xs">
+                      {disabledReason}
+                    </Typography.Paragraph>
+                  ) : null}
+                  {!disabledReason &&
+                  playerOut !== null &&
+                  playerIn !== null ? (
+                    <Typography.Paragraph
+                      color="muted"
+                      className="text-xs opacity-85"
+                    >
+                      {getPlayerLabel(playerOut)} out /{" "}
+                      {getPlayerLabel(playerIn)} in
+                    </Typography.Paragraph>
+                  ) : null}
+                </Button>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-3">
+            <Separator className="flex-1" />
+            <Typography.Paragraph color="muted" className="text-xs">
+              or
+            </Typography.Paragraph>
+            <Separator className="flex-1" />
+          </div>
+        </>
+      )}
+      <Button
+        className="rounded-2xl py-4"
+        size="lg"
+        variant="outline"
+        onPress={onPickManually}
+      >
+        Pick players manually →
+      </Button>
+    </FullscreenModal>
   );
 };
 
@@ -1264,99 +1047,4 @@ export function getActivePlayers(events: PlayerEvent[]): Set<number> {
     }
   }
   return active;
-}
-
-// Abstracted list style dialog, since the 3 dialogs are very similar, only differing in the options they show and the type of data they return.
-interface Option<T> {
-  text: string;
-  key: string;
-  value: T;
-  group?: string;
-  disabled?: boolean;
-}
-
-function ListSelectionDialog<T>({
-  open,
-  title,
-  options,
-  onPickOption,
-}: {
-  open: boolean;
-  title: string;
-  options: Option<T>[];
-  onPickOption: (option: T | null) => void;
-}) {
-  return (
-    <Dialog fullScreen open={open}>
-      <AppBar sx={{ position: "relative" }}>
-        <Toolbar>
-          <IconButton
-            edge="start"
-            color="inherit"
-            onClick={() => onPickOption(null)}
-            aria-label="close"
-          >
-            <CloseIcon />
-          </IconButton>
-          <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
-            {title}
-          </Typography>
-        </Toolbar>
-      </AppBar>
-      <DialogContent>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {options.every((o) => !o.group)
-            ? options.map((option) => (
-                <Button
-                  key={option.key}
-                  variant="contained"
-                  disabled={option.disabled}
-                  onClick={() => {
-                    onPickOption(option.value);
-                  }}
-                >
-                  {option.text}
-                </Button>
-              ))
-            : Array.from(new Set(options.map((o) => o.group || ""))).map(
-                (groupName) => (
-                  <Box
-                    key={groupName}
-                    sx={{ display: "flex", flexDirection: "column", gap: 1 }}
-                  >
-                    {groupName && (
-                      <Typography
-                        variant="subtitle2"
-                        sx={{
-                          color: "text.secondary",
-                          mt: 1,
-                          fontWeight: "bold",
-                        }}
-                      >
-                        {groupName}
-                      </Typography>
-                    )}
-                    <Stack spacing={1.5}>
-                      {options
-                        .filter((o) => (o.group || "") === groupName)
-                        .map((option) => (
-                          <Button
-                            key={option.key}
-                            variant="contained"
-                            disabled={option.disabled}
-                            onClick={() => {
-                              onPickOption(option.value);
-                            }}
-                          >
-                            {option.text}
-                          </Button>
-                        ))}
-                    </Stack>
-                  </Box>
-                ),
-              )}
-        </Box>
-      </DialogContent>
-    </Dialog>
-  );
 }

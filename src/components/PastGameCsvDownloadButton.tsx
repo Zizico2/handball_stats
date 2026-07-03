@@ -1,7 +1,7 @@
 "use client";
 
-import DownloadIcon from "@mui/icons-material/Download";
-import { Button } from "@mui/material";
+import { Button } from "@heroui/react";
+import { Download } from "lucide-react";
 
 interface PastGameCsvDownloadButtonProps {
   csv: string;
@@ -25,12 +25,8 @@ export function PastGameCsvDownloadButton({
   };
 
   return (
-    <Button
-      onClick={handleDownload}
-      startIcon={<DownloadIcon />}
-      variant="outlined"
-      sx={{ alignSelf: "flex-start" }}
-    >
+    <Button className="self-start" variant="outline" onPress={handleDownload}>
+      <Download className="size-4" />
       Export event log CSV
     </Button>
   );

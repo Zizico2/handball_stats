@@ -1,16 +1,16 @@
 "use client";
 
 import {
-  Box,
   Button,
-  FormControl,
-  InputLabel,
-  MenuItem,
+  Label,
+  ListBox,
   Select,
+  Surface,
   Tooltip,
   Typography,
-} from "@mui/material";
+} from "@heroui/react";
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
+import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -94,97 +94,80 @@ function NewGame() {
   };
 
   return (
-    <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
-      <Box
-        sx={{
-          width: "100%",
-          maxWidth: 560,
-          display: "flex",
-          flexDirection: "column",
-          gap: 2,
-        }}
-      >
-        <Typography variant="h4">New Game</Typography>
+    <div className="flex justify-center p-6">
+      <div className="flex w-full max-w-[560px] flex-col gap-4">
+        <Typography.Heading level={3}>New Game</Typography.Heading>
         {activeGame.data ? (
-          // TODO: refactor this into a separate component. It is also used in "active game" when a starting 7 hasn't been set.
-          <Box
-            sx={{
-              bgcolor: "rgba(211, 47, 47, 0.08)",
-              border: "1px solid",
-              borderColor: "rgba(211, 47, 47, 0.3)",
-              borderRadius: 2,
-              p: 2,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 1.5,
-            }}
+          <Surface
+            className="flex flex-col items-center gap-3 rounded-xl border border-danger/30 bg-danger/10 p-4"
+            variant="secondary"
           >
-            <Typography
-              variant="body2"
-              align="center"
-              sx={{
-                color: "error.main",
-                fontWeight: "medium",
-              }}
-            >
+            <Typography.Paragraph className="text-center font-medium text-danger">
               Active game #{activeGame.data.gameId}
               {activeTeamName ? ` (${activeTeamName})` : ""} is currently in
               progress. You must end it before you can start a new game.
-            </Typography>
-            <Button
-              href="/active-game"
-              variant="outlined"
-              color="error"
-              size="small"
-            >
+            </Typography.Paragraph>
+            <NextLink className="link text-danger" href="/active-game">
               Go to Active Game
-            </Button>
-          </Box>
+            </NextLink>
+          </Surface>
         ) : null}
-        <FormControl fullWidth disabled={teams.data.length === 0}>
-          <InputLabel id="home-team-select-label">Home Team</InputLabel>
-          <Select
-            labelId="home-team-select-label"
-            label="Home Team"
-            value={selectedTeamId?.toString() ?? ""}
-            onChange={(event) => {
-              const value = event.target.value;
-              setSelectedTeamId(value === "" ? null : Number(value));
-            }}
-          >
-            {teams.data.length === 0 ? (
-              <MenuItem value="">No teams available</MenuItem>
-            ) : (
-              teams.data.map((team) => (
-                <MenuItem key={team.id} value={team.id.toString()}>
-                  {team.name}
-                </MenuItem>
-              ))
-            )}
-          </Select>
-        </FormControl>
-        <Tooltip
-          title={
-            activeGame.data
-              ? "Cannot start a new game while an active game exists. End the active match first."
-              : ""
-          }
-          arrow
+        <Select
+          fullWidth
+          isDisabled={teams.data.length === 0}
+          placeholder="Select a team"
+          value={selectedTeamId?.toString() ?? null}
+          onChange={(value) => {
+            setSelectedTeamId(value ? Number(value) : null);
+          }}
         >
-          <span style={{ display: "block", width: "100%" }}>
+          <Label>Home Team</Label>
+          <Select.Trigger>
+            <Select.Value />
+            <Select.Indicator />
+          </Select.Trigger>
+          <Select.Popover>
+            <ListBox>
+              {teams.data.length === 0 ? (
+                <ListBox.Item
+                  id="none"
+                  isDisabled
+                  textValue="No teams available"
+                >
+                  No teams available
+                </ListBox.Item>
+              ) : (
+                teams.data.map((team) => (
+                  <ListBox.Item
+                    key={team.id}
+                    id={team.id.toString()}
+                    textValue={team.name}
+                  >
+                    {team.name}
+                  </ListBox.Item>
+                ))
+              )}
+            </ListBox>
+          </Select.Popover>
+        </Select>
+        <Tooltip isDisabled={!activeGame.data}>
+          <Tooltip.Trigger>
             <Button
-              variant="contained"
-              onClick={handleStartNewGame}
-              disabled={selectedTeamId === null || !!activeGame.data}
-              fullWidth
+              className="w-full"
+              isDisabled={selectedTeamId === null || !!activeGame.data}
+              variant="primary"
+              onPress={handleStartNewGame}
             >
               Start Game
             </Button>
-          </span>
+          </Tooltip.Trigger>
+          <Tooltip.Content>
+            Cannot start a new game while an active game exists. End the active
+            match first.
+          </Tooltip.Content>
         </Tooltip>
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }
 

@@ -1,15 +1,7 @@
 "use client";
 
-import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
-import {
-  Box,
-  Card,
-  CardContent,
-  Chip,
-  Divider,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Card, Chip, ScrollShadow, Separator, Typography } from "@heroui/react";
+import { ArrowLeftRight } from "lucide-react";
 import type { PlayerEvent } from "@/datamodel";
 
 interface EventLogProps {
@@ -17,35 +9,28 @@ interface EventLogProps {
   getPlayerLabel: (number: number) => string;
 }
 
+type ChipColor = "default" | "accent" | "success" | "warning" | "danger";
+
+function getEventGroupColor(group: string): ChipColor {
+  switch (group) {
+    case "attack":
+      return "warning";
+    case "defense":
+      return "accent";
+    case "sanction":
+      return "danger";
+    case "substitution":
+      return "success";
+    default:
+      return "default";
+  }
+}
+
 export function EventLog({ events, getPlayerLabel }: EventLogProps) {
   const formatElapsed = (totalSeconds: number) => {
     const m = Math.floor(totalSeconds / 60);
     const s = totalSeconds % 60;
     return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  };
-
-  const getEventGroupColor = (
-    group: string,
-  ):
-    | "default"
-    | "primary"
-    | "secondary"
-    | "error"
-    | "info"
-    | "success"
-    | "warning" => {
-    switch (group) {
-      case "attack":
-        return "warning";
-      case "defense":
-        return "primary";
-      case "sanction":
-        return "error";
-      case "substitution":
-        return "success";
-      default:
-        return "default";
-    }
   };
 
   const firstHalfStarting = events.filter(
@@ -98,129 +83,61 @@ export function EventLog({ events, getPlayerLabel }: EventLogProps) {
   }
 
   const sortedItems = [...items].sort((a, b) => {
-    // 1. Sort by half (secondHalf before firstHalf)
     if (a.half === "secondHalf" && b.half === "firstHalf") return -1;
     if (a.half === "firstHalf" && b.half === "secondHalf") return 1;
 
-    // 2. Sort by elapsed seconds descending
     if (b.ellapsed_seconds !== a.ellapsed_seconds) {
       return b.ellapsed_seconds - a.ellapsed_seconds;
     }
 
-    // 3. If elapsed seconds are equal, startingLineup should be at the bottom of the half's events list (meaning it shows below/after them in descending list order)
     if (a.type === "startingLineup" && b.type !== "startingLineup") return 1;
     if (a.type !== "startingLineup" && b.type === "startingLineup") return -1;
 
-    // 4. Sort by event ID descending
     const aId = a.event ? a.event.id : 0;
     const bId = b.event ? b.event.id : 0;
     return bId - aId;
   });
 
   return (
-    <Box sx={{ mt: 4, width: "100%", maxWidth: 600, mx: "auto" }}>
-      <Typography variant="h5" sx={{ mb: 2, fontWeight: "bold" }}>
+    <div className="mx-auto mt-8 w-full max-w-[600px]">
+      <Typography.Heading level={4} className="mb-4 font-bold">
         Match Log
-      </Typography>
-      <Box
-        sx={{
-          maxHeight: 400,
-          overflowY: "auto",
-          pr: 1,
-          "&::-webkit-scrollbar": {
-            width: "6px",
-          },
-          "&::-webkit-scrollbar-track": {
-            background: "transparent",
-          },
-          "&::-webkit-scrollbar-thumb": {
-            background: "rgba(0, 0, 0, 0.1)",
-            borderRadius: "4px",
-          },
-          "&::-webkit-scrollbar-thumb:hover": {
-            background: "rgba(0, 0, 0, 0.2)",
-          },
-        }}
-      >
-        <Stack spacing={1.5}>
+      </Typography.Heading>
+      <ScrollShadow className="max-h-[400px] pr-2" orientation="vertical">
+        <div className="flex flex-col gap-3">
           {sortedItems.length === 0 ? (
-            <Typography
-              align="center"
-              sx={{
-                color: "text.secondary",
-                py: 4,
-              }}
-            >
+            <Typography.Paragraph color="muted" className="py-8 text-center">
               No events recorded yet.
-            </Typography>
+            </Typography.Paragraph>
           ) : (
             sortedItems.map((item) => {
               if (item.type === "startingLineup" && item.startingPlayers) {
                 return (
                   <Card
                     key={item.id}
-                    variant="outlined"
-                    sx={{
-                      borderRadius: 2,
-                      boxShadow: "0px 1px 3px rgba(0,0,0,0.05)",
-                      borderColor: "divider",
-                      bgcolor: "action.hover",
-                    }}
+                    className="border border-separator bg-surface-secondary shadow-sm"
                   >
-                    <CardContent
-                      sx={{ py: 1.5, px: 2, "&:last-child": { pb: 1.5 } }}
-                    >
-                      <Stack
-                        direction="row"
-                        spacing={2}
-                        sx={{
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Stack
-                          direction="row"
-                          spacing={1.5}
-                          sx={{ alignItems: "center" }}
-                        >
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              fontFamily: "monospace",
-                              fontWeight: "bold",
-                              color: "text.secondary",
-                              bgcolor: "action.selected",
-                              px: 1,
-                              py: 0.25,
-                              borderRadius: 1,
-                            }}
-                          >
+                    <Card.Content className="px-4 py-3">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <Typography.Code className="rounded bg-default px-2 py-0.5 font-mono font-bold">
                             00:00
-                          </Typography>
-                          <Chip
-                            size="small"
-                            label="STARTING LINEUP"
-                            color="secondary"
-                            variant="outlined"
-                            sx={{ fontWeight: "medium", fontSize: "0.7rem" }}
-                          />
-                        </Stack>
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            color: "text.secondary",
-                          }}
-                        >
+                          </Typography.Code>
+                          <Chip color="accent" size="sm" variant="secondary">
+                            STARTING LINEUP
+                          </Chip>
+                        </div>
+                        <Typography.Paragraph color="muted" className="text-xs">
                           {item.half === "firstHalf" ? "1st Half" : "2nd Half"}
-                        </Typography>
-                      </Stack>
-                      <Divider sx={{ my: 1 }} />
-                      <Typography variant="body2" sx={{ fontWeight: "medium" }}>
+                        </Typography.Paragraph>
+                      </div>
+                      <Separator className="my-2" />
+                      <Typography.Paragraph className="font-medium">
                         {item.startingPlayers
                           .map((e) => getPlayerLabel(e.player))
                           .join(", ")}
-                      </Typography>
-                    </CardContent>
+                      </Typography.Paragraph>
+                    </Card.Content>
                   </Card>
                 );
               }
@@ -230,118 +147,65 @@ export function EventLog({ events, getPlayerLabel }: EventLogProps) {
               return (
                 <Card
                   key={event.id}
-                  variant="outlined"
-                  sx={{
-                    borderRadius: 2,
-                    boxShadow: "0px 1px 3px rgba(0,0,0,0.05)",
-                    borderColor: "divider",
-                  }}
+                  className="border border-separator shadow-sm"
                 >
-                  <CardContent
-                    sx={{ py: 1.5, px: 2, "&:last-child": { pb: 1.5 } }}
-                  >
-                    <Stack
-                      direction="row"
-                      spacing={2}
-                      sx={{
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <Stack
-                        direction="row"
-                        spacing={1.5}
-                        sx={{ alignItems: "center" }}
-                      >
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontFamily: "monospace",
-                            fontWeight: "bold",
-                            color: "text.secondary",
-                            bgcolor: "action.selected",
-                            px: 1,
-                            py: 0.25,
-                            borderRadius: 1,
-                          }}
-                        >
+                  <Card.Content className="px-4 py-3">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <Typography.Code className="rounded bg-default px-2 py-0.5 font-mono font-bold">
                           {formatElapsed(event.ellapsed_seconds)}
-                        </Typography>
+                        </Typography.Code>
                         <Chip
-                          size="small"
-                          label={event.eventGroup.toUpperCase()}
                           color={getEventGroupColor(event.eventGroup)}
-                          variant="outlined"
-                          sx={{ fontWeight: "medium", fontSize: "0.7rem" }}
-                        />
-                      </Stack>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          color: "text.secondary",
-                        }}
-                      >
+                          size="sm"
+                          variant="secondary"
+                        >
+                          {event.eventGroup.toUpperCase()}
+                        </Chip>
+                      </div>
+                      <Typography.Paragraph color="muted" className="text-xs">
                         {event.half === "firstHalf" ? "1st Half" : "2nd Half"}
-                      </Typography>
-                    </Stack>
+                      </Typography.Paragraph>
+                    </div>
 
-                    <Divider sx={{ my: 1 }} />
+                    <Separator className="my-2" />
 
                     {event.eventType === "substitution" ? (
-                      <Stack
-                        direction="row"
-                        spacing={1}
-                        sx={{ mt: 0.5, alignItems: "center" }}
-                      >
-                        <Typography
-                          variant="body1"
-                          sx={{ fontWeight: "medium", color: "error.main" }}
-                        >
+                      <div className="mt-1 flex items-center gap-2">
+                        <Typography.Paragraph className="font-medium text-danger">
                           {getPlayerLabel(event.player)}
-                        </Typography>
-                        <SwapHorizIcon color="action" />
-                        <Typography
-                          variant="body1"
-                          sx={{ fontWeight: "medium", color: "success.main" }}
-                        >
+                        </Typography.Paragraph>
+                        <ArrowLeftRight className="size-4 text-muted" />
+                        <Typography.Paragraph className="font-medium text-success">
                           {getPlayerLabel(event.event.playerIn)}
-                        </Typography>
-                      </Stack>
+                        </Typography.Paragraph>
+                      </div>
                     ) : (
-                      <Box sx={{ mt: 0.5 }}>
-                        <Typography
-                          variant="body1"
-                          sx={{ fontWeight: "medium" }}
-                        >
+                      <div className="mt-1">
+                        <Typography.Paragraph className="font-medium">
                           {getPlayerLabel(event.player)} —{" "}
-                          <span style={{ textTransform: "capitalize" }}>
+                          <span className="capitalize">
                             {event.eventType.replace(/([A-Z])/g, " $1")}
                           </span>
-                        </Typography>
+                        </Typography.Paragraph>
                         {"event" in event && event.eventType === "shot" && (
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              color: "text.secondary",
-                              mt: 0.5,
-                            }}
-                          >
+                          <Typography.Paragraph color="muted" className="mt-1">
                             Goal:{" "}
                             <strong>{event.event.goal ? "Yes" : "No"}</strong>
                             {event.event.direction &&
                               ` | Direction: ${event.event.direction}`}
                             {event.event.aim && ` | Aim: ${event.event.aim}`}
-                          </Typography>
+                          </Typography.Paragraph>
                         )}
-                      </Box>
+                      </div>
                     )}
-                  </CardContent>
+                  </Card.Content>
                 </Card>
               );
             })
           )}
-        </Stack>
-      </Box>
-    </Box>
+        </div>
+      </ScrollShadow>
+    </div>
   );
 }

@@ -1,12 +1,9 @@
 import "./globals.css";
 import { ClerkProvider, Show } from "@clerk/nextjs";
-import CssBaseline from "@mui/material/CssBaseline";
-import { ThemeProvider } from "@mui/material/styles";
-import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import { Roboto } from "next/font/google";
 import ResponsiveDrawer from "@/components/ResponsiveDrawer";
 import SignedOutEntry from "../components/SignedOutEntry";
-import theme from "../theme";
+import { Providers } from "./providers";
 
 const roboto = Roboto({
   weight: ["300", "400", "500", "700"],
@@ -14,9 +11,6 @@ const roboto = Roboto({
   display: "swap",
   variable: "--font-roboto",
 });
-
-import { Box } from "@mui/material";
-import InitColorSchemeScript from "@mui/material/InitColorSchemeScript";
 
 export default async function RootLayout({
   children,
@@ -26,41 +20,26 @@ export default async function RootLayout({
   trailingActions: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={roboto.variable} suppressHydrationWarning>
-      <body>
-        <InitColorSchemeScript attribute="data" defaultMode="dark" />
-        <AppRouterCacheProvider>
-          <ThemeProvider theme={theme} defaultMode="dark">
-            <CssBaseline />
-            <ClerkProvider>
-              <Show when="signed-in">
-                <Box
-                  sx={{
-                    height: "100dvh",
-                    width: "100dvw",
-                    display: "flex",
-                    flexDirection: "column",
-                    overflowY: "hidden",
-                    // TODO: what should this be?
-                  }}
-                >
-                  <ResponsiveDrawer trailingActions={trailingActions}>
-                    <Box
-                      sx={{
-                        overflowY: "auto",
-                      }}
-                    >
-                      {children}
-                    </Box>
-                  </ResponsiveDrawer>
-                </Box>
-              </Show>
-              <Show when="signed-out">
-                <SignedOutEntry />
-              </Show>
-            </ClerkProvider>
-          </ThemeProvider>
-        </AppRouterCacheProvider>
+    <html
+      lang="en"
+      className={`${roboto.variable} dark`}
+      suppressHydrationWarning
+    >
+      <body className="bg-background font-sans text-foreground">
+        <Providers>
+          <ClerkProvider>
+            <Show when="signed-in">
+              <div className="flex h-dvh w-dvw flex-col overflow-hidden">
+                <ResponsiveDrawer trailingActions={trailingActions}>
+                  {children}
+                </ResponsiveDrawer>
+              </div>
+            </Show>
+            <Show when="signed-out">
+              <SignedOutEntry />
+            </Show>
+          </ClerkProvider>
+        </Providers>
       </body>
     </html>
   );
