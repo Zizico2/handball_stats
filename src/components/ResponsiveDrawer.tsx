@@ -7,7 +7,6 @@ import {
   ScrollShadow,
   Separator,
   Surface,
-  Toolbar,
   Typography,
 } from "@heroui/react";
 import { Menu } from "lucide-react";
@@ -66,25 +65,25 @@ export default function ResponsiveDrawer({
         <NavLinks />
       </Surface>
 
-      <Drawer>
-        <Drawer.Backdrop isOpen={mobileOpen} onOpenChange={setMobileOpen}>
-          <Drawer.Content className="w-60 sm:hidden" placement="left">
+      <Drawer.Backdrop isOpen={mobileOpen} onOpenChange={setMobileOpen}>
+        <Drawer.Content className="w-60 sm:hidden" placement="left">
+          <Drawer.Dialog>
             <Drawer.Header>
               <Drawer.Heading>Arcazzi</Drawer.Heading>
             </Drawer.Header>
             <Drawer.Body>
               <NavLinks onNavigate={() => setMobileOpen(false)} />
             </Drawer.Body>
-          </Drawer.Content>
-        </Drawer.Backdrop>
-      </Drawer>
+          </Drawer.Dialog>
+        </Drawer.Content>
+      </Drawer.Backdrop>
 
       <div className="flex w-full flex-col">
         <Surface
           className="shrink-0 border-b border-separator"
           variant="default"
         >
-          <Toolbar className="flex w-full min-h-14 items-center gap-2 px-2">
+          <div className="flex w-full min-h-14 items-center gap-2 px-2">
             <Button
               isIconOnly
               aria-label="Open navigation"
@@ -100,7 +99,7 @@ export default function ResponsiveDrawer({
             <div className="ml-auto flex shrink-0 items-center">
               {trailingActions}
             </div>
-          </Toolbar>
+          </div>
         </Surface>
 
         <main className="flex min-h-0 flex-1 flex-col">

@@ -3,7 +3,6 @@ import {
   Button,
   Checkbox,
   Chip,
-  Label,
   Modal,
   Separator,
   Surface,
@@ -730,22 +729,21 @@ const PickStarting7Dialog = ({
   const isValid = selected.length === targetCount;
 
   return (
-    <Modal>
-      <Modal.Backdrop
-        isOpen={open}
-        isDismissable={false}
-        onOpenChange={(isOpen) => {
-          if (!isOpen) {
-            onClose();
-          }
-        }}
-      >
-        <Modal.Container size="sm">
-          <Modal.Dialog>
-            <Modal.Header>
-              <Modal.Heading>Define Starting Lineup</Modal.Heading>
-            </Modal.Header>
-            <Modal.Body className="flex flex-col gap-4">
+    <Modal.Backdrop
+      isOpen={open}
+      isDismissable={false}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          onClose();
+        }
+      }}
+    >
+      <Modal.Container size="sm">
+        <Modal.Dialog>
+          <Modal.Header>
+            <Modal.Heading>Define Starting Lineup</Modal.Heading>
+          </Modal.Header>
+          <Modal.Body className="flex flex-col gap-4">
               <Typography.Paragraph color="muted">
                 Select {targetCount} starting players.
                 {selected.length !== targetCount &&
@@ -756,15 +754,22 @@ const PickStarting7Dialog = ({
                 {players.map((player) => {
                   const isChecked = selected.includes(player.number);
                   return (
-                    <button
+                    <div
                       key={player.number}
-                      type="button"
-                      className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-surface-secondary"
-                      onClick={() => handleToggle(player.number)}
+                      className="px-3 py-2 hover:bg-surface-secondary"
                     >
-                      <Checkbox isSelected={isChecked} />
-                      <Label>{`#${player.number} ${player.name}`}</Label>
-                    </button>
+                      <Checkbox
+                        isSelected={isChecked}
+                        onChange={() => handleToggle(player.number)}
+                      >
+                        <Checkbox.Content>
+                          <Checkbox.Control>
+                            <Checkbox.Indicator />
+                          </Checkbox.Control>
+                          {`#${player.number} ${player.name}`}
+                        </Checkbox.Content>
+                      </Checkbox>
+                    </div>
                   );
                 })}
               </div>
@@ -785,7 +790,6 @@ const PickStarting7Dialog = ({
           </Modal.Dialog>
         </Modal.Container>
       </Modal.Backdrop>
-    </Modal>
   );
 };
 

@@ -1,10 +1,4 @@
-import {
-  Separator,
-  Skeleton,
-  Surface,
-  Toolbar,
-  Typography,
-} from "@heroui/react";
+import { Separator, Skeleton, Surface, Typography } from "@heroui/react";
 
 export default function AppShellSkeleton() {
   return (
@@ -31,11 +25,11 @@ export default function AppShellSkeleton() {
             className="shrink-0 border-b border-separator"
             variant="default"
           >
-            <Toolbar className="flex w-full min-h-14 items-center gap-2 px-2">
+            <div className="flex w-full min-h-14 items-center gap-2 px-2">
               <Typography.Heading level={4} className="min-w-0 flex-1 truncate">
                 Arcazzi
               </Typography.Heading>
-            </Toolbar>
+            </div>
           </Surface>
 
           <main className="flex min-h-0 flex-1 flex-col p-6">

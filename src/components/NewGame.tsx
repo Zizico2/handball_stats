@@ -151,16 +151,14 @@ function NewGame() {
           </Select.Popover>
         </Select>
         <Tooltip isDisabled={!activeGame.data}>
-          <Tooltip.Trigger>
-            <Button
-              className="w-full"
-              isDisabled={selectedTeamId === null || !!activeGame.data}
-              variant="primary"
-              onPress={handleStartNewGame}
-            >
-              Start Game
-            </Button>
-          </Tooltip.Trigger>
+          <Button
+            className="w-full"
+            isDisabled={selectedTeamId === null || !!activeGame.data}
+            variant="primary"
+            onPress={handleStartNewGame}
+          >
+            Start Game
+          </Button>
           <Tooltip.Content>
             Cannot start a new game while an active game exists. End the active
             match first.
