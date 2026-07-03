@@ -1,3 +1,3 @@
-export default function DefaultMatchControls() {
+export default function TrailingActionsDefault() {
   return null;
 }
