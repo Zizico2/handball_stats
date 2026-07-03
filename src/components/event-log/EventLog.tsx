@@ -4,7 +4,6 @@ import { ScrollShadow, Typography } from "@heroui/react";
 import { useMemo } from "react";
 import { EventLogTimeline } from "@/components/event-log/EventLogTimeline";
 import type { PlayerEvent } from "@/datamodel";
-import { buildPlayerLabelMap } from "@/lib/display/formatPlayerLabel";
 
 interface EventLogProps {
   events: PlayerEvent[];
@@ -36,10 +35,4 @@ export function EventLog({
       </ScrollShadow>
     </div>
   );
-}
-
-export function buildEventLogPlayerLabels(
-  players: Array<{ number: number; name: string }>,
-): Record<number, string> {
-  return buildPlayerLabelMap(players);
 }

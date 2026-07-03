@@ -1,8 +1,6 @@
-import {
-  buildEventLogPlayerLabels,
-  EventLog,
-} from "@/components/event-log/EventLog";
+import { EventLog } from "@/components/event-log/EventLog";
 import type { PlayerEvent } from "@/datamodel";
+import { buildPlayerLabelMap } from "@/lib/display/formatPlayerLabel";
 
 interface PastGameEventLogProps {
   events: PlayerEvent[];
@@ -16,7 +14,7 @@ export function PastGameEventLog({ events, players }: PastGameEventLogProps) {
   return (
     <EventLog
       events={events}
-      playerLabels={buildEventLogPlayerLabels(players)}
+      playerLabels={buildPlayerLabelMap(players)}
     />
   );
 }

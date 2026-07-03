@@ -1,12 +1,10 @@
 import { instant } from "@next/playwright";
 import { expect, test } from "@playwright/test";
 
-const hasAuth =
-  Boolean(process.env.E2E_CLERK_EMAIL) &&
-  Boolean(process.env.E2E_CLERK_PASSWORD);
+const hasAuth = Boolean(process.env.CLERK_SECRET_KEY);
 
 test.describe("instant navigations", () => {
-  test.skip(!hasAuth, "Requires E2E_CLERK_EMAIL and E2E_CLERK_PASSWORD.");
+  test.skip(!hasAuth, "Requires CLERK_SECRET_KEY for Clerk testing helpers.");
 
   test("drawer shell and past games header appear instantly", async ({
     page,
@@ -23,7 +21,9 @@ test.describe("instant navigations", () => {
       ).toBeVisible();
     });
 
-    await expect(page.getByText(/No past games yet|goals|events/)).toBeVisible({
+    await expect(
+      page.getByText(/No past games yet|goals|events/).first(),
+    ).toBeVisible({
       timeout: 15_000,
     });
   });
