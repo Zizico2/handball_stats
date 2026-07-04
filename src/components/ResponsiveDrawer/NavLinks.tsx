@@ -11,13 +11,16 @@ export const navItems = [
   { text: "Create Teams", href: "/create-teams" },
 ];
 
+const navItemClassName =
+  "flex w-full items-center rounded-xl px-3 py-2.5 text-sm text-foreground no-underline transition-colors hover:bg-default";
+
 export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav className="flex flex-col gap-1 p-2">
       {navItems.map((item) => (
         <NextLink
           key={item.href}
-          className="link rounded-lg px-3 py-2 text-foreground no-underline hover:bg-surface-secondary"
+          className={navItemClassName}
           href={item.href}
           onClick={onNavigate}
         >
