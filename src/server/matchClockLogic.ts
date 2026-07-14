@@ -20,6 +20,7 @@ export interface BuildMatchClockSnapshotInput {
   gameId: number;
   nowMs: number;
   firstHalfStartedAtMs: number | null;
+  halftimeStartedAtMs: number | null;
   secondHalfStartedAtMs: number | null;
   pauseToggles: MatchClockPauseToggle[];
 }
@@ -53,6 +54,26 @@ function calculateHalfElapsedSeconds(
   return Math.floor(calculateElapsedMs(startAtMs, toggleTimes, nowMs) / 1000);
 }
 
+function deriveActiveHalf(
+  firstHalfStartedAtMs: number | null,
+  halftimeStartedAtMs: number | null,
+  secondHalfStartedAtMs: number | null,
+): MatchHalf | null {
+  if (firstHalfStartedAtMs === null) {
+    return null;
+  }
+
+  if (secondHalfStartedAtMs !== null) {
+    return "secondHalf";
+  }
+
+  if (halftimeStartedAtMs !== null) {
+    return null;
+  }
+
+  return "firstHalf";
+}
+
 export function buildMatchClockSnapshot(
   input: BuildMatchClockSnapshotInput,
 ): MatchClockSnapshot {
@@ -60,6 +81,7 @@ export function buildMatchClockSnapshot(
     gameId,
     nowMs,
     firstHalfStartedAtMs,
+    halftimeStartedAtMs,
     secondHalfStartedAtMs,
     pauseToggles,
   } = input;
@@ -72,10 +94,12 @@ export function buildMatchClockSnapshot(
     .filter((toggle) => toggle.half === "secondHalf")
     .map((toggle) => toggle.toggledAtMs);
 
+  const firstHalfEndMs = halftimeStartedAtMs ?? nowMs;
+
   const firstHalfElapsedSeconds = calculateHalfElapsedSeconds(
     firstHalfStartedAtMs,
     firstHalfToggleTimes,
-    nowMs,
+    firstHalfEndMs,
   );
 
   const secondHalfElapsedSeconds = calculateHalfElapsedSeconds(
@@ -87,12 +111,11 @@ export function buildMatchClockSnapshot(
   const firstHalfPaused = firstHalfToggleTimes.length % 2 === 1;
   const secondHalfPaused = secondHalfToggleTimes.length % 2 === 1;
 
-  const activeHalf: MatchHalf | null =
-    firstHalfStartedAtMs === null
-      ? null
-      : secondHalfStartedAtMs !== null
-        ? "secondHalf"
-        : "firstHalf";
+  const activeHalf = deriveActiveHalf(
+    firstHalfStartedAtMs,
+    halftimeStartedAtMs,
+    secondHalfStartedAtMs,
+  );
 
   const activeElapsedSeconds =
     activeHalf === "secondHalf"

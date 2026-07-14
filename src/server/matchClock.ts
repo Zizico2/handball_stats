@@ -20,6 +20,7 @@ export async function getMatchClockSnapshot(
     .select({
       localId: schema.games.localId,
       firstHalfStartedAtMs: schema.games.firstHalfStartedAtMs,
+      halftimeStartedAtMs: schema.games.halftimeStartedAtMs,
       secondHalfStartedAtMs: schema.games.secondHalfStartedAtMs,
     })
     .from(schema.games)
@@ -36,6 +37,7 @@ export async function getMatchClockSnapshot(
       gameId: gameLocalId,
       nowMs,
       firstHalfStartedAtMs: null,
+      halftimeStartedAtMs: null,
       secondHalfStartedAtMs: null,
       pauseToggles: [],
     });
@@ -59,6 +61,7 @@ export async function getMatchClockSnapshot(
     gameId: gameLocalId,
     nowMs,
     firstHalfStartedAtMs: gameRow.firstHalfStartedAtMs,
+    halftimeStartedAtMs: gameRow.halftimeStartedAtMs,
     secondHalfStartedAtMs: gameRow.secondHalfStartedAtMs,
     pauseToggles,
   });
