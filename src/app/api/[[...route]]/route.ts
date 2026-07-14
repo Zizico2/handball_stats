@@ -1,7 +1,19 @@
-import { handle } from "hono/vercel";
+import { auth } from "@clerk/nextjs/server";
 import { apiApp } from "@/server/api/app";
 
-export const GET = handle(apiApp);
-export const POST = handle(apiApp);
-export const PUT = handle(apiApp);
-export const DELETE = handle(apiApp);
+async function handleRequest(request: Request) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  return apiApp.fetch(request, { userId });
+}
+
+export {
+  handleRequest as DELETE,
+  handleRequest as GET,
+  handleRequest as POST,
+  handleRequest as PUT,
+};

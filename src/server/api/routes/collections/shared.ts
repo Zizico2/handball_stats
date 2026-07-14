@@ -1,5 +1,3 @@
-import { auth } from "@clerk/nextjs/server";
-import { HTTPException } from "hono/http-exception";
 import {
   activeGameSchema,
   gameSchema,
@@ -22,13 +20,3 @@ export const upsertPauseToggleBodySchema = pauseToggleSchema.omit({
   id: true,
   toggledAtMs: true,
 });
-
-export async function requireUserId() {
-  const { userId } = await auth();
-
-  if (!userId) {
-    throw new HTTPException(401, { message: "Unauthorized" });
-  }
-
-  return userId;
-}

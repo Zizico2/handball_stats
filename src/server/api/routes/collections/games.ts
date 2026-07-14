@@ -3,12 +3,13 @@ import { eq, getColumns, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { dbRowToGame, gameToDbRow } from "@/db";
 import * as schema from "@/db/schema";
+import type { ApiEnv } from "@/server/api/types";
 import { getDb } from "@/server/db";
-import { gamesArraySchema, requireUserId } from "./shared";
+import { gamesArraySchema } from "./shared";
 
-export const gamesRoutes = new Hono()
+export const gamesRoutes = new Hono<ApiEnv>()
   .get("/", async (c) => {
-    const userId = await requireUserId();
+    const { userId } = c.env;
     const db = await getDb();
     const rows = await db
       .select()
@@ -19,7 +20,7 @@ export const gamesRoutes = new Hono()
   })
   .post("/", zValidator("json", gamesArraySchema), async (c) => {
     const items = c.req.valid("json");
-    const userId = await requireUserId();
+    const { userId } = c.env;
     const db = await getDb();
     const inserted = await db
       .insert(schema.games)
@@ -30,7 +31,7 @@ export const gamesRoutes = new Hono()
   })
   .put("/", zValidator("json", gamesArraySchema), async (c) => {
     const items = c.req.valid("json");
-    const userId = await requireUserId();
+    const { userId } = c.env;
     const db = await getDb();
 
     if (items.length === 0) {

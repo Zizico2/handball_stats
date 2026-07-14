@@ -3,12 +3,13 @@ import { and, eq, getColumns, inArray, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { activeGameToDbRow, dbRowToActiveGame } from "@/db";
 import * as schema from "@/db/schema";
+import type { ApiEnv } from "@/server/api/types";
 import { getDb } from "@/server/db";
-import { activeGameArraySchema, idsSchema, requireUserId } from "./shared";
+import { activeGameArraySchema, idsSchema } from "./shared";
 
-export const activeGameRoutes = new Hono()
+export const activeGameRoutes = new Hono<ApiEnv>()
   .get("/", async (c) => {
-    const userId = await requireUserId();
+    const { userId } = c.env;
     const db = await getDb();
     const rows = await db
       .select()
@@ -22,7 +23,7 @@ export const activeGameRoutes = new Hono()
   // TODO: I think the app itself shouldn't rely on upsert behavior, it should know whether it's creating or updating an active game and call the appropriate endpoint.
   .put("/", zValidator("json", activeGameArraySchema), async (c) => {
     const items = c.req.valid("json");
-    const userId = await requireUserId();
+    const { userId } = c.env;
     const db = await getDb();
 
     if (items.length === 0) {
@@ -54,7 +55,7 @@ export const activeGameRoutes = new Hono()
   })
   .delete("/", zValidator("json", idsSchema), async (c) => {
     const ids = c.req.valid("json");
-    const userId = await requireUserId();
+    const { userId } = c.env;
     const db = await getDb();
 
     if (ids.length === 0) {

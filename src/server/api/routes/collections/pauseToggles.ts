@@ -5,16 +5,17 @@ import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import { dbRowToPauseToggle, pauseToggleToDbRow } from "@/db";
 import * as schema from "@/db/schema";
+import type { ApiEnv } from "@/server/api/types";
 import { getDb } from "@/server/db";
-import { requireUserId, upsertPauseToggleBodySchema } from "./shared";
+import { upsertPauseToggleBodySchema } from "./shared";
 
 const pauseToggleResourceIdSchema = z.object({
   pauseToggleId: z.uuid(),
 });
 
-export const pauseTogglesRoutes = new Hono()
+export const pauseTogglesRoutes = new Hono<ApiEnv>()
   .get("/", async (c) => {
-    const userId = await requireUserId();
+    const { userId } = c.env;
     const db = await getDb();
     const rows = await db
       .select()
@@ -31,7 +32,7 @@ export const pauseTogglesRoutes = new Hono()
     async (c) => {
       const { pauseToggleId } = c.req.valid("param");
       const { gameId, half } = c.req.valid("json");
-      const userId = await requireUserId();
+      const { userId } = c.env;
       const db = await getDb();
       const toggledAtMs = Date.now();
 
@@ -78,7 +79,7 @@ export const pauseTogglesRoutes = new Hono()
     zValidator("param", pauseToggleResourceIdSchema),
     async (c) => {
       const { pauseToggleId } = c.req.valid("param");
-      const userId = await requireUserId();
+      const { userId } = c.env;
       const db = await getDb();
 
       await db

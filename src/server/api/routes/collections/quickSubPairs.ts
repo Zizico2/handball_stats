@@ -3,12 +3,13 @@ import { and, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";
 import { dbRowToQuickSubPair, quickSubPairToDbRow } from "@/db";
 import * as schema from "@/db/schema";
+import type { ApiEnv } from "@/server/api/types";
 import { getDb } from "@/server/db";
-import { idsSchema, quickSubPairsArraySchema, requireUserId } from "./shared";
+import { idsSchema, quickSubPairsArraySchema } from "./shared";
 
-export const quickSubPairsRoutes = new Hono()
+export const quickSubPairsRoutes = new Hono<ApiEnv>()
   .get("/", async (c) => {
-    const userId = await requireUserId();
+    const { userId } = c.env;
     const db = await getDb();
     const rows = await db
       .select()
@@ -19,7 +20,7 @@ export const quickSubPairsRoutes = new Hono()
   })
   .post("/", zValidator("json", quickSubPairsArraySchema), async (c) => {
     const items = c.req.valid("json");
-    const userId = await requireUserId();
+    const { userId } = c.env;
     const db = await getDb();
     const inserted = await db
       .insert(schema.quickSubPairs)
@@ -30,7 +31,7 @@ export const quickSubPairsRoutes = new Hono()
   })
   .delete("/", zValidator("json", idsSchema), async (c) => {
     const ids = c.req.valid("json");
-    const userId = await requireUserId();
+    const { userId } = c.env;
     const db = await getDb();
 
     if (ids.length === 0) {

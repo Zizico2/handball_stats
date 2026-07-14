@@ -3,12 +3,13 @@ import { and, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";
 import { dbRowToTeamPlayer, teamPlayerToDbRow } from "@/db";
 import * as schema from "@/db/schema";
+import type { ApiEnv } from "@/server/api/types";
 import { getDb } from "@/server/db";
-import { idsSchema, requireUserId, teamPlayersArraySchema } from "./shared";
+import { idsSchema, teamPlayersArraySchema } from "./shared";
 
-export const teamPlayersRoutes = new Hono()
+export const teamPlayersRoutes = new Hono<ApiEnv>()
   .get("/", async (c) => {
-    const userId = await requireUserId();
+    const { userId } = c.env;
     const db = await getDb();
     const rows = await db
       .select()
@@ -19,7 +20,7 @@ export const teamPlayersRoutes = new Hono()
   })
   .post("/", zValidator("json", teamPlayersArraySchema), async (c) => {
     const items = c.req.valid("json");
-    const userId = await requireUserId();
+    const { userId } = c.env;
     const db = await getDb();
     const inserted = await db
       .insert(schema.teamPlayers)
@@ -30,7 +31,7 @@ export const teamPlayersRoutes = new Hono()
   })
   .delete("/", zValidator("json", idsSchema), async (c) => {
     const ids = c.req.valid("json");
-    const userId = await requireUserId();
+    const { userId } = c.env;
     const db = await getDb();
 
     if (ids.length === 0) {

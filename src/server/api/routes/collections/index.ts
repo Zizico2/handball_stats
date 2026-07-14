@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { ApiEnv } from "@/server/api/types";
 import { activeGameRoutes } from "./activeGame";
 import { gamesRoutes } from "./games";
 import { matchClockRoutes } from "./matchClock";
@@ -8,7 +9,7 @@ import { quickSubPairsRoutes } from "./quickSubPairs";
 import { teamPlayersRoutes } from "./teamPlayers";
 import { teamsRoutes } from "./teams";
 
-export const collectionsRoutes = new Hono()
+export const collectionsRoutes = new Hono<ApiEnv>()
   .route("/player-events", playerEventsRoutes)
   .route("/teams", teamsRoutes)
   .route("/team-players", teamPlayersRoutes)

@@ -4,9 +4,10 @@ import { Hono } from "hono";
 import type { MatchHalf } from "@/datamodel";
 import { dbRowToPlayerEvent, playerEventToDbRow } from "@/db";
 import * as schema from "@/db/schema";
+import type { ApiEnv } from "@/server/api/types";
 import { getDb } from "@/server/db";
 import { getMatchClockSnapshot } from "@/server/matchClock";
-import { idsSchema, playerEventsArraySchema, requireUserId } from "./shared";
+import { idsSchema, playerEventsArraySchema } from "./shared";
 
 interface GameStartingPhase {
   firstHalfStartedAtMs: number | null;
@@ -41,9 +42,9 @@ function resolveStartingPlayerHalf(phase: GameStartingPhase): MatchHalf {
   );
 }
 
-export const playerEventsRoutes = new Hono()
+export const playerEventsRoutes = new Hono<ApiEnv>()
   .get("/", async (c) => {
-    const userId = await requireUserId();
+    const { userId } = c.env;
     const db = await getDb();
     const rows = await db
       .select()
@@ -54,7 +55,7 @@ export const playerEventsRoutes = new Hono()
   })
   .post("/", zValidator("json", playerEventsArraySchema), async (c) => {
     const items = c.req.valid("json");
-    const userId = await requireUserId();
+    const { userId } = c.env;
     const db = await getDb();
 
     const nowMs = Date.now();
@@ -153,7 +154,7 @@ export const playerEventsRoutes = new Hono()
   })
   .delete("/", zValidator("json", idsSchema), async (c) => {
     const ids = c.req.valid("json");
-    const userId = await requireUserId();
+    const { userId } = c.env;
     const db = await getDb();
 
     if (ids.length === 0) {
