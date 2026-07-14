@@ -160,4 +160,23 @@ describe("buildMatchClockSnapshot", () => {
     expect(snapshot.firstHalfElapsedSeconds).toBe(9 * 60);
     expect(snapshot.firstHalfPaused).toBe(false);
   });
+
+  test("second half without first half: still treats second half as active", () => {
+    const secondHalfStartMs = 2_000_000;
+    const nowMs = secondHalfStartMs + 45_000;
+
+    const snapshot = buildMatchClockSnapshot({
+      gameId: 8,
+      nowMs,
+      firstHalfStartedAtMs: null,
+      halftimeStartedAtMs: null,
+      secondHalfStartedAtMs: secondHalfStartMs,
+      pauseToggles: [],
+    });
+
+    expect(snapshot.activeHalf).toBe("secondHalf");
+    expect(snapshot.activeElapsedSeconds).toBe(45);
+    expect(snapshot.firstHalfElapsedSeconds).toBe(0);
+    expect(snapshot.secondHalfElapsedSeconds).toBe(45);
+  });
 });

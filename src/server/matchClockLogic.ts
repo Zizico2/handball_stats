@@ -59,12 +59,13 @@ function deriveActiveHalf(
   halftimeStartedAtMs: number | null,
   secondHalfStartedAtMs: number | null,
 ): MatchHalf | null {
-  if (firstHalfStartedAtMs === null) {
-    return null;
-  }
-
+  // Prefer second half even if earlier timestamps are missing (corrupt / partial rows).
   if (secondHalfStartedAtMs !== null) {
     return "secondHalf";
+  }
+
+  if (firstHalfStartedAtMs === null) {
+    return null;
   }
 
   if (halftimeStartedAtMs !== null) {
