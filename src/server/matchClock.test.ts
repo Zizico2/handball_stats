@@ -161,22 +161,33 @@ describe("buildMatchClockSnapshot", () => {
     expect(snapshot.firstHalfPaused).toBe(false);
   });
 
-  test("second half without first half: still treats second half as active", () => {
-    const secondHalfStartMs = 2_000_000;
-    const nowMs = secondHalfStartMs + 45_000;
+  test("second half without first half: throws", () => {
+    expect(() =>
+      buildMatchClockSnapshot({
+        gameId: 8,
+        nowMs: 2_045_000,
+        firstHalfStartedAtMs: null,
+        halftimeStartedAtMs: null,
+        secondHalfStartedAtMs: 2_000_000,
+        pauseToggles: [],
+      }),
+    ).toThrow(
+      "Invalid match clock timestamps: later phase set without first half start",
+    );
+  });
 
-    const snapshot = buildMatchClockSnapshot({
-      gameId: 8,
-      nowMs,
-      firstHalfStartedAtMs: null,
-      halftimeStartedAtMs: null,
-      secondHalfStartedAtMs: secondHalfStartMs,
-      pauseToggles: [],
-    });
-
-    expect(snapshot.activeHalf).toBe("secondHalf");
-    expect(snapshot.activeElapsedSeconds).toBe(45);
-    expect(snapshot.firstHalfElapsedSeconds).toBe(0);
-    expect(snapshot.secondHalfElapsedSeconds).toBe(45);
+  test("halftime without first half: throws", () => {
+    expect(() =>
+      buildMatchClockSnapshot({
+        gameId: 9,
+        nowMs: 2_045_000,
+        firstHalfStartedAtMs: null,
+        halftimeStartedAtMs: 2_000_000,
+        secondHalfStartedAtMs: null,
+        pauseToggles: [],
+      }),
+    ).toThrow(
+      "Invalid match clock timestamps: later phase set without first half start",
+    );
   });
 });

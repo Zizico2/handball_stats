@@ -54,18 +54,32 @@ function calculateHalfElapsedSeconds(
   return Math.floor(calculateElapsedMs(startAtMs, toggleTimes, nowMs) / 1000);
 }
 
+function assertValidPhaseTimestamps(
+  firstHalfStartedAtMs: number | null,
+  halftimeStartedAtMs: number | null,
+  secondHalfStartedAtMs: number | null,
+): void {
+  if (
+    firstHalfStartedAtMs === null &&
+    (halftimeStartedAtMs !== null || secondHalfStartedAtMs !== null)
+  ) {
+    throw new Error(
+      "Invalid match clock timestamps: later phase set without first half start",
+    );
+  }
+}
+
 function deriveActiveHalf(
   firstHalfStartedAtMs: number | null,
   halftimeStartedAtMs: number | null,
   secondHalfStartedAtMs: number | null,
 ): MatchHalf | null {
-  // Prefer second half even if earlier timestamps are missing (corrupt / partial rows).
-  if (secondHalfStartedAtMs !== null) {
-    return "secondHalf";
-  }
-
   if (firstHalfStartedAtMs === null) {
     return null;
+  }
+
+  if (secondHalfStartedAtMs !== null) {
+    return "secondHalf";
   }
 
   if (halftimeStartedAtMs !== null) {
@@ -86,6 +100,12 @@ export function buildMatchClockSnapshot(
     secondHalfStartedAtMs,
     pauseToggles,
   } = input;
+
+  assertValidPhaseTimestamps(
+    firstHalfStartedAtMs,
+    halftimeStartedAtMs,
+    secondHalfStartedAtMs,
+  );
 
   const firstHalfToggleTimes = pauseToggles
     .filter((toggle) => toggle.half === "firstHalf")
