@@ -88,13 +88,16 @@ export function buildMatchClockSnapshot(
 
   const firstHalfToggleTimes = pauseToggles
     .filter((toggle) => toggle.half === "firstHalf")
-    .map((toggle) => toggle.toggledAtMs);
+    .map((toggle) => toggle.toggledAtMs)
+    .sort((left, right) => left - right);
 
   const secondHalfToggleTimes = pauseToggles
     .filter((toggle) => toggle.half === "secondHalf")
-    .map((toggle) => toggle.toggledAtMs);
+    .map((toggle) => toggle.toggledAtMs)
+    .sort((left, right) => left - right);
 
-  const firstHalfEndMs = halftimeStartedAtMs ?? nowMs;
+  // Freeze first half at HT when present; if HT was skipped, freeze at second-half start.
+  const firstHalfEndMs = halftimeStartedAtMs ?? secondHalfStartedAtMs ?? nowMs;
 
   const firstHalfElapsedSeconds = calculateHalfElapsedSeconds(
     firstHalfStartedAtMs,

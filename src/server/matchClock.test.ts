@@ -120,4 +120,44 @@ describe("buildMatchClockSnapshot", () => {
     expect(snapshot.firstHalfElapsedSeconds).toBe(10 * 60);
     expect(snapshot.activeElapsedSeconds).toBe(0);
   });
+
+  test("second half without HT: first half freezes at second-half start", () => {
+    const secondHalfStartMs = FIRST_HALF_START_MS + 32 * 60 * 1000;
+    const nowMs = secondHalfStartMs + 90_000;
+
+    const snapshot = buildMatchClockSnapshot({
+      gameId: 6,
+      nowMs,
+      firstHalfStartedAtMs: FIRST_HALF_START_MS,
+      halftimeStartedAtMs: null,
+      secondHalfStartedAtMs: secondHalfStartMs,
+      pauseToggles: [],
+    });
+
+    expect(snapshot.activeHalf).toBe("secondHalf");
+    expect(snapshot.firstHalfElapsedSeconds).toBe(32 * 60);
+    expect(snapshot.activeElapsedSeconds).toBe(90);
+  });
+
+  test("unsorted pause toggles are sorted before elapsed math", () => {
+    const pauseAtMs = FIRST_HALF_START_MS + 5 * 60 * 1000;
+    const resumeAtMs = FIRST_HALF_START_MS + 8 * 60 * 1000;
+    const nowMs = FIRST_HALF_START_MS + 12 * 60 * 1000;
+
+    const snapshot = buildMatchClockSnapshot({
+      gameId: 7,
+      nowMs,
+      firstHalfStartedAtMs: FIRST_HALF_START_MS,
+      halftimeStartedAtMs: null,
+      secondHalfStartedAtMs: null,
+      pauseToggles: [
+        { half: "firstHalf", toggledAtMs: resumeAtMs },
+        { half: "firstHalf", toggledAtMs: pauseAtMs },
+      ],
+    });
+
+    // 12m wall - 3m pause = 9m elapsed
+    expect(snapshot.firstHalfElapsedSeconds).toBe(9 * 60);
+    expect(snapshot.firstHalfPaused).toBe(false);
+  });
 });
