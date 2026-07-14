@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "3e08919d-fe00-4c8a-8b73-b397a1c43a70",
+  "id": "2139f9a5-e2b3-46c6-8641-08e045b10d70",
   "prevIds": ["b7bd4c15-bf7d-4ec3-80e6-0490c7c911b4"],
   "ddl": [
     {
@@ -789,6 +789,12 @@
     {
       "value": "`event_type` != 'shot' OR `shot_direction` IS NOT NULL",
       "name": "shot_direction_required_for_shot",
+      "entityType": "checks",
+      "table": "player_events"
+    },
+    {
+      "value": "`event_type` != 'shot' OR `shot_position` IS NOT NULL",
+      "name": "shot_position_required_for_shot",
       "entityType": "checks",
       "table": "player_events"
     }
