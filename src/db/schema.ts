@@ -152,6 +152,7 @@ export const playerEvents = sqliteTable(
     shotGoal: integer("shot_goal", { mode: "boolean" }),
     shotDirection: text("shot_direction"),
     shotAim: text("shot_aim"),
+    shotPosition: text("shot_position"),
     substitutionPlayerIn: integer("substitution_player_in"),
   },
   (table) => [
@@ -171,6 +172,12 @@ export const playerEvents = sqliteTable(
       "shot_direction_required_for_shot",
       sql.raw(
         `\`${table.eventType.name}\` != 'shot' OR \`${table.shotDirection.name}\` IS NOT NULL`,
+      ),
+    ),
+    check(
+      "shot_position_required_for_shot",
+      sql.raw(
+        `\`${table.eventType.name}\` != 'shot' OR \`${table.shotPosition.name}\` IS NOT NULL`,
       ),
     ),
   ],

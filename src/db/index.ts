@@ -50,6 +50,7 @@ const dbPlayerEventToDomainSchema = dbPlayerEventSchema
         event: {
           goal: row.shotGoal ?? false,
           direction: row.shotDirection,
+          position: row.shotPosition,
           ...(row.shotAim !== null ? { aim: row.shotAim } : {}),
         },
       };
@@ -118,6 +119,7 @@ export function playerEventToDbRow(
     shotGoal: null as boolean | null,
     shotDirection: null as string | null,
     shotAim: null as string | null,
+    shotPosition: null as string | null,
     substitutionPlayerIn: null as number | null,
   };
 
@@ -127,6 +129,7 @@ export function playerEventToDbRow(
       shotGoal: event.event.goal,
       shotDirection: event.event.direction,
       shotAim: event.event.aim ?? null,
+      shotPosition: event.event.position,
     };
   }
 

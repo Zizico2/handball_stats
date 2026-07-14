@@ -25,28 +25,34 @@ export function useNewGameForm({
 
   const nextGameId = useNextLocalId(lastGame);
 
-  const handleStartNewGame = () => {
+  const handleStartNewGame = async () => {
     if (selectedTeamId === null) {
       return;
     }
 
-    gamesCollection.insert({
+    // Persist the game before the active-game marker. Both share a FK to
+    // (user_id, game_local_id); firing the two collection writes concurrently
+    // can make the active-game upsert fail with SQLITE_CONSTRAINT_FOREIGNKEY.
+    const gameTx = gamesCollection.insert({
       id: nextGameId,
       homeTeamId: selectedTeamId,
       createdAt: new Date().toISOString(),
       firstHalfStartedAtMs: null,
       secondHalfStartedAtMs: null,
     });
+    await gameTx.isPersisted.promise;
 
     if (activeGameData) {
-      activeGameCollection.delete(activeGameData.id);
+      const deleteTx = activeGameCollection.delete(activeGameData.id);
+      await deleteTx.isPersisted.promise;
     }
 
-    activeGameCollection.insert({
+    const activeTx = activeGameCollection.insert({
       id: 1,
       gameId: nextGameId,
       homeTeamId: selectedTeamId,
     });
+    await activeTx.isPersisted.promise;
 
     onStarted();
   };
