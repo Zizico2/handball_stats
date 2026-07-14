@@ -23,6 +23,16 @@ export default defineConfig({
     },
     {
       name: "instant-nav",
+      testMatch: /instant-nav\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: authFile,
+      },
+    },
+    {
+      name: "shot-event",
+      testMatch: /shot-event\.spec\.ts/,
       dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],

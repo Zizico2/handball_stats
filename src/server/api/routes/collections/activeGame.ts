@@ -1,5 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
-import { and, eq, getColumns, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";
 import { activeGameToDbRow, dbRowToActiveGame } from "@/db";
 import * as schema from "@/db/schema";
@@ -30,25 +30,23 @@ export const activeGameRoutes = new Hono<ApiEnv>()
       return c.json([]);
     }
 
-    const activeGameColumns = getColumns(schema.activeGame);
-
     const rows = items.map((item) => activeGameToDbRow(item, userId));
+    const localIds = rows.map((row) => row.localId);
+
+    // Replace rows instead of ON CONFLICT upsert: Drizzle's composite-target
+    // upsert emits table-qualified conflict columns that fail on D1/SQLite.
+    await db
+      .delete(schema.activeGame)
+      .where(
+        and(
+          eq(schema.activeGame.userId, userId),
+          inArray(schema.activeGame.localId, localIds),
+        ),
+      );
+
     const inserted = await db
       .insert(schema.activeGame)
       .values(rows)
-      .onConflictDoUpdate({
-        target: [schema.activeGame.userId, schema.activeGame.localId],
-        set: {
-          // In SQLite upserts, `excluded` is the row that was attempted to be inserted.
-          // Build refs from schema metadata so db column names are not hardcoded.
-          gameLocalId: sql.raw(
-            `excluded.${activeGameColumns.gameLocalId.name}`,
-          ),
-          homeTeamLocalId: sql.raw(
-            `excluded.${activeGameColumns.homeTeamLocalId.name}`,
-          ),
-        },
-      })
       .returning();
 
     return c.json(inserted.map(dbRowToActiveGame));
