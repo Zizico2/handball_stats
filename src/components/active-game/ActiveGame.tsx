@@ -137,10 +137,14 @@ function ActiveGame() {
           !(matchStatus === "firstHalf" || matchStatus === "secondHalf")
         }
         getPlayerLabel={getPlayerLabel}
-        hasActiveGame={activeGame.data !== null}
+        hasActiveGame={activeGameData != null}
         matchClock={{ minutes, seconds }}
         onRecordEvent={handleStartEvent}
-        onSetStartingLineup={() => setStarting7DialogOpen(true)}
+        onSetStartingLineup={() => {
+          if (activeGameData != null) {
+            setStarting7DialogOpen(true);
+          }
+        }}
         selectedTeamPlayers={selectedTeamPlayers}
         startingPlayerNumbers={startingPlayerNumbers}
       />
