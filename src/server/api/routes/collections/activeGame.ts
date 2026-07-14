@@ -1,5 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, getColumns, inArray, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { activeGameToDbRow, dbRowToActiveGame } from "@/db";
 import * as schema from "@/db/schema";
@@ -18,7 +18,6 @@ export const activeGameRoutes = new Hono<ApiEnv>()
 
     return c.json(rows.map(dbRowToActiveGame));
   })
-  // TODO: I don't like that this endpoint is using raw SQL for the upsert.
   // TODO: Maybe this should be split into 2 endpoints, one for creating and one for updating?
   // TODO: I think the app itself shouldn't rely on upsert behavior, it should know whether it's creating or updating an active game and call the appropriate endpoint.
   .put("/", zValidator("json", activeGameArraySchema), async (c) => {
@@ -30,23 +29,23 @@ export const activeGameRoutes = new Hono<ApiEnv>()
       return c.json([]);
     }
 
+    const activeGameColumns = getColumns(schema.activeGame);
     const rows = items.map((item) => activeGameToDbRow(item, userId));
-    const localIds = rows.map((row) => row.localId);
-
-    // Replace rows instead of ON CONFLICT upsert: Drizzle's composite-target
-    // upsert emits table-qualified conflict columns that fail on D1/SQLite.
-    await db
-      .delete(schema.activeGame)
-      .where(
-        and(
-          eq(schema.activeGame.userId, userId),
-          inArray(schema.activeGame.localId, localIds),
-        ),
-      );
-
     const inserted = await db
       .insert(schema.activeGame)
       .values(rows)
+      .onConflictDoUpdate({
+        target: [schema.activeGame.userId, schema.activeGame.localId],
+        set: {
+          // In SQLite upserts, `excluded` is the row that was attempted to be inserted.
+          gameLocalId: sql.raw(
+            `excluded.${activeGameColumns.gameLocalId.name}`,
+          ),
+          homeTeamLocalId: sql.raw(
+            `excluded.${activeGameColumns.homeTeamLocalId.name}`,
+          ),
+        },
+      })
       .returning();
 
     return c.json(inserted.map(dbRowToActiveGame));
