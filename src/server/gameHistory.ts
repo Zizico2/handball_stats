@@ -1,24 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { and, desc, eq } from "drizzle-orm";
-import { dbPlayerEventSchema, dbRowToPlayerEvent } from "@/db";
+import { dbRowToPlayerEvent } from "@/db";
+import { PLAYER_EVENTS_CSV_COLUMN_KEYS } from "@/db/playerEventCsv";
 import * as schema from "@/db/schema";
 import { getDb } from "@/server/db";
 
-const playerEventSelectSchemaCsv = dbPlayerEventSchema.pick({
-  player: true,
-  ellapsedSeconds: true,
-  eventType: true,
-  eventGroup: true,
-  half: true,
-  shotGoal: true,
-  shotDirection: true,
-  shotAim: true,
-  substitutionPlayerIn: true,
-});
-
-export const PLAYER_EVENTS_CSV_COLUMN_KEYS = Object.keys(
-  playerEventSelectSchemaCsv.shape,
-) as Array<keyof typeof schema.playerEvents.$inferSelect>;
+export { PLAYER_EVENTS_CSV_COLUMN_KEYS };
 
 function toCsvCell(value: unknown) {
   if (value === null || value === undefined) {

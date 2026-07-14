@@ -15,6 +15,7 @@
     "format-check": "biome format",
     "test:instant": "playwright test --project=instant-nav",
     "test:e2e": "playwright test",
+    "test": "bun test",
     "db:generate": "drizzle-kit generate",
     "db:flatten": "bun run flatten.ts",
     "db:migrate:local": "rimraf drizzle_flat && bun run db:flatten && bunx wrangler d1 migrations apply arcazzi --local",

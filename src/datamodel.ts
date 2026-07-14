@@ -72,6 +72,7 @@ export type ShotDirectionFields = z.infer<typeof shotDirectionFieldsSchema>;
 
 export const baseShotSchema = z.object({
   goal: z.boolean(),
+  position: shotPosition.optional(),
 });
 
 export const shotSchema = withShotDirectionFields(baseShotSchema)
