@@ -8,7 +8,7 @@ import { dbRowToPlayerEvent, playerEventToDbRow } from "./index";
 const USER_ID = "test-user";
 
 function shotEvent(
-  position?: (typeof shotPosition.options)[number],
+  position: (typeof shotPosition.options)[number],
 ): PlayerEvent {
   return {
     id: 1,
@@ -22,7 +22,7 @@ function shotEvent(
       goal: true,
       direction: "OnTarget",
       aim: "TopLeft",
-      ...(position !== undefined ? { position } : {}),
+      position,
     },
   };
 }
@@ -41,7 +41,7 @@ function dbShotRow(overrides: Partial<DbPlayerEvent> = {}): DbPlayerEvent {
     shotGoal: true,
     shotDirection: "OnTarget",
     shotAim: "TopLeft",
-    shotPosition: null,
+    shotPosition: "9m+",
     substitutionPlayerIn: null,
     ...overrides,
   };
@@ -67,13 +67,10 @@ describe("playerEvent shot position round trip", () => {
     }
   });
 
-  test("null shotPosition still parses without position", () => {
-    const parsed = dbRowToPlayerEvent(dbShotRow({ shotPosition: null }));
-
-    expect(parsed.eventType).toBe("shot");
-    if (parsed.eventType === "shot") {
-      expect(parsed.event.position).toBeUndefined();
-    }
+  test("shot rows without shotPosition fail to parse", () => {
+    expect(() =>
+      dbRowToPlayerEvent(dbShotRow({ shotPosition: null })),
+    ).toThrow();
   });
 
   test("PLAYER_EVENTS_CSV_COLUMN_KEYS includes shotPosition", () => {

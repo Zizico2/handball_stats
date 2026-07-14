@@ -57,7 +57,7 @@ export function EventLogCard({ event, getPlayerLabel }: EventLogCardProps) {
             {event.eventType === "shot" && (
               <Typography.Paragraph color="muted" className="mt-1">
                 Goal: <strong>{event.event.goal ? "Yes" : "No"}</strong>
-                {event.event.position && ` | Position: ${event.event.position}`}
+                {` | Position: ${event.event.position}`}
                 {event.event.direction &&
                   ` | Direction: ${event.event.direction}`}
                 {event.event.aim && ` | Aim: ${event.event.aim}`}

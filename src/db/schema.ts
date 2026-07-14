@@ -174,5 +174,11 @@ export const playerEvents = sqliteTable(
         `\`${table.eventType.name}\` != 'shot' OR \`${table.shotDirection.name}\` IS NOT NULL`,
       ),
     ),
+    check(
+      "shot_position_required_for_shot",
+      sql.raw(
+        `\`${table.eventType.name}\` != 'shot' OR \`${table.shotPosition.name}\` IS NOT NULL`,
+      ),
+    ),
   ],
 );
