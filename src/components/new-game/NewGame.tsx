@@ -9,10 +9,10 @@ import {
   Typography,
 } from "@heroui/react";
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
-import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { activeGameCollection, teamsCollection } from "@/collections";
+import { AppNextLink } from "@/components/AppNextLink";
 import { useNewGameForm } from "@/components/new-game/hooks/useNewGameForm";
 import { AlertCallout } from "@/components/ui/AlertCallout";
 
@@ -67,9 +67,9 @@ function NewGame() {
           <AlertCallout
             variant="danger"
             action={
-              <NextLink className="link text-danger" href="/active-game">
+              <AppNextLink className="link text-danger" href="/active-game">
                 Go to Active Game
-              </NextLink>
+              </AppNextLink>
             }
           >
             Active game #{activeGame.data.gameId}

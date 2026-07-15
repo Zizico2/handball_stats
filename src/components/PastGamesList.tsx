@@ -1,6 +1,6 @@
 import { Card, Typography } from "@heroui/react";
 import { ChevronRight } from "lucide-react";
-import NextLink from "next/link";
+import { AppNextLink } from "@/components/AppNextLink";
 import { GameMetaLine } from "@/components/game/GameMetaLine";
 import { GameStatChips } from "@/components/game/GameStatChips";
 import { listPastGames } from "@/server/gameHistory";
@@ -24,7 +24,7 @@ export async function PastGamesList() {
   return (
     <div className="flex max-w-[720px] flex-col gap-4">
       {games.map((game) => (
-        <NextLink
+        <AppNextLink
           key={game.id}
           className="no-underline"
           href={`/past-games/${game.id}`}
@@ -52,7 +52,7 @@ export async function PastGamesList() {
               </div>
             </Card.Content>
           </Card>
-        </NextLink>
+        </AppNextLink>
       ))}
     </div>
   );

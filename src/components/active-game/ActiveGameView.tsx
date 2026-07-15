@@ -1,5 +1,5 @@
 import { Typography } from "@heroui/react";
-import NextLink from "next/link";
+import { AppNextLink } from "@/components/AppNextLink";
 import { EventGroupButtons } from "@/components/active-game/EventGroupButtons";
 import { MatchClock } from "@/components/active-game/MatchClock";
 import {
@@ -43,9 +43,9 @@ export function ActiveGameView({
             <Typography.Paragraph color="muted">
               No active game. Choose a home team first.
             </Typography.Paragraph>
-            <NextLink className="link" href="/new-game">
+            <AppNextLink className="link" href="/new-game">
               Go to New Game
-            </NextLink>
+            </AppNextLink>
           </div>
         ) : startingPlayerNumbers.length === 0 ? (
           <StartingLineupPrompt onSetStartingLineup={onSetStartingLineup} />
