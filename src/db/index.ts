@@ -82,6 +82,8 @@ export function createDb(d1: D1Database) {
   return drizzle(d1, { schema });
 }
 
+export type AppDb = ReturnType<typeof createDb>;
+
 export function dbRowToTeam(row: DbTeam): Team {
   return {
     id: row.localId,

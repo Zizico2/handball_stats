@@ -89,6 +89,22 @@ The schema lives in `src/db/schema.ts`. When you change it:
 
 ---
 
+## Testing
+
+Non-E2E tests are split into two tiers:
+
+| Command | What it runs |
+|---|---|
+| `bun run test` | Full non-E2E gate: unit tests, then D1 route tests |
+| `bun run test:unit` | Fast pure Bun suites (phase logic, match clock, mappers) under `src/` |
+| `bun run test:d1` | Database route tests in local workerd with an isolated D1 binding |
+
+`bun run test:d1` regenerates `drizzle_flat/` from checked-in `drizzle/` migrations and applies those files to Vitest’s isolated local D1 storage. It does **not** use the remote D1 database and needs no Cloudflare credentials.
+
+Only database-backed route tests use D1. Pure logic suites stay on Bun.
+
+---
+
 ## Code Quality
 
 [Biome](https://biomejs.dev/) handles both linting and formatting.
