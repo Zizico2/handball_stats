@@ -115,16 +115,45 @@ export async function insertGameAndActiveMarkerAtomic(
   });
 }
 
+function isUniqueConstraintError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const code =
+    "code" in error && typeof error.code === "string" ? error.code : "";
+  if (
+    code === "SQLITE_CONSTRAINT_UNIQUE" ||
+    code === "SQLITE_CONSTRAINT" ||
+    code.includes("CONSTRAINT_UNIQUE")
+  ) {
+    return true;
+  }
+
+  const message =
+    "message" in error && typeof error.message === "string"
+      ? error.message
+      : String(error);
+  return /unique constraint failed|UNIQUE constraint failed/i.test(message);
+}
+
+async function loadActiveGame(
+  db: StartGameDb,
+  userId: string,
+): Promise<unknown> {
+  return db
+    .select()
+    .from(schema.activeGame)
+    .where(eq(schema.activeGame.userId, userId))
+    .get();
+}
+
 export async function startGame(
   db: StartGameDb,
   userId: string,
   input: StartGameInput,
 ): Promise<{ game: Game; activeGame: ActiveGame }> {
-  const existingActive = await db
-    .select()
-    .from(schema.activeGame)
-    .where(eq(schema.activeGame.userId, userId))
-    .get();
+  const existingActive = await loadActiveGame(db, userId);
 
   if (existingActive) {
     throw new StartGameConflictError();
@@ -145,14 +174,23 @@ export async function startGame(
     throw new StartGameTeamNotFoundError(input.homeTeamId);
   }
 
-  const { game, activeGame } = await insertGameAndActiveMarkerAtomic(
-    db,
-    gameInsertRow(input, userId),
-    activeGameInsertRow(input, userId),
-  );
+  try {
+    const { game, activeGame } = await insertGameAndActiveMarkerAtomic(
+      db,
+      gameInsertRow(input, userId),
+      activeGameInsertRow(input, userId),
+    );
 
-  return {
-    game: dbRowToGame(game),
-    activeGame: dbRowToActiveGame(activeGame),
-  };
+    return {
+      game: dbRowToGame(game),
+      activeGame: dbRowToActiveGame(activeGame),
+    };
+  } catch (error) {
+    // Concurrent starts can both pass the pre-check; the losing insert hits
+    // the active_game unique index. Map that to 409 instead of a raw 500.
+    if (isUniqueConstraintError(error) && (await loadActiveGame(db, userId))) {
+      throw new StartGameConflictError();
+    }
+    throw error;
+  }
 }

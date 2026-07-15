@@ -197,4 +197,92 @@ describe("games start API (sqlite)", () => {
     expect(games).toHaveLength(0);
     expect(active).toHaveLength(0);
   });
+
+  test("concurrent starts: loser gets 409, not 500", async () => {
+    const [first, second] = await Promise.all([
+      startRequest({
+        id: GAME_ID,
+        homeTeamId: TEAM_ID,
+        createdAt: "2026-01-02T00:00:00.000Z",
+      }),
+      startRequest({
+        id: GAME_ID + 1,
+        homeTeamId: TEAM_ID,
+        createdAt: "2026-01-03T00:00:00.000Z",
+      }),
+    ]);
+
+    const statuses = [first.status, second.status].toSorted((a, b) => a - b);
+    expect(statuses).toEqual([200, 409]);
+
+    const games = await testDb
+      .select()
+      .from(schema.games)
+      .where(eq(schema.games.userId, USER_ID));
+    const active = await testDb
+      .select()
+      .from(schema.activeGame)
+      .where(eq(schema.activeGame.userId, USER_ID));
+
+    expect(games).toHaveLength(1);
+    expect(active).toHaveLength(1);
+  });
+
+  test("unique constraint after pre-check maps to 409", async () => {
+    const { startGame, StartGameConflictError } = await import(
+      "@/server/startGame"
+    );
+
+    await testDb.insert(schema.games).values({
+      userId: USER_ID,
+      localId: GAME_ID,
+      homeTeamLocalId: TEAM_ID,
+      createdAt: "2026-01-02T00:00:00.000Z",
+      firstHalfStartedAtMs: null,
+      halftimeStartedAtMs: null,
+      secondHalfStartedAtMs: null,
+    });
+    await testDb.insert(schema.activeGame).values({
+      userId: USER_ID,
+      localId: 1,
+      gameLocalId: GAME_ID,
+      homeTeamLocalId: TEAM_ID,
+    });
+
+    // Simulate the race: pre-check misses the winner, insert hits UNIQUE.
+    let hideActiveOnce = true;
+    const base = testDb as unknown as StartGameDb;
+    const racingDb: StartGameDb = {
+      select: () => ({
+        from: (table: unknown) => ({
+          where: (condition: unknown) => ({
+            get: () => {
+              if (hideActiveOnce && table === schema.activeGame) {
+                hideActiveOnce = false;
+                return undefined;
+              }
+              return base.select().from(table).where(condition).get();
+            },
+          }),
+        }),
+      }),
+      insert: ((table: unknown) => base.insert(table)) as StartGameDb["insert"],
+      transaction: ((fn) => base.transaction(fn)) as StartGameDb["transaction"],
+    };
+
+    await expect(
+      startGame(racingDb, USER_ID, {
+        id: GAME_ID + 1,
+        homeTeamId: TEAM_ID,
+        createdAt: "2026-01-03T00:00:00.000Z",
+      }),
+    ).rejects.toBeInstanceOf(StartGameConflictError);
+
+    const res = await startRequest({
+      id: GAME_ID + 1,
+      homeTeamId: TEAM_ID,
+      createdAt: "2026-01-03T00:00:00.000Z",
+    });
+    expect(res.status).toBe(409);
+  });
 });
