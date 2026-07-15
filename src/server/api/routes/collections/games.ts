@@ -14,7 +14,6 @@ import {
 } from "@/server/gamePhaseTransitions";
 import {
   StartGameConflictError,
-  type StartGameDb,
   StartGameTeamNotFoundError,
   startGame,
 } from "@/server/startGame";
@@ -148,11 +147,7 @@ export const gamesRoutes = new Hono<ApiEnv>()
     const db = await getDb();
 
     try {
-      const result = await startGame(
-        db as unknown as StartGameDb,
-        userId,
-        body,
-      );
+      const result = await startGame(db, userId, body);
       return c.json(result);
     } catch (error) {
       if (error instanceof StartGameConflictError) {

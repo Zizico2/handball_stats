@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import type { ActiveGame, Game } from "@/datamodel";
 import {
+  type AppDb,
   type DbActiveGame,
   type DbActiveGameInsert,
   type DbGame,
@@ -30,31 +31,6 @@ export type StartGameInput = {
   createdAt: string;
 };
 
-/**
- * Minimal DB surface shared by D1 (async + batch) and bun:sqlite tests
- * (sync transaction). Avoids coupling the helper to one driver.
- */
-export type StartGameDb = {
-  select: () => {
-    from: (table: unknown) => {
-      where: (condition: unknown) => {
-        get: () => Promise<unknown> | unknown;
-      };
-    };
-  };
-  insert: (table: unknown) => {
-    values: (row: unknown) => {
-      returning: () => {
-        all: () => unknown[];
-      } & PromiseLike<unknown[]>;
-    };
-  };
-  batch?: (
-    queries: readonly [PromiseLike<unknown[]>, PromiseLike<unknown[]>],
-  ) => Promise<[unknown[], unknown[]]>;
-  transaction: <T>(fn: (tx: StartGameDb) => T) => T;
-};
-
 function gameInsertRow(input: StartGameInput, userId: string): DbGameInsert {
   return {
     userId,
@@ -80,39 +56,23 @@ function activeGameInsertRow(
 }
 
 /**
- * Inserts the game row and active-game marker atomically.
- * Prefers D1 `batch` (all-or-nothing); falls back to `transaction` for
- * bun:sqlite unit tests.
+ * Inserts the game row and active-game marker atomically via D1 `batch`
+ * (all-or-nothing).
  */
 export async function insertGameAndActiveMarkerAtomic(
-  db: StartGameDb,
+  db: AppDb,
   gameRow: DbGameInsert,
   activeRow: DbActiveGameInsert,
 ): Promise<{ game: DbGame; activeGame: DbActiveGame }> {
-  if (typeof db.batch === "function") {
-    const [gamesRows, activeRows] = await db.batch([
-      db.insert(schema.games).values(gameRow).returning(),
-      db.insert(schema.activeGame).values(activeRow).returning(),
-    ]);
-    return {
-      game: gamesRows[0] as DbGame,
-      activeGame: activeRows[0] as DbActiveGame,
-    };
-  }
+  const [gamesRows, activeRows] = await db.batch([
+    db.insert(schema.games).values(gameRow).returning(),
+    db.insert(schema.activeGame).values(activeRow).returning(),
+  ]);
 
-  return db.transaction((tx) => {
-    const games = tx
-      .insert(schema.games)
-      .values(gameRow)
-      .returning()
-      .all() as DbGame[];
-    const actives = tx
-      .insert(schema.activeGame)
-      .values(activeRow)
-      .returning()
-      .all() as DbActiveGame[];
-    return { game: games[0], activeGame: actives[0] };
-  });
+  return {
+    game: gamesRows[0],
+    activeGame: activeRows[0],
+  };
 }
 
 function isUniqueConstraintError(error: unknown): boolean {
@@ -137,10 +97,7 @@ function isUniqueConstraintError(error: unknown): boolean {
   return /unique constraint failed|UNIQUE constraint failed/i.test(message);
 }
 
-async function loadActiveGame(
-  db: StartGameDb,
-  userId: string,
-): Promise<unknown> {
+async function loadActiveGame(db: AppDb, userId: string) {
   return db
     .select()
     .from(schema.activeGame)
@@ -149,7 +106,7 @@ async function loadActiveGame(
 }
 
 export async function startGame(
-  db: StartGameDb,
+  db: AppDb,
   userId: string,
   input: StartGameInput,
 ): Promise<{ game: Game; activeGame: ActiveGame }> {

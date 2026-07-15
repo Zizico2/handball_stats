@@ -1,57 +1,31 @@
-import { Database } from "bun:sqlite";
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/bun-sqlite";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import type { Game, GamePhaseTransitionResult } from "@/datamodel";
+import { createDb } from "@/db";
 import * as schema from "@/db/schema";
+import { getTestDb, resetAppTables } from "./db";
 
-mock.module("server-only", () => ({}));
+vi.mock("server-only", () => ({}));
 
-let testDb: ReturnType<typeof drizzle<typeof schema>>;
-
-mock.module("@/server/db", () => ({
-  getDb: async () => testDb,
+vi.mock("@/server/db", () => ({
+  getDb: async () => createDb(env.DB),
 }));
 
-const { gamesRoutes } = await import("./games");
+const { gamesRoutes } = await import("@/server/api/routes/collections/games");
 
 const USER_ID = "user-phase-transitions";
 const TEAM_ID = 1;
 const GAME_ID = 10;
 
-function createTestDb() {
-  const sqlite = new Database(":memory:");
-  sqlite.run("PRAGMA foreign_keys = ON");
-  sqlite.run(`
-    CREATE TABLE teams (
-      id integer PRIMARY KEY,
-      user_id text NOT NULL,
-      local_id integer NOT NULL,
-      name text NOT NULL
-    );
-    CREATE UNIQUE INDEX teams_user_id_local_id_uq ON teams (user_id, local_id);
-    CREATE TABLE games (
-      id integer PRIMARY KEY,
-      user_id text NOT NULL,
-      local_id integer NOT NULL,
-      home_team_local_id integer NOT NULL,
-      created_at text NOT NULL,
-      first_half_started_at_ms integer,
-      halftime_started_at_ms integer,
-      second_half_started_at_ms integer,
-      FOREIGN KEY (user_id, home_team_local_id) REFERENCES teams(user_id, local_id)
-    );
-    CREATE UNIQUE INDEX games_user_id_local_id_uq ON games (user_id, local_id);
-  `);
-  return drizzle({ client: sqlite, schema });
-}
-
 async function seedTeamAndEmptyGame() {
-  await testDb.insert(schema.teams).values({
+  const db = getTestDb();
+  await db.insert(schema.teams).values({
     userId: USER_ID,
     localId: TEAM_ID,
     name: "Home",
   });
-  await testDb.insert(schema.games).values({
+  await db.insert(schema.games).values({
     userId: USER_ID,
     localId: GAME_ID,
     homeTeamLocalId: TEAM_ID,
@@ -74,9 +48,9 @@ function transitionRequest(gameId: number, to: string) {
   );
 }
 
-describe("games phase transition API (sqlite)", () => {
+describe("games phase transition API (D1)", () => {
   beforeEach(async () => {
-    testDb = createTestDb();
+    await resetAppTables();
     await seedTeamAndEmptyGame();
   });
 
@@ -101,7 +75,7 @@ describe("games phase transition API (sqlite)", () => {
     );
 
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as Game[];
     expect(body).toEqual([
       {
         id: 20,
@@ -113,7 +87,7 @@ describe("games phase transition API (sqlite)", () => {
       },
     ]);
 
-    const row = await testDb
+    const row = await getTestDb()
       .select()
       .from(schema.games)
       .where(eq(schema.games.localId, 20))
@@ -144,7 +118,7 @@ describe("games phase transition API (sqlite)", () => {
     );
 
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as Game[];
     expect(body[0].firstHalfStartedAtMs).toBeNull();
     expect(body[0].halftimeStartedAtMs).toBeNull();
     expect(body[0].secondHalfStartedAtMs).toBeNull();
@@ -153,8 +127,9 @@ describe("games phase transition API (sqlite)", () => {
   test("PUT upsert cannot clear existing phase timestamps", async () => {
     const started = await transitionRequest(GAME_ID, "firstHalf");
     expect(started.status).toBe(200);
-    const { game: startedGame } = await started.json();
-    expect(startedGame.firstHalfStartedAtMs).toBeNumber();
+    const { game: startedGame } =
+      (await started.json()) as GamePhaseTransitionResult;
+    expect(typeof startedGame.firstHalfStartedAtMs).toBe("number");
 
     const res = await gamesRoutes.request(
       "/",
@@ -176,7 +151,7 @@ describe("games phase transition API (sqlite)", () => {
     );
 
     expect(res.status).toBe(200);
-    const row = await testDb
+    const row = await getTestDb()
       .select()
       .from(schema.games)
       .where(eq(schema.games.localId, GAME_ID))
@@ -190,7 +165,7 @@ describe("games phase transition API (sqlite)", () => {
     const after = Date.now();
 
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as GamePhaseTransitionResult;
     expect(body.applied).toBe(true);
     expect(body.game.firstHalfStartedAtMs).toBeGreaterThanOrEqual(before);
     expect(body.game.firstHalfStartedAtMs).toBeLessThanOrEqual(after);
@@ -200,11 +175,12 @@ describe("games phase transition API (sqlite)", () => {
 
   test("idempotent transition returns applied=false without changing timestamp", async () => {
     const first = await transitionRequest(GAME_ID, "firstHalf");
-    const { game: firstGame } = await first.json();
+    const { game: firstGame } =
+      (await first.json()) as GamePhaseTransitionResult;
 
     const second = await transitionRequest(GAME_ID, "firstHalf");
     expect(second.status).toBe(200);
-    const body = await second.json();
+    const body = (await second.json()) as GamePhaseTransitionResult;
     expect(body.applied).toBe(false);
     expect(body.game.firstHalfStartedAtMs).toBe(firstGame.firstHalfStartedAtMs);
   });
@@ -216,7 +192,7 @@ describe("games phase transition API (sqlite)", () => {
     const staleHalftime = await transitionRequest(GAME_ID, "halftime");
     expect(staleHalftime.status).toBe(409);
 
-    const row = await testDb
+    const row = await getTestDb()
       .select()
       .from(schema.games)
       .where(eq(schema.games.localId, GAME_ID))
@@ -233,8 +209,8 @@ describe("games phase transition API (sqlite)", () => {
 
     expect(a.status).toBe(200);
     expect(b.status).toBe(200);
-    const bodyA = await a.json();
-    const bodyB = await b.json();
+    const bodyA = (await a.json()) as GamePhaseTransitionResult;
+    const bodyB = (await b.json()) as GamePhaseTransitionResult;
 
     const applied = [bodyA, bodyB].filter((body) => body.applied);
     const idempotent = [bodyA, bodyB].filter((body) => !body.applied);
@@ -243,7 +219,7 @@ describe("games phase transition API (sqlite)", () => {
     expect(bodyA.game.firstHalfStartedAtMs).toBe(
       bodyB.game.firstHalfStartedAtMs,
     );
-    expect(applied[0].game.firstHalfStartedAtMs).toBeNumber();
+    expect(typeof applied[0].game.firstHalfStartedAtMs).toBe("number");
   });
 
   test("concurrent halftime transitions: one applied, one idempotent", async () => {
@@ -256,24 +232,25 @@ describe("games phase transition API (sqlite)", () => {
 
     expect(a.status).toBe(200);
     expect(b.status).toBe(200);
-    const bodyA = await a.json();
-    const bodyB = await b.json();
+    const bodyA = (await a.json()) as GamePhaseTransitionResult;
+    const bodyB = (await b.json()) as GamePhaseTransitionResult;
 
     const applied = [bodyA, bodyB].filter((body) => body.applied);
     const idempotent = [bodyA, bodyB].filter((body) => !body.applied);
     expect(applied).toHaveLength(1);
     expect(idempotent).toHaveLength(1);
     expect(bodyA.game.halftimeStartedAtMs).toBe(bodyB.game.halftimeStartedAtMs);
-    expect(applied[0].game.halftimeStartedAtMs).toBeNumber();
+    expect(typeof applied[0].game.halftimeStartedAtMs).toBe("number");
   });
 
   test("interleaved: after second half is applied, concurrent HT is always 409", async () => {
     expect((await transitionRequest(GAME_ID, "firstHalf")).status).toBe(200);
     const second = await transitionRequest(GAME_ID, "secondHalf");
     expect(second.status).toBe(200);
-    const { game, applied } = await second.json();
+    const { game, applied } =
+      (await second.json()) as GamePhaseTransitionResult;
     expect(applied).toBe(true);
-    expect(game.secondHalfStartedAtMs).toBeNumber();
+    expect(typeof game.secondHalfStartedAtMs).toBe("number");
 
     const [htA, htB] = await Promise.all([
       transitionRequest(GAME_ID, "halftime"),
