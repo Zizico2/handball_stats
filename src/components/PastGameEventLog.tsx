@@ -12,9 +12,6 @@ interface PastGameEventLogProps {
 
 export function PastGameEventLog({ events, players }: PastGameEventLogProps) {
   return (
-    <EventLog
-      events={events}
-      playerLabels={buildPlayerLabelMap(players)}
-    />
+    <EventLog events={events} playerLabels={buildPlayerLabelMap(players)} />
   );
 }

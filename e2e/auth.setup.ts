@@ -6,8 +6,7 @@ import { seedE2eData } from "./seedE2eData";
 
 const authFile = path.join("playwright", ".auth", "user.json");
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
-const testEmail =
-  process.env.E2E_CLERK_EMAIL ?? "e2e+clerk_test@example.com";
+const testEmail = process.env.E2E_CLERK_EMAIL ?? "e2e+clerk_test@example.com";
 
 setup.describe.configure({ mode: "serial" });
 
