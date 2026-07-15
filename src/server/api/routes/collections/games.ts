@@ -3,6 +3,7 @@ import { and, eq, getColumns, isNotNull, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
+import { startGameBodySchema } from "@/datamodel";
 import { dbRowToGame, gameToDbRow } from "@/db";
 import * as schema from "@/db/schema";
 import type { ApiEnv } from "@/server/api/types";
@@ -11,6 +12,12 @@ import {
   decidePhaseTransition,
   type GamePhaseTransition,
 } from "@/server/gamePhaseTransitions";
+import {
+  StartGameConflictError,
+  type StartGameDb,
+  StartGameTeamNotFoundError,
+  startGame,
+} from "@/server/startGame";
 import { gamesArraySchema } from "./shared";
 
 const gameIdParamSchema = z.object({
@@ -134,6 +141,28 @@ export const gamesRoutes = new Hono<ApiEnv>()
       .returning();
 
     return c.json(inserted.map(dbRowToGame));
+  })
+  .post("/start", zValidator("json", startGameBodySchema), async (c) => {
+    const body = c.req.valid("json");
+    const { userId } = c.env;
+    const db = await getDb();
+
+    try {
+      const result = await startGame(
+        db as unknown as StartGameDb,
+        userId,
+        body,
+      );
+      return c.json(result);
+    } catch (error) {
+      if (error instanceof StartGameConflictError) {
+        throw new HTTPException(409, { message: error.message });
+      }
+      if (error instanceof StartGameTeamNotFoundError) {
+        throw new HTTPException(404, { message: error.message });
+      }
+      throw error;
+    }
   })
   .post(
     "/:gameId/transitions",
