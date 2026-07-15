@@ -351,3 +351,16 @@ export const activeGameSchema = z.object({
   homeTeamId: z.number(),
 });
 export type ActiveGame = z.infer<typeof activeGameSchema>;
+
+export const startGameBodySchema = z.object({
+  id: z.number().int().positive(),
+  homeTeamId: z.number().int().positive(),
+  createdAt: z.iso.datetime(),
+});
+export type StartGameBody = z.infer<typeof startGameBodySchema>;
+
+export const startGameResultSchema = z.object({
+  game: gameSchema,
+  activeGame: activeGameSchema,
+});
+export type StartGameResult = z.infer<typeof startGameResultSchema>;

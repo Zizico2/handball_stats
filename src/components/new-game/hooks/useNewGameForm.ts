@@ -1,18 +1,17 @@
 "use client";
 
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
+import { useCallback, useState } from "react";
 import { activeGameCollection, gamesCollection } from "@/collections";
-import type { ActiveGame } from "@/datamodel";
 import { useNextLocalId } from "@/hooks/useNextLocalId";
+import { startGameMutation } from "@/server/api/client";
 
 interface UseNewGameFormParams {
-  activeGameData: ActiveGame | undefined;
   onStarted: () => void;
   selectedTeamId: number | null;
 }
 
 export function useNewGameForm({
-  activeGameData,
   onStarted,
   selectedTeamId,
 }: UseNewGameFormParams) {
@@ -24,38 +23,46 @@ export function useNewGameForm({
   );
 
   const nextGameId = useNextLocalId(lastGame);
+  const [isStarting, setIsStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
 
-  const handleStartNewGame = async () => {
-    if (selectedTeamId === null) {
+  const clearStartError = useCallback(() => {
+    setStartError(null);
+  }, []);
+
+  const handleStartNewGame = useCallback(async () => {
+    if (selectedTeamId === null || isStarting) {
       return;
     }
 
-    // Persist the game before the active-game marker. Both share a FK to
-    // (user_id, game_local_id); firing the two collection writes concurrently
-    // can make the active-game upsert fail with SQLITE_CONSTRAINT_FOREIGNKEY.
-    const gameTx = gamesCollection.insert({
-      id: nextGameId,
-      homeTeamId: selectedTeamId,
-      createdAt: new Date().toISOString(),
-      firstHalfStartedAtMs: null,
-      secondHalfStartedAtMs: null,
-    });
-    await gameTx.isPersisted.promise;
+    setIsStarting(true);
+    setStartError(null);
 
-    if (activeGameData) {
-      const deleteTx = activeGameCollection.delete(activeGameData.id);
-      await deleteTx.isPersisted.promise;
+    try {
+      await startGameMutation({
+        id: nextGameId,
+        homeTeamId: selectedTeamId,
+        createdAt: new Date().toISOString(),
+      });
+
+      await Promise.all([
+        gamesCollection.utils.refetch(),
+        activeGameCollection.utils.refetch(),
+      ]);
+
+      onStarted();
+    } catch {
+      setStartError("Could not start the game. Please try again.");
+    } finally {
+      setIsStarting(false);
     }
+  }, [isStarting, nextGameId, onStarted, selectedTeamId]);
 
-    const activeTx = activeGameCollection.insert({
-      id: 1,
-      gameId: nextGameId,
-      homeTeamId: selectedTeamId,
-    });
-    await activeTx.isPersisted.promise;
-
-    onStarted();
+  return {
+    clearStartError,
+    handleStartNewGame,
+    isStarting,
+    nextGameId,
+    startError,
   };
-
-  return { handleStartNewGame, nextGameId };
 }

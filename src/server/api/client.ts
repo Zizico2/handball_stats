@@ -5,6 +5,7 @@ import type {
   PauseToggle,
   PlayerEvent,
   QuickSubPair,
+  StartGameBody,
   Team,
   TeamPlayer,
 } from "@/datamodel";
@@ -82,6 +83,12 @@ export async function deleteQuickSubPairsMutation(ids: number[]) {
 
 export async function createGamesMutation(items: Game[]) {
   return parseResponse(apiClient.api.collections.games.$post({ json: items }));
+}
+
+export async function startGameMutation(body: StartGameBody) {
+  return parseResponse(
+    apiClient.api.collections.games.start.$post({ json: body }),
+  );
 }
 
 export async function upsertGamesMutation(items: Game[]) {

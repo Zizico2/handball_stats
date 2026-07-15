@@ -53,11 +53,11 @@ function NewGame() {
     );
   }, [activeGame.data, teams.data]);
 
-  const { handleStartNewGame } = useNewGameForm({
-    activeGameData: activeGame.data,
-    selectedTeamId,
-    onStarted: () => router.push("/active-game"),
-  });
+  const { clearStartError, handleStartNewGame, isStarting, startError } =
+    useNewGameForm({
+      selectedTeamId,
+      onStarted: () => router.push("/active-game"),
+    });
 
   return (
     <div className="flex justify-center p-6">
@@ -77,12 +77,16 @@ function NewGame() {
             progress. You must end it before you can start a new game.
           </AlertCallout>
         ) : null}
+        {startError ? (
+          <AlertCallout variant="danger">{startError}</AlertCallout>
+        ) : null}
         <Select
           fullWidth
-          isDisabled={teams.data.length === 0}
+          isDisabled={teams.data.length === 0 || isStarting}
           placeholder="Select a team"
           value={selectedTeamId?.toString() ?? null}
           onChange={(value) => {
+            clearStartError();
             setSelectedTeamId(value ? Number(value) : null);
           }}
         >
@@ -118,11 +122,16 @@ function NewGame() {
         <Tooltip isDisabled={!activeGame.data}>
           <Button
             className="w-full"
-            isDisabled={selectedTeamId === null || !!activeGame.data}
+            isDisabled={
+              selectedTeamId === null || !!activeGame.data || isStarting
+            }
+            isPending={isStarting}
             variant="primary"
-            onPress={handleStartNewGame}
+            onPress={() => {
+              void handleStartNewGame();
+            }}
           >
-            Start Game
+            {({ isPending }) => (isPending ? "Starting…" : "Start Game")}
           </Button>
           <Tooltip.Content>
             Cannot start a new game while an active game exists. End the active
