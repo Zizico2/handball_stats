@@ -28,6 +28,7 @@ export async function PastGamesList() {
           key={game.id}
           className="no-underline"
           href={`/past-games/${game.id}`}
+          prefetch={false}
         >
           <Card className="border border-separator transition-colors hover:bg-surface-secondary">
             <Card.Content className="p-4">

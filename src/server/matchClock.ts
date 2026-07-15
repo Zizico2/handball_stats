@@ -3,6 +3,7 @@ import * as schema from "@/db/schema";
 import { getDb } from "@/server/db";
 import {
   buildMatchClockSnapshot,
+  type MatchClockPauseToggle,
   type MatchClockSnapshot,
 } from "@/server/matchClockLogic";
 
@@ -43,7 +44,7 @@ export async function getMatchClockSnapshot(
     });
   }
 
-  const pauseToggles = await db
+  const pauseToggles = (await db
     .select({
       half: schema.pauseToggles.half,
       toggledAtMs: schema.pauseToggles.toggledAtMs,
@@ -55,7 +56,7 @@ export async function getMatchClockSnapshot(
         eq(schema.pauseToggles.gameLocalId, gameLocalId),
       ),
     )
-    .orderBy(asc(schema.pauseToggles.toggledAtMs));
+    .orderBy(asc(schema.pauseToggles.toggledAtMs))) as MatchClockPauseToggle[];
 
   return buildMatchClockSnapshot({
     gameId: gameLocalId,

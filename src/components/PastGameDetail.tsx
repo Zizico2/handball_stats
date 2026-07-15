@@ -75,6 +75,7 @@ export function PastGameDetailShell() {
     <NextLink
       className="link inline-flex items-center gap-2 self-start"
       href="/past-games"
+      prefetch={false}
     >
       <ArrowLeft className="size-4" />
       Back to past games

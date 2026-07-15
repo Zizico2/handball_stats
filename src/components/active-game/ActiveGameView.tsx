@@ -43,7 +43,7 @@ export function ActiveGameView({
             <Typography.Paragraph color="muted">
               No active game. Choose a home team first.
             </Typography.Paragraph>
-            <NextLink className="link" href="/new-game">
+            <NextLink className="link" href="/new-game" prefetch={false}>
               Go to New Game
             </NextLink>
           </div>

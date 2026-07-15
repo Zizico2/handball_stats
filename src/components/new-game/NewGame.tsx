@@ -67,7 +67,11 @@ function NewGame() {
           <AlertCallout
             variant="danger"
             action={
-              <NextLink className="link text-danger" href="/active-game">
+              <NextLink
+                className="link text-danger"
+                href="/active-game"
+                prefetch={false}
+              >
                 Go to Active Game
               </NextLink>
             }

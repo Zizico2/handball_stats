@@ -23,6 +23,7 @@ export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           className={navItemClassName}
           href={item.href}
           onClick={onNavigate}
+          prefetch={false}
         >
           {item.text}
         </NextLink>
