@@ -315,6 +315,15 @@ export const gameSchema = z.object({
 });
 export type Game = z.infer<typeof gameSchema>;
 
+export const gamePhaseTransitionResultSchema = z.object({
+  game: gameSchema,
+  /** True only when this request wrote the phase timestamp. */
+  applied: z.boolean(),
+});
+export type GamePhaseTransitionResult = z.infer<
+  typeof gamePhaseTransitionResultSchema
+>;
+
 export const pauseToggleSchema = z.object({
   id: z.uuid(),
   gameId: z.number(),
