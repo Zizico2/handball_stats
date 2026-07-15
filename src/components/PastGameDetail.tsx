@@ -1,7 +1,7 @@
 import { Typography } from "@heroui/react";
 import { ArrowLeft } from "lucide-react";
-import NextLink from "next/link";
 import { notFound } from "next/navigation";
+import { AppNextLink } from "@/components/AppNextLink";
 import { GameMetaLine } from "@/components/game/GameMetaLine";
 import { GameStatChips } from "@/components/game/GameStatChips";
 import { PastGameCsvDownloadButton } from "@/components/PastGameCsvDownloadButton";
@@ -72,13 +72,12 @@ export async function PastGameDetailContent({
 
 export function PastGameDetailShell() {
   return (
-    <NextLink
+    <AppNextLink
       className="link inline-flex items-center gap-2 self-start"
       href="/past-games"
-      prefetch={false}
     >
       <ArrowLeft className="size-4" />
       Back to past games
-    </NextLink>
+    </AppNextLink>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { Show, UserButton } from "@clerk/nextjs";
-import NextLink from "next/link";
+import { AppNextLink } from "@/components/AppNextLink";
 
 export const navItems = [
   { text: "Home", href: "/" },
@@ -18,15 +18,14 @@ export function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav className="flex flex-col gap-1 p-2">
       {navItems.map((item) => (
-        <NextLink
+        <AppNextLink
           key={item.href}
           className={navItemClassName}
           href={item.href}
           onClick={onNavigate}
-          prefetch={false}
         >
           {item.text}
-        </NextLink>
+        </AppNextLink>
       ))}
       <Show when="signed-in">
         <div className="px-2 pt-2">
