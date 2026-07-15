@@ -1,4 +1,5 @@
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
+import { DetailedError } from "hono/client";
 import {
   type Dispatch,
   type SetStateAction,
@@ -11,8 +12,39 @@ import { v4 as uuidv4 } from "uuid";
 import { gamesCollection, pauseTogglesCollection } from "@/collections";
 import type { ActiveGame, Game, PauseToggle } from "@/datamodel";
 import type { MatchStatus } from "@/inGameControlsAtoms";
-import { getMatchClockSnapshotQuery } from "@/server/api/client";
+import {
+  getMatchClockSnapshotQuery,
+  transitionGamePhaseMutation,
+} from "@/server/api/client";
 import { useNow } from "@/useNow";
+
+function matchStatusFromGame(game: Game): MatchStatus | null {
+  if (game.secondHalfStartedAtMs != null) {
+    return "secondHalf";
+  }
+
+  if (game.halftimeStartedAtMs != null) {
+    return "halftime";
+  }
+
+  if (game.firstHalfStartedAtMs != null) {
+    return "firstHalf";
+  }
+
+  return null;
+}
+
+function applyGamePhaseLocally(game: Game) {
+  gamesCollection.update(game.id, (draft) => {
+    draft.firstHalfStartedAtMs = game.firstHalfStartedAtMs ?? null;
+    draft.halftimeStartedAtMs = game.halftimeStartedAtMs ?? null;
+    draft.secondHalfStartedAtMs = game.secondHalfStartedAtMs ?? null;
+  });
+}
+
+function isPhaseConflictError(error: unknown): boolean {
+  return error instanceof DetailedError && error.statusCode === 409;
+}
 
 interface UseServerMatchClockOptions {
   activeGameData: ActiveGame | null;
@@ -222,47 +254,87 @@ export function useServerMatchClock({
       return;
     }
 
-    // TODO(test): make this `update` fail on purpose to test that the UI stays consistent.
-    gamesCollection.update(activeGameRecord.id, (draft) => {
-      draft.firstHalfStartedAtMs =
-        draft.firstHalfStartedAtMs ?? Date.now() + serverOffsetMs;
-    });
-    setMatchStatus("firstHalf");
-  }, [activeGameRecord, serverOffsetMs, setMatchStatus]);
+    void (async () => {
+      try {
+        const game = await transitionGamePhaseMutation(
+          activeGameRecord.id,
+          "firstHalf",
+        );
+        applyGamePhaseLocally(game);
+        setMatchStatus("firstHalf");
+      } catch (error) {
+        if (isPhaseConflictError(error)) {
+          await gamesCollection.utils.refetch();
+          const refreshed = gamesCollection.get(activeGameRecord.id);
+          if (refreshed) {
+            setMatchStatus(matchStatusFromGame(refreshed));
+          }
+          return;
+        }
+        console.error("Failed to start first half", error);
+      }
+    })();
+  }, [activeGameRecord, setMatchStatus]);
 
   const startSecondHalf = useCallback(() => {
     if (!activeGameRecord) {
       return;
     }
 
-    gamesCollection.update(activeGameRecord.id, (draft) => {
-      draft.secondHalfStartedAtMs =
-        draft.secondHalfStartedAtMs ?? Date.now() + serverOffsetMs;
-    });
-    setMatchStatus("secondHalf");
-  }, [activeGameRecord, serverOffsetMs, setMatchStatus]);
+    void (async () => {
+      try {
+        const game = await transitionGamePhaseMutation(
+          activeGameRecord.id,
+          "secondHalf",
+        );
+        applyGamePhaseLocally(game);
+        setMatchStatus("secondHalf");
+      } catch (error) {
+        if (isPhaseConflictError(error)) {
+          await gamesCollection.utils.refetch();
+          const refreshed = gamesCollection.get(activeGameRecord.id);
+          if (refreshed) {
+            setMatchStatus(matchStatusFromGame(refreshed));
+          }
+          return;
+        }
+        console.error("Failed to start second half", error);
+      }
+    })();
+  }, [activeGameRecord, setMatchStatus]);
 
   const startHalftime = useCallback(() => {
-    if (activeGameRecord) {
-      gamesCollection.update(activeGameRecord.id, (draft) => {
-        draft.halftimeStartedAtMs =
-          draft.halftimeStartedAtMs ?? Date.now() + serverOffsetMs;
-      });
+    if (!activeGameRecord) {
+      return;
     }
 
-    if (activeHalf === "firstHalf" && !paused) {
-      appendPauseToggle("firstHalf");
-    }
+    const shouldPauseFirstHalf = activeHalf === "firstHalf" && !paused;
+    const alreadyAtHalftime = activeGameRecord.halftimeStartedAtMs != null;
 
-    setMatchStatus("halftime");
-  }, [
-    activeGameRecord,
-    activeHalf,
-    appendPauseToggle,
-    paused,
-    serverOffsetMs,
-    setMatchStatus,
-  ]);
+    void (async () => {
+      try {
+        const game = await transitionGamePhaseMutation(
+          activeGameRecord.id,
+          "halftime",
+        );
+        applyGamePhaseLocally(game);
+        if (!alreadyAtHalftime && shouldPauseFirstHalf) {
+          appendPauseToggle("firstHalf");
+        }
+        setMatchStatus("halftime");
+      } catch (error) {
+        if (isPhaseConflictError(error)) {
+          await gamesCollection.utils.refetch();
+          const refreshed = gamesCollection.get(activeGameRecord.id);
+          if (refreshed) {
+            setMatchStatus(matchStatusFromGame(refreshed));
+          }
+          return;
+        }
+        console.error("Failed to start halftime", error);
+      }
+    })();
+  }, [activeGameRecord, activeHalf, appendPauseToggle, paused, setMatchStatus]);
 
   const togglePause = useCallback(() => {
     if (activeHalf === "firstHalf") {

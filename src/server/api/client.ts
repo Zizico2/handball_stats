@@ -88,6 +88,18 @@ export async function upsertGamesMutation(items: Game[]) {
   return parseResponse(apiClient.api.collections.games.$put({ json: items }));
 }
 
+export async function transitionGamePhaseMutation(
+  gameId: number,
+  to: "firstHalf" | "halftime" | "secondHalf",
+) {
+  return parseResponse(
+    apiClient.api.collections.games[":gameId"].transitions.$post({
+      param: { gameId: String(gameId) },
+      json: { to },
+    }),
+  );
+}
+
 export async function upsertActiveGameMutation(items: ActiveGame[]) {
   return parseResponse(
     apiClient.api.collections["active-game"].$put({ json: items }),
