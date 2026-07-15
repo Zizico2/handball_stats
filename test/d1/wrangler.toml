@@ -1,0 +1,14 @@
+# Minimal Wrangler config for Workers Vitest + isolated local D1.
+# Intentionally omits [assets] and production routes so tests do not
+# require a built `.open-next/` tree.
+"$schema" = "../../node_modules/wrangler/config-schema.json"
+name = "arcazzi-d1-tests"
+compatibility_date = "2026-02-10"
+compatibility_flags = ["nodejs_compat"]
+main = "./worker.ts"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "arcazzi"
+database_id = "00000000-0000-0000-0000-000000000001"
+migrations_dir = "../../drizzle_flat"

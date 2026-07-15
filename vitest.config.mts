@@ -20,10 +20,10 @@ export default defineConfig({
       const migrations = await readD1Migrations(migrationsPath);
 
       return {
-        // Isolated module tests must not depend on a built OpenNext worker.
-        main: "./test/d1/worker.ts",
+        // Isolated module tests must not depend on a built OpenNext worker
+        // or production [assets] pointing at `.open-next/assets`.
         wrangler: {
-          configPath: "./wrangler.toml",
+          configPath: "./test/d1/wrangler.toml",
         },
         miniflare: {
           bindings: {
