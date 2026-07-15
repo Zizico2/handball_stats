@@ -21,6 +21,18 @@ const phaseTransitionBodySchema = z.object({
   to: z.enum(["firstHalf", "halftime", "secondHalf"]),
 });
 
+function gameInsertRowWithoutPhases(
+  item: z.infer<typeof gamesArraySchema>[number],
+  userId: string,
+) {
+  return {
+    ...gameToDbRow(item, userId),
+    firstHalfStartedAtMs: null,
+    halftimeStartedAtMs: null,
+    secondHalfStartedAtMs: null,
+  };
+}
+
 async function loadGameOrThrow(
   userId: string,
   gameId: number,
@@ -116,7 +128,7 @@ export const gamesRoutes = new Hono<ApiEnv>()
     const db = await getDb();
     const inserted = await db
       .insert(schema.games)
-      .values(items.map((item) => gameToDbRow(item, userId)))
+      .values(items.map((item) => gameInsertRowWithoutPhases(item, userId)))
       .returning();
 
     return c.json(inserted.map(dbRowToGame));
@@ -131,33 +143,16 @@ export const gamesRoutes = new Hono<ApiEnv>()
       const { userId } = c.env;
       const nowMs = Date.now();
 
-      const existing = await loadGameOrThrow(userId, gameId);
-      const decision = decidePhaseTransition(
-        {
-          firstHalfStartedAtMs: existing.firstHalfStartedAtMs,
-          halftimeStartedAtMs: existing.halftimeStartedAtMs,
-          secondHalfStartedAtMs: existing.secondHalfStartedAtMs,
-        },
-        to,
-      );
-
-      if (decision.kind === "idempotent") {
-        return c.json(dbRowToGame(existing));
-      }
-
-      if (decision.kind === "conflict") {
-        throw new HTTPException(409, { message: decision.reason });
-      }
-
+      // Always attempt the conditional write first so success is based on the
+      // atomic UPDATE, not a pre-read that can go stale before the response.
       const updated = await applyAtomicPhaseUpdate(userId, gameId, to, nowMs);
 
       if (updated) {
-        return c.json(dbRowToGame(updated));
+        return c.json({ game: dbRowToGame(updated), applied: true });
       }
 
-      // Race: another writer applied a transition first.
       const refreshed = await loadGameOrThrow(userId, gameId);
-      const afterRace = decidePhaseTransition(
+      const decision = decidePhaseTransition(
         {
           firstHalfStartedAtMs: refreshed.firstHalfStartedAtMs,
           halftimeStartedAtMs: refreshed.halftimeStartedAtMs,
@@ -166,14 +161,14 @@ export const gamesRoutes = new Hono<ApiEnv>()
         to,
       );
 
-      if (afterRace.kind === "idempotent") {
-        return c.json(dbRowToGame(refreshed));
+      if (decision.kind === "idempotent") {
+        return c.json({ game: dbRowToGame(refreshed), applied: false });
       }
 
       throw new HTTPException(409, {
         message:
-          afterRace.kind === "conflict"
-            ? afterRace.reason
+          decision.kind === "conflict"
+            ? decision.reason
             : "Game phase transition conflict",
       });
     },
@@ -188,7 +183,7 @@ export const gamesRoutes = new Hono<ApiEnv>()
     }
 
     const gameColumns = getColumns(schema.games);
-    const rows = items.map((item) => gameToDbRow(item, userId));
+    const rows = items.map((item) => gameInsertRowWithoutPhases(item, userId));
     const inserted = await db
       .insert(schema.games)
       .values(rows)

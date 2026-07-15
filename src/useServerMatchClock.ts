@@ -256,12 +256,12 @@ export function useServerMatchClock({
 
     void (async () => {
       try {
-        const game = await transitionGamePhaseMutation(
+        const { game } = await transitionGamePhaseMutation(
           activeGameRecord.id,
           "firstHalf",
         );
         applyGamePhaseLocally(game);
-        setMatchStatus("firstHalf");
+        setMatchStatus(matchStatusFromGame(game));
       } catch (error) {
         if (isPhaseConflictError(error)) {
           await gamesCollection.utils.refetch();
@@ -283,12 +283,12 @@ export function useServerMatchClock({
 
     void (async () => {
       try {
-        const game = await transitionGamePhaseMutation(
+        const { game } = await transitionGamePhaseMutation(
           activeGameRecord.id,
           "secondHalf",
         );
         applyGamePhaseLocally(game);
-        setMatchStatus("secondHalf");
+        setMatchStatus(matchStatusFromGame(game));
       } catch (error) {
         if (isPhaseConflictError(error)) {
           await gamesCollection.utils.refetch();
@@ -309,19 +309,20 @@ export function useServerMatchClock({
     }
 
     const shouldPauseFirstHalf = activeHalf === "firstHalf" && !paused;
-    const alreadyAtHalftime = activeGameRecord.halftimeStartedAtMs != null;
 
     void (async () => {
       try {
-        const game = await transitionGamePhaseMutation(
+        const { game, applied } = await transitionGamePhaseMutation(
           activeGameRecord.id,
           "halftime",
         );
         applyGamePhaseLocally(game);
-        if (!alreadyAtHalftime && shouldPauseFirstHalf) {
+        // Only the writer that actually applied HT may insert the pause toggle,
+        // so concurrent idempotent tabs cannot resume the clock with a second toggle.
+        if (applied && shouldPauseFirstHalf) {
           appendPauseToggle("firstHalf");
         }
-        setMatchStatus("halftime");
+        setMatchStatus(matchStatusFromGame(game));
       } catch (error) {
         if (isPhaseConflictError(error)) {
           await gamesCollection.utils.refetch();
