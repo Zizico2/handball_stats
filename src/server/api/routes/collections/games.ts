@@ -21,7 +21,7 @@ const phaseTransitionBodySchema = z.object({
   to: z.enum(["firstHalf", "halftime", "secondHalf"]),
 });
 
-function gameInsertRowWithoutPhases(
+function gameDbRowWithoutPhaseTimestamps(
   item: z.infer<typeof gamesArraySchema>[number],
   userId: string,
 ) {
@@ -128,7 +128,9 @@ export const gamesRoutes = new Hono<ApiEnv>()
     const db = await getDb();
     const inserted = await db
       .insert(schema.games)
-      .values(items.map((item) => gameInsertRowWithoutPhases(item, userId)))
+      .values(
+        items.map((item) => gameDbRowWithoutPhaseTimestamps(item, userId)),
+      )
       .returning();
 
     return c.json(inserted.map(dbRowToGame));
@@ -183,7 +185,9 @@ export const gamesRoutes = new Hono<ApiEnv>()
     }
 
     const gameColumns = getColumns(schema.games);
-    const rows = items.map((item) => gameInsertRowWithoutPhases(item, userId));
+    const rows = items.map((item) =>
+      gameDbRowWithoutPhaseTimestamps(item, userId),
+    );
     const inserted = await db
       .insert(schema.games)
       .values(rows)
