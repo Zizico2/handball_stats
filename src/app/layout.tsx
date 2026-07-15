@@ -4,8 +4,6 @@ import { Roboto } from "next/font/google";
 import AuthGatedShell from "@/components/AuthGatedShell";
 import { Providers } from "./providers";
 
-export const instant = false;
-
 const roboto = Roboto({
   weight: ["300", "400", "500", "700"],
   subsets: ["latin"],
