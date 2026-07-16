@@ -149,5 +149,5 @@ jobs:
         run: |
           database_id="$(bunx wrangler d1 list --json | jq -r --arg name "$DB_NAME" '.[] | select(.name == $name) | .uuid')"
           if [ -n "$database_id" ]; then
-            bunx wrangler d1 delete "$database_id" --skip-confirmation
+            bunx wrangler d1 delete "$DB_NAME" --skip-confirmation
           fi
