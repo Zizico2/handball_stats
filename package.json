@@ -7,10 +7,6 @@
     "dev": "next dev",
     "build": "next build",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "build:cf": "opennextjs-cloudflare build",
-    "deploy:cf": "opennextjs-cloudflare deploy",
-    "upload:cf": "opennextjs-cloudflare upload",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "lint": "biome check",
     "format": "biome format --write",
     "format-check": "biome format",
@@ -25,8 +21,7 @@
     "db:generate": "drizzle-kit generate",
     "db:flatten": "bun run flatten.ts",
     "write-preview-wrangler": "bun run scripts/write-preview-wrangler.ts",
-    "db:migrate:local": "rimraf drizzle_flat && bun run db:flatten && bunx wrangler d1 migrations apply arcazzi --local",
-    "db:migrate:prod": "rimraf drizzle_flat && bun run db:flatten && bunx wrangler d1 migrations apply arcazzi --remote"
+    "db:migrate:local": "rimraf drizzle_flat && bun run db:flatten && bunx wrangler d1 migrations apply arcazzi --local"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.4.0",

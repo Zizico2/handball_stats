@@ -79,13 +79,7 @@ The schema lives in `src/db/schema.ts`. When you change it:
    bun run db:migrate:local
    ```
 
-3. **Apply to production:**
-
-   ```bash
-   bun run db:migrate:prod
-   ```
-
-> Production migrations require Wrangler authentication with your Cloudflare account.
+Production migrations are intentionally applied only by the beta deployment workflow in CI.
 
 ---
 
@@ -122,26 +116,16 @@ bun run format
 
 ---
 
-## Cloudflare / OpenNext Deployment
+## Cloudflare / OpenNext Preview
 
-Build and deploy the app to Cloudflare Workers via OpenNext:
+Build and preview the app locally in the Workers runtime:
 
 ```bash
-# Build for Cloudflare
-bun run build:cf
-
-# Preview locally (full Workers runtime)
 bun run preview
-
-# Deploy to production
-bun run deploy:cf
 ```
 
-Generate Cloudflare environment types after changing `wrangler.toml` bindings:
-
-```bash
-bun run cf-typegen
-```
+The preview command performs its required OpenNext build. Cloudflare builds, remote migrations,
+version uploads, and deployments are intentionally available only through GitHub Actions.
 
 ---
 
@@ -166,4 +150,3 @@ The app uses Zod (`src/datamodel.ts`) for runtime validation and TypeScript type
 - `playerEventSchema` — discriminated union by `eventType` (attack, defense, sanction).
 - `shotSchema` — validates shot payloads; enforces that `OffTarget` shots cannot be goals.
 - `teamSchema`, `teamPlayerSchema`, `gameSchema`, `activeGameSchema` — remaining domain entities.
-
