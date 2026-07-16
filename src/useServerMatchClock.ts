@@ -14,6 +14,11 @@ import { gamesCollection, pauseTogglesCollection } from "@/collections";
 import type { ActiveGame, Game, MatchHalf, PauseToggle } from "@/datamodel";
 import type { MatchStatus } from "@/inGameControlsAtoms";
 import {
+  beginMatchSaving,
+  markMatchFailed,
+  markMatchSaved,
+} from "@/matchSyncAtom";
+import {
   getMatchClockSnapshotQuery,
   setGamePauseStateMutation,
   transitionGamePhaseMutation,
@@ -59,7 +64,7 @@ interface UseServerMatchClockResult {
   minutes: number;
   seconds: number;
   isRunning: boolean;
-  isPausePending: boolean;
+  isClockMutationPending: boolean;
   activeHalf: "firstHalf" | "secondHalf" | null;
   eventElapsedSeconds: number;
   activeGamePauseToggles: PauseToggle[];
@@ -113,6 +118,13 @@ function inferActiveHalf(
   return null;
 }
 
+async function reloadMatchClockCollections() {
+  await Promise.all([
+    gamesCollection.utils.refetch(),
+    pauseTogglesCollection.utils.refetch(),
+  ]);
+}
+
 export function useServerMatchClock({
   activeGameData,
   activeGameRecord,
@@ -125,8 +137,8 @@ export function useServerMatchClock({
   const pauseToggles = pauseTogglesQuery.data;
 
   const [serverOffsetMs, setServerOffsetMs] = useState(0);
-  const [isPausePending, setIsPausePending] = useState(false);
-  const pausePendingRef = useRef(false);
+  const [isClockMutationPending, setIsClockMutationPending] = useState(false);
+  const clockMutationPendingRef = useRef(false);
 
   const syncServerOffset = useCallback(async () => {
     if (!activeGameData) {
@@ -238,20 +250,49 @@ export function useServerMatchClock({
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
 
+  const beginClockMutation = useCallback(() => {
+    if (clockMutationPendingRef.current) {
+      return false;
+    }
+
+    clockMutationPendingRef.current = true;
+    setIsClockMutationPending(true);
+    beginMatchSaving();
+    return true;
+  }, []);
+
+  const endClockMutation = useCallback(() => {
+    clockMutationPendingRef.current = false;
+    setIsClockMutationPending(false);
+  }, []);
+
   const requestPauseState = useCallback(
     async (half: MatchHalf, paused: boolean) => {
       if (!activeGameData) {
         return { applied: false as const };
       }
 
-      try {
-        const result = await setGamePauseStateMutation(activeGameData.gameId, {
-          half,
-          paused,
-          clientId: uuidv4(),
-        });
+      const result = await setGamePauseStateMutation(activeGameData.gameId, {
+        half,
+        paused,
+        clientId: uuidv4(),
+      });
 
-        await pauseTogglesCollection.utils.refetch();
+      await pauseTogglesCollection.utils.refetch();
+      return result;
+    },
+    [activeGameData],
+  );
+
+  const setPaused = useCallback(
+    async (half: MatchHalf, nextPaused: boolean) => {
+      if (!beginClockMutation()) {
+        return { applied: false as const };
+      }
+
+      try {
+        const result = await requestPauseState(half, nextPaused);
+        markMatchSaved();
         return result;
       } catch (error) {
         console.error("Failed to set match pause state", error);
@@ -260,33 +301,33 @@ export function useServerMatchClock({
         } catch (refetchError) {
           console.error("Failed to refresh match pause state", refetchError);
         }
+        markMatchFailed(
+          "Could not update pause state. Retry, or reload the match.",
+          () => {
+            void setPaused(half, nextPaused);
+          },
+        );
         return { applied: false as const };
+      } finally {
+        endClockMutation();
       }
     },
-    [activeGameData],
+    [beginClockMutation, endClockMutation, requestPauseState],
   );
 
-  const setPaused = useCallback(
-    async (half: MatchHalf, paused: boolean) => {
-      if (pausePendingRef.current) {
-        return { applied: false as const };
-      }
-
-      pausePendingRef.current = true;
-      setIsPausePending(true);
-
-      try {
-        return await requestPauseState(half, paused);
-      } finally {
-        pausePendingRef.current = false;
-        setIsPausePending(false);
+  const reconcilePhaseConflict = useCallback(
+    async (gameId: number) => {
+      await gamesCollection.utils.refetch();
+      const refreshed = gamesCollection.get(gameId);
+      if (refreshed) {
+        setMatchStatus(matchStatusFromGame(refreshed));
       }
     },
-    [requestPauseState],
+    [setMatchStatus],
   );
 
   const startFirstHalf = useCallback(() => {
-    if (!activeGameRecord) {
+    if (!activeGameRecord || !beginClockMutation()) {
       return;
     }
 
@@ -298,22 +339,42 @@ export function useServerMatchClock({
         );
         applyGamePhaseLocally(game);
         setMatchStatus(matchStatusFromGame(game));
+        markMatchSaved();
       } catch (error) {
         if (isPhaseConflictError(error)) {
-          await gamesCollection.utils.refetch();
-          const refreshed = gamesCollection.get(activeGameRecord.id);
-          if (refreshed) {
-            setMatchStatus(matchStatusFromGame(refreshed));
-          }
+          await reconcilePhaseConflict(activeGameRecord.id);
+          markMatchSaved();
           return;
         }
         console.error("Failed to start first half", error);
+        try {
+          await reloadMatchClockCollections();
+        } catch (refetchError) {
+          console.error(
+            "Failed to reload match after clock error",
+            refetchError,
+          );
+        }
+        markMatchFailed(
+          "Could not start the first half. Retry, or reload the match.",
+          () => {
+            startFirstHalf();
+          },
+        );
+      } finally {
+        endClockMutation();
       }
     })();
-  }, [activeGameRecord, setMatchStatus]);
+  }, [
+    activeGameRecord,
+    beginClockMutation,
+    endClockMutation,
+    reconcilePhaseConflict,
+    setMatchStatus,
+  ]);
 
   const startSecondHalf = useCallback(() => {
-    if (!activeGameRecord) {
+    if (!activeGameRecord || !beginClockMutation()) {
       return;
     }
 
@@ -325,27 +386,44 @@ export function useServerMatchClock({
         );
         applyGamePhaseLocally(game);
         setMatchStatus(matchStatusFromGame(game));
+        markMatchSaved();
       } catch (error) {
         if (isPhaseConflictError(error)) {
-          await gamesCollection.utils.refetch();
-          const refreshed = gamesCollection.get(activeGameRecord.id);
-          if (refreshed) {
-            setMatchStatus(matchStatusFromGame(refreshed));
-          }
+          await reconcilePhaseConflict(activeGameRecord.id);
+          markMatchSaved();
           return;
         }
         console.error("Failed to start second half", error);
+        try {
+          await reloadMatchClockCollections();
+        } catch (refetchError) {
+          console.error(
+            "Failed to reload match after clock error",
+            refetchError,
+          );
+        }
+        markMatchFailed(
+          "Could not start the second half. Retry, or reload the match.",
+          () => {
+            startSecondHalf();
+          },
+        );
+      } finally {
+        endClockMutation();
       }
     })();
-  }, [activeGameRecord, setMatchStatus]);
+  }, [
+    activeGameRecord,
+    beginClockMutation,
+    endClockMutation,
+    reconcilePhaseConflict,
+    setMatchStatus,
+  ]);
 
   const startHalftime = useCallback(() => {
-    if (!activeGameRecord || pausePendingRef.current) {
+    if (!activeGameRecord || !beginClockMutation()) {
       return;
     }
-
-    pausePendingRef.current = true;
-    setIsPausePending(true);
 
     void (async () => {
       try {
@@ -358,22 +436,40 @@ export function useServerMatchClock({
         // paused state. The server rejects stale resumes once HT has started.
         await requestPauseState("firstHalf", true);
         setMatchStatus(matchStatusFromGame(game));
+        markMatchSaved();
       } catch (error) {
         if (isPhaseConflictError(error)) {
-          await gamesCollection.utils.refetch();
-          const refreshed = gamesCollection.get(activeGameRecord.id);
-          if (refreshed) {
-            setMatchStatus(matchStatusFromGame(refreshed));
-          }
+          await reconcilePhaseConflict(activeGameRecord.id);
+          markMatchSaved();
           return;
         }
         console.error("Failed to start halftime", error);
+        try {
+          await reloadMatchClockCollections();
+        } catch (refetchError) {
+          console.error(
+            "Failed to reload match after clock error",
+            refetchError,
+          );
+        }
+        markMatchFailed(
+          "Could not start halftime. Retry, or reload the match.",
+          () => {
+            startHalftime();
+          },
+        );
       } finally {
-        pausePendingRef.current = false;
-        setIsPausePending(false);
+        endClockMutation();
       }
     })();
-  }, [activeGameRecord, requestPauseState, setMatchStatus]);
+  }, [
+    activeGameRecord,
+    beginClockMutation,
+    endClockMutation,
+    reconcilePhaseConflict,
+    requestPauseState,
+    setMatchStatus,
+  ]);
 
   const togglePause = useCallback(() => {
     if (activeHalf === null) {
@@ -391,7 +487,7 @@ export function useServerMatchClock({
     minutes,
     seconds,
     isRunning,
-    isPausePending,
+    isClockMutationPending,
     activeHalf,
     eventElapsedSeconds: totalSeconds,
     activeGamePauseToggles,

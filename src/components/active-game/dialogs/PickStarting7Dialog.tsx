@@ -9,6 +9,7 @@ interface PickStarting7DialogProps {
   open: boolean;
   players: TeamPlayer[];
   currentStartingNumbers: number[];
+  isSaving?: boolean;
   onSave: (numbers: number[]) => void;
   onClose: () => void;
 }
@@ -17,6 +18,7 @@ export function PickStarting7Dialog({
   open,
   players,
   currentStartingNumbers,
+  isSaving = false,
   onSave,
   onClose,
 }: PickStarting7DialogProps) {
@@ -80,15 +82,16 @@ export function PickStarting7Dialog({
             </div>
 
             <div className="flex justify-end gap-3">
-              <Button variant="ghost" onPress={onClose}>
+              <Button isDisabled={isSaving} variant="ghost" onPress={onClose}>
                 Cancel
               </Button>
               <Button
-                isDisabled={!isValid}
+                isDisabled={!isValid || isSaving}
+                isPending={isSaving}
                 variant="primary"
                 onPress={() => onSave(selected)}
               >
-                Save Lineup
+                {({ isPending }) => (isPending ? "Saving…" : "Save Lineup")}
               </Button>
             </div>
           </Modal.Body>

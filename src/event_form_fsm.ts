@@ -1,6 +1,6 @@
 // https://mermaid.ai/live/edit#pako:eNqNVP2PmjAY_le6_rQlnlHxC3JnwpQ5cwaIkiW3w5AOKhKxNaXe5oz_-1oQgfNjxw-0ffs8z_vR9j1AnwYYajDhiONRhEKGNg9vLZcA8QURwz6PKAHO18yS_aMgxuDhYQAEi_GIhDO6kwPQwNzRZ06GIpRjwKJwxQFdppzMLr9xTH-hGAx1c2hMAWeIJJF0lBQQIR1iDuqpsyWjG4DIHqRxZiBMgtSHS7J1unUR0uOjv6KRjweDM6qyX05D5xz5a5HFa8jobguengBKTYv_c0d4iUmCK-Qgs32APUckK3SZnpyMi1KGVbSU2Eb-WtjsGO0xE3x7Mnz25qKwzsQyPeOHYTqe82IbVYk83JsKI-ObYc6NikBV4lStShorynMB3XF0MZT4LnnFb5hwZ7_FaX4CvbipeTWqq6KUrzC7LJKM5ZoQin-jfZLDq7slvOTbNLuWuXt7qr8Ys3uJXMotIxIlKxxcalTjvub2XTij83vMj_m75Xi2NZ_Is76QKeC3dIp3W8iNJjNjmOmV39U9-vs3dg9bCmVMUWwxk8pRXvyi3YiaWsRJG8DiY5KlKpd0PlV0KkoV59fOaWzpU8-aeaaVTnP6GSY5aW_KbxT4vBSOkxPCkBfkC6zBkEUB1Djb4RrcYLZBcgkPUs2F4gZssAs1MQ0QW7vQJUfB2SLyk9JNThMNIVxBbYniRKx226Do1WcrE-0QsyHdEQ61TioBtQP8A7Vmp1lvKKrSb6lKu9NrKDW4F9Zuu95tdtWe0u911Y7SbB1r8G_qtFHv95S2Kja77Y7aaKm94z-Wdw0U
 
-import { assign, setup } from "xstate";
+import { assign, fromPromise, setup } from "xstate";
 import type {
   EventGroup,
   EventType,
@@ -36,6 +36,7 @@ export type Event =
   | { type: "PICK_SHOT_DIRECTION"; pick: ShotDirectionFields }
   | { type: "PICK_GOAL_OR_NO_GOAL"; goal: boolean }
   | { type: "PICK_SHOT_POSITION"; position: ShotPosition }
+  | { type: "RETRY" }
   | { type: "CANCEL" };
 
 export const eventMachine = setup({
@@ -43,14 +44,17 @@ export const eventMachine = setup({
     context: { playerEvent: {} } as Context,
     events: {} as Event,
   },
+  actors: {
+    persistEvent: fromPromise(
+      async (_args: { input: DeepPartial<PlayerEvent> }) => {},
+    ),
+  },
   actions: {
     resetContext: assign(() => {
       return {
         playerEvent: {},
       };
     }),
-    // allow for the outside to override finishEvent
-    finishEvent: () => {},
   },
   // guards: {
   //   isShotEvent: ({ context }) => context.playerEvent.eventType === "shot",
@@ -410,9 +414,22 @@ export const eventMachine = setup({
       },
     },
     finished: {
-      entry: "finishEvent",
-      always: {
-        target: "idle",
+      invoke: {
+        src: "persistEvent",
+        input: ({ context }) => context.playerEvent,
+        onDone: {
+          target: "idle",
+        },
+        onError: {
+          target: "persistFailed",
+        },
+      },
+    },
+    persistFailed: {
+      on: {
+        RETRY: {
+          target: "finished",
+        },
       },
     },
   },

@@ -10,6 +10,7 @@ import {
 import { Menu } from "lucide-react";
 import type * as React from "react";
 import { useState } from "react";
+import { MatchSyncStatus } from "@/components/MatchSyncStatus";
 import { MobileNavDrawer } from "@/components/ResponsiveDrawer/MobileNavDrawer";
 import { NavLinks } from "@/components/ResponsiveDrawer/NavLinks";
 
@@ -54,7 +55,8 @@ export default function ResponsiveDrawer({
             <Typography.Heading level={4} className="min-w-0 flex-1 truncate">
               Arcazzi
             </Typography.Heading>
-            <div className="ml-auto flex shrink-0 items-center">
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <MatchSyncStatus />
               {trailingActions}
             </div>
           </div>

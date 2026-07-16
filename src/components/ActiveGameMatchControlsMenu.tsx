@@ -12,30 +12,32 @@ export default function ActiveGameMatchControlsMenu() {
 
   if (
     inGameControls.matchStatus !== null ||
-    inGameControls.disableStartFirstHalf
+    inGameControls.disableStartFirstHalf ||
+    inGameControls.isClockMutationPending
   ) {
     disabledKeys.add("start-first-half");
   }
   if (
     inGameControls.matchStatus !== "firstHalf" ||
-    inGameControls.isPausePending
+    inGameControls.isClockMutationPending
   ) {
     disabledKeys.add("start-halftime");
   }
   if (
     inGameControls.matchStatus !== "halftime" ||
-    inGameControls.disableStartSecondHalf
+    inGameControls.disableStartSecondHalf ||
+    inGameControls.isClockMutationPending
   ) {
     disabledKeys.add("start-second-half");
   }
   if (
     inGameControls.matchStatus === null ||
     inGameControls.matchStatus === "halftime" ||
-    inGameControls.isPausePending
+    inGameControls.isClockMutationPending
   ) {
     disabledKeys.add("toggle-pause");
   }
-  if (!inGameControls.hasActiveGame) {
+  if (!inGameControls.hasActiveGame || inGameControls.isClockMutationPending) {
     disabledKeys.add("end-match");
   }
 

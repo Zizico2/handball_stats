@@ -8,7 +8,6 @@ import { PickShotDirectionDialog } from "@/components/active-game/dialogs/PickSh
 import { PickShotPositionDialog } from "@/components/active-game/dialogs/PickShotPositionDialog";
 import { PickStarting7Dialog } from "@/components/active-game/dialogs/PickStarting7Dialog";
 import { QuickSubDialog } from "@/components/active-game/dialogs/QuickSubDialog";
-import { insertPlayerEvent } from "@/components/active-game/utils/insertPlayerEvent";
 import type {
   EventGroup,
   MatchHalf,
@@ -25,10 +24,13 @@ interface ActiveGameEventDialogsProps {
   activeHalf: MatchHalf | null;
   activePlayerNumbers: Set<number>;
   eventElapsedSeconds: number;
+  isSavingQuickSub: boolean;
+  isSavingStarting7: boolean;
   nextEventId: number;
   onCloseQuickSub: () => void;
   onCloseStarting7: () => void;
   onPickManually: () => void;
+  onQuickSub: (playerOut: number, playerIn: number) => void;
   onSaveStarting7: (numbers: number[]) => void;
   quickSubDialogOpen: boolean;
   quickSubPairs: QuickSubPair[];
@@ -40,14 +42,13 @@ interface ActiveGameEventDialogsProps {
 }
 
 export function ActiveGameEventDialogs({
-  activeGameGameId,
-  activeHalf,
   activePlayerNumbers,
-  eventElapsedSeconds,
-  nextEventId,
+  isSavingQuickSub,
+  isSavingStarting7,
   onCloseQuickSub,
   onCloseStarting7,
   onPickManually,
+  onQuickSub,
   onSaveStarting7,
   quickSubDialogOpen,
   quickSubPairs,
@@ -58,6 +59,8 @@ export function ActiveGameEventDialogs({
   state,
 }: ActiveGameEventDialogsProps) {
   const cancel = () => send({ type: "CANCEL" });
+  const dialogsLocked =
+    state.matches("finished") || state.matches("persistFailed");
 
   return (
     <>
@@ -77,6 +80,9 @@ export function ActiveGameEventDialogs({
             : "Pick a Player"
         }
         onPickPlayer={(pickedPlayer) => {
+          if (dialogsLocked) {
+            return;
+          }
           if (pickedPlayer) {
             send({ type: "PICK_PLAYER", player: pickedPlayer });
           } else {
@@ -92,6 +98,9 @@ export function ActiveGameEventDialogs({
         selectionMode="benchOnly"
         title="Pick Player Entering"
         onPickPlayer={(pickedPlayer) => {
+          if (dialogsLocked) {
+            return;
+          }
           if (pickedPlayer) {
             send({ type: "PICK_PLAYER", player: pickedPlayer });
           } else {
@@ -102,38 +111,31 @@ export function ActiveGameEventDialogs({
       {starting7DialogOpen ? (
         <PickStarting7Dialog
           currentStartingNumbers={startingPlayerNumbers}
+          isSaving={isSavingStarting7}
           open={starting7DialogOpen}
           players={selectedTeamPlayers}
           onClose={onCloseStarting7}
           onSave={onSaveStarting7}
         />
       ) : null}
-      {quickSubDialogOpen && activeHalf && activeGameGameId !== null ? (
+      {quickSubDialogOpen ? (
         <QuickSubDialog
           activePlayerNumbers={activePlayerNumbers}
+          isSaving={isSavingQuickSub}
           open={quickSubDialogOpen}
           pairs={quickSubPairs}
           players={selectedTeamPlayers}
           onClose={onCloseQuickSub}
           onPickManually={onPickManually}
-          onQuickSub={(playerOut, playerIn) => {
-            insertPlayerEvent({
-              id: nextEventId,
-              player: playerOut,
-              game_id: activeGameGameId,
-              ellapsed_seconds: eventElapsedSeconds,
-              half: activeHalf,
-              eventType: "substitution",
-              eventGroup: "substitution",
-              event: { playerIn },
-            });
-            onCloseQuickSub();
-          }}
+          onQuickSub={onQuickSub}
         />
       ) : null}
       <PickShotDirectionDialog
         open={state.matches("pickingShotDirection")}
         onPick={(pick) => {
+          if (dialogsLocked) {
+            return;
+          }
           if (pick) {
             send({ type: "PICK_SHOT_DIRECTION", pick });
           } else {
@@ -144,6 +146,9 @@ export function ActiveGameEventDialogs({
       <PickGoalOrNoGoalDialog
         open={state.matches("pickingGoalOrNoGoal")}
         onPickGoalOrNoGoal={(goal) => {
+          if (dialogsLocked) {
+            return;
+          }
           if (goal !== null) {
             send({ type: "PICK_GOAL_OR_NO_GOAL", goal });
           } else {
@@ -154,6 +159,9 @@ export function ActiveGameEventDialogs({
       <PickShotPositionDialog
         open={state.matches("pickingShotPosition")}
         onPickShotPosition={(position) => {
+          if (dialogsLocked) {
+            return;
+          }
           if (position) {
             send({ type: "PICK_SHOT_POSITION", position });
           } else {
@@ -165,6 +173,9 @@ export function ActiveGameEventDialogs({
         group="attack"
         open={state.matches("startingAttack")}
         onPickEventType={(eventType) => {
+          if (dialogsLocked) {
+            return;
+          }
           if (eventType) {
             send({ type: "PICK_ATTACK_EVENT_TYPE", eventType });
           } else {
@@ -176,6 +187,9 @@ export function ActiveGameEventDialogs({
         group="defense"
         open={state.matches("startingDefense")}
         onPickEventType={(eventType) => {
+          if (dialogsLocked) {
+            return;
+          }
           if (eventType) {
             send({ type: "PICK_DEFENSE_EVENT_TYPE", eventType });
           } else {
@@ -187,6 +201,9 @@ export function ActiveGameEventDialogs({
         group="sanction"
         open={state.matches("startingSanction")}
         onPickEventType={(eventType) => {
+          if (dialogsLocked) {
+            return;
+          }
           if (eventType) {
             send({ type: "PICK_SANCTION_EVENT_TYPE", eventType });
           } else {

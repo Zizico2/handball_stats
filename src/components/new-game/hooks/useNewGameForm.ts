@@ -4,6 +4,11 @@ import { useLiveSuspenseQuery } from "@tanstack/react-db";
 import { useCallback, useState } from "react";
 import { activeGameCollection, gamesCollection } from "@/collections";
 import { useNextLocalId } from "@/hooks/useNextLocalId";
+import {
+  beginMatchSaving,
+  markMatchFailed,
+  markMatchSaved,
+} from "@/matchSyncAtom";
 import { startGameMutation } from "@/server/api/client";
 
 interface UseNewGameFormParams {
@@ -37,6 +42,7 @@ export function useNewGameForm({
 
     setIsStarting(true);
     setStartError(null);
+    beginMatchSaving();
 
     try {
       await startGameMutation({
@@ -50,9 +56,14 @@ export function useNewGameForm({
         activeGameCollection.utils.refetch(),
       ]);
 
+      markMatchSaved();
       onStarted();
     } catch {
-      setStartError("Could not start the game. Please try again.");
+      const message = "Could not start the game. Please try again.";
+      setStartError(message);
+      markMatchFailed(message, () => {
+        void handleStartNewGame();
+      });
     } finally {
       setIsStarting(false);
     }

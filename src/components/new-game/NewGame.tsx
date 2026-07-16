@@ -14,7 +14,7 @@ import { useEffect, useMemo, useState } from "react";
 import { activeGameCollection, teamsCollection } from "@/collections";
 import { AppNextLink } from "@/components/AppNextLink";
 import { useNewGameForm } from "@/components/new-game/hooks/useNewGameForm";
-import { AlertCallout } from "@/components/ui/AlertCallout";
+import { AlertCallout, AlertCalloutButton } from "@/components/ui/AlertCallout";
 
 function NewGame() {
   const router = useRouter();
@@ -78,7 +78,22 @@ function NewGame() {
           </AlertCallout>
         ) : null}
         {startError ? (
-          <AlertCallout variant="danger">{startError}</AlertCallout>
+          <div data-testid="match-sync-failure">
+            <AlertCallout
+              variant="danger"
+              action={
+                <AlertCalloutButton
+                  onPress={() => {
+                    void handleStartNewGame();
+                  }}
+                >
+                  Retry
+                </AlertCalloutButton>
+              }
+            >
+              {startError}
+            </AlertCallout>
+          </div>
         ) : null}
         <Select
           fullWidth
