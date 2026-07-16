@@ -127,6 +127,11 @@ bun run preview
 The preview command performs its required OpenNext build. Cloudflare builds, remote migrations,
 version uploads, and deployments are intentionally available only through GitHub Actions.
 
+Pull requests use Cloudflare Worker version preview aliases, Cloudflare's native branch-preview
+primitive. D1 does not provide database branches, so CI creates one isolated D1 database per PR
+and generates an ephemeral Wrangler config that binds that database to the preview version. The
+config exists only on the runner and is removed after upload.
+
 ---
 
 ## Project Structure

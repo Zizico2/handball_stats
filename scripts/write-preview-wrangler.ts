@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 
 function usage(): never {
   throw new Error(
-    "Usage: bun run write-preview-wrangler <database-name> <database-id> <output-path>",
+    "Usage: bun scripts/write-preview-wrangler.ts <database-name> <database-id> <output-path>",
   );
 }
 
