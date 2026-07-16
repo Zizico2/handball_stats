@@ -54,4 +54,4 @@ jobs:
             --tag "$GITHUB_SHA" \
             --secrets-file "$secrets_file"
       - name: Smoke test beta
-        run: curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 5 https://arcazzi.bernardobordadagua.com/
+        run: curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 5 https://arcazzi.bernardobordadagua.com/

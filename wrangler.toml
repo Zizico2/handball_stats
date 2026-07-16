@@ -3,6 +3,7 @@ main = ".open-next/worker.js"
 name = "arcazzi"
 compatibility_date = "2026-02-10"
 compatibility_flags = ["nodejs_compat"]
+preview_urls = true
 
 [dev]
 host = "localhost:8789"
