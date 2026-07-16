@@ -109,6 +109,8 @@ jobs:
       - name: Publish preview URL
         id: preview
         run: echo "url=https://pr-$PR_NUMBER-arcazzi.${{ vars.CLOUDFLARE_WORKERS_SUBDOMAIN }}.workers.dev" >> "$GITHUB_OUTPUT"
+      - name: Install Playwright browser
+        run: bunx playwright install --with-deps chromium
       - name: Run remote Playwright suite
         env:
           PLAYWRIGHT_BASE_URL: ${{ steps.preview.outputs.url }}
