@@ -3,7 +3,7 @@ import { and, eq, getColumns, isNotNull, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
-import { startGameBodySchema } from "@/datamodel";
+import { gamePauseStateBodySchema, startGameBodySchema } from "@/datamodel";
 import { dbRowToGame, gameToDbRow } from "@/db";
 import * as schema from "@/db/schema";
 import type { ApiEnv } from "@/server/api/types";
@@ -12,6 +12,10 @@ import {
   decidePhaseTransition,
   type GamePhaseTransition,
 } from "@/server/gamePhaseTransitions";
+import {
+  GameNotFoundError,
+  setGamePauseState,
+} from "@/server/setGamePauseState";
 import {
   StartGameConflictError,
   StartGameTeamNotFoundError,
@@ -197,6 +201,35 @@ export const gamesRoutes = new Hono<ApiEnv>()
             ? decision.reason
             : "Game phase transition conflict",
       });
+    },
+  )
+  .post(
+    "/:gameId/pause-state",
+    zValidator("param", gameIdParamSchema),
+    zValidator("json", gamePauseStateBodySchema),
+    async (c) => {
+      const { gameId } = c.req.valid("param");
+      const { half, paused, clientId } = c.req.valid("json");
+      const { userId } = c.env;
+      const nowMs = Date.now();
+      const resolvedClientId = clientId ?? crypto.randomUUID();
+
+      try {
+        const result = await setGamePauseState(
+          userId,
+          gameId,
+          half,
+          paused,
+          resolvedClientId,
+          nowMs,
+        );
+        return c.json(result);
+      } catch (error) {
+        if (error instanceof GameNotFoundError) {
+          throw new HTTPException(404, { message: error.message });
+        }
+        throw error;
+      }
     },
   )
   .put("/", zValidator("json", gamesArraySchema), async (c) => {

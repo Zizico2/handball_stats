@@ -27,7 +27,8 @@ export default function ActiveGameMatchControlsMenu() {
   }
   if (
     inGameControls.matchStatus === null ||
-    inGameControls.matchStatus === "halftime"
+    inGameControls.matchStatus === "halftime" ||
+    inGameControls.isPausePending
   ) {
     disabledKeys.add("toggle-pause");
   }

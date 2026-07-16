@@ -14,6 +14,7 @@ export interface ActiveGameControlsState extends ActiveGameControlActions {
   hasActiveGame: boolean;
   matchStatus: MatchStatus | null;
   isRunning: boolean;
+  isPausePending: boolean;
   disableStartFirstHalf: boolean;
   disableStartSecondHalf: boolean;
 }
@@ -24,6 +25,7 @@ export const initialActiveGameControlsState: ActiveGameControlsState = {
   hasActiveGame: false,
   matchStatus: null,
   isRunning: false,
+  isPausePending: false,
   disableStartFirstHalf: true,
   disableStartSecondHalf: true,
   onEndMatch: noop,

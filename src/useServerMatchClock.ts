@@ -6,14 +6,16 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { gamesCollection, pauseTogglesCollection } from "@/collections";
-import type { ActiveGame, Game, PauseToggle } from "@/datamodel";
+import type { ActiveGame, Game, MatchHalf, PauseToggle } from "@/datamodel";
 import type { MatchStatus } from "@/inGameControlsAtoms";
 import {
   getMatchClockSnapshotQuery,
+  setGamePauseStateMutation,
   transitionGamePhaseMutation,
 } from "@/server/api/client";
 import { useNow } from "@/useNow";
@@ -57,6 +59,7 @@ interface UseServerMatchClockResult {
   minutes: number;
   seconds: number;
   isRunning: boolean;
+  isPausePending: boolean;
   activeHalf: "firstHalf" | "secondHalf" | null;
   eventElapsedSeconds: number;
   activeGamePauseToggles: PauseToggle[];
@@ -122,6 +125,8 @@ export function useServerMatchClock({
   const pauseToggles = pauseTogglesQuery.data;
 
   const [serverOffsetMs, setServerOffsetMs] = useState(0);
+  const [isPausePending, setIsPausePending] = useState(false);
+  const pausePendingRef = useRef(false);
 
   const syncServerOffset = useCallback(async () => {
     if (!activeGameData) {
@@ -233,20 +238,38 @@ export function useServerMatchClock({
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
 
-  const appendPauseToggle = useCallback(
-    (half: "firstHalf" | "secondHalf") => {
+  const setPaused = useCallback(
+    async (half: MatchHalf, paused: boolean) => {
       if (!activeGameData) {
-        return;
+        return { applied: false as const };
       }
 
-      pauseTogglesCollection.insert({
-        id: uuidv4(),
-        gameId: activeGameData.gameId,
-        half,
-        toggledAtMs: Date.now() + serverOffsetMs,
-      });
+      if (pausePendingRef.current) {
+        return { applied: false as const };
+      }
+
+      pausePendingRef.current = true;
+      setIsPausePending(true);
+
+      try {
+        const result = await setGamePauseStateMutation(activeGameData.gameId, {
+          half,
+          paused,
+          clientId: uuidv4(),
+        });
+
+        await pauseTogglesCollection.utils.refetch();
+        return result;
+      } catch (error) {
+        console.error("Failed to set match pause state", error);
+        await pauseTogglesCollection.utils.refetch();
+        return { applied: false as const };
+      } finally {
+        pausePendingRef.current = false;
+        setIsPausePending(false);
+      }
     },
-    [activeGameData, serverOffsetMs],
+    [activeGameData],
   );
 
   const startFirstHalf = useCallback(() => {
@@ -317,10 +340,10 @@ export function useServerMatchClock({
           "halftime",
         );
         applyGamePhaseLocally(game);
-        // Only the writer that actually applied HT may insert the pause toggle,
-        // so concurrent idempotent tabs cannot resume the clock with a second toggle.
+        // Only the writer that actually applied HT may pause the clock,
+        // so concurrent idempotent tabs cannot resume with a second toggle.
         if (applied && shouldPauseFirstHalf) {
-          appendPauseToggle("firstHalf");
+          await setPaused("firstHalf", true);
         }
         setMatchStatus(matchStatusFromGame(game));
       } catch (error) {
@@ -335,18 +358,15 @@ export function useServerMatchClock({
         console.error("Failed to start halftime", error);
       }
     })();
-  }, [activeGameRecord, activeHalf, appendPauseToggle, paused, setMatchStatus]);
+  }, [activeGameRecord, activeHalf, paused, setMatchStatus, setPaused]);
 
   const togglePause = useCallback(() => {
-    if (activeHalf === "firstHalf") {
-      appendPauseToggle("firstHalf");
+    if (activeHalf === null) {
       return;
     }
 
-    if (activeHalf === "secondHalf") {
-      appendPauseToggle("secondHalf");
-    }
-  }, [activeHalf, appendPauseToggle]);
+    void setPaused(activeHalf, !paused);
+  }, [activeHalf, paused, setPaused]);
 
   const clearClockState = useCallback(() => {
     setMatchStatus(null);
@@ -356,6 +376,7 @@ export function useServerMatchClock({
     minutes,
     seconds,
     isRunning,
+    isPausePending,
     activeHalf,
     eventElapsedSeconds: totalSeconds,
     activeGamePauseToggles,
