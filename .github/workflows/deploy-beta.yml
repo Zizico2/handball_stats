@@ -49,6 +49,6 @@ jobs:
           secrets_file="$RUNNER_TEMP/beta-secrets.json"
           trap 'rm -f "$secrets_file"' EXIT
           jq -n --arg key "$CLERK_SECRET_KEY" '{CLERK_SECRET_KEY: $key}' > "$secrets_file"
-          bun run deploy:cf -- --message "Beta $GITHUB_SHA" --tag "$GITHUB_SHA" --secrets-file "$secrets_file"
+          bun run deploy:cf -- --message="Beta $GITHUB_SHA" --tag="$GITHUB_SHA" --secrets-file="$secrets_file"
       - name: Smoke test beta
         run: curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 5 https://arcazzi.bernardobordadagua.com/
