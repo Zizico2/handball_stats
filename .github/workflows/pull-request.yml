@@ -139,11 +139,15 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      deployments: write
     environment: preview
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       DB_NAME: arcazzi-pr-${{ github.event.pull_request.number }}
+      PR_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
@@ -155,4 +159,23 @@ jobs:
           database_id="$(bunx wrangler d1 list --json | jq -r --arg name "$DB_NAME" '.[] | select(.name == $name) | .uuid')"
           if [ -n "$database_id" ]; then
             bunx wrangler d1 delete "$DB_NAME" --skip-confirmation
+          fi
+      - name: Mark preview deployment inactive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          deployment_id="$(gh api \
+            --method GET \
+            "repos/$GITHUB_REPOSITORY/deployments?environment=preview&per_page=100" \
+            | jq -r --arg head_sha "$PR_SHA" --arg event_sha "$GITHUB_SHA" \
+              '[.[] | select(.sha == $head_sha or .sha == $event_sha)] | sort_by(.created_at) | last | .id // empty')"
+
+          if [ -n "$deployment_id" ]; then
+            gh api \
+              --method POST \
+              "repos/$GITHUB_REPOSITORY/deployments/$deployment_id/statuses" \
+              -f state=inactive \
+              -F auto_inactive=false
+          else
+            echo "No preview deployment found for $PR_SHA; cleanup is already complete."
           fi
