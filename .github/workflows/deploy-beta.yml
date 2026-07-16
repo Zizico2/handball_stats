@@ -38,9 +38,12 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run check
       - run: bun run test
-      - run: bun run build:cf
+      - run: bunx opennextjs-cloudflare build
       - name: Migrate beta database
-        run: bun run db:migrate:prod
+        run: |
+          bunx rimraf drizzle_flat
+          bun run db:flatten
+          bunx wrangler d1 migrations apply arcazzi --remote
       - name: Deploy exact build
         env:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}

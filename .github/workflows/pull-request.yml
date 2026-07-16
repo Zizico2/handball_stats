@@ -46,7 +46,7 @@ jobs:
           key: next-${{ runner.os }}-${{ hashFiles('bun.lock') }}-${{ github.sha }}
           restore-keys: next-${{ runner.os }}-${{ hashFiles('bun.lock') }}-
       - run: bun install --frozen-lockfile
-      - run: bun run build:cf
+      - run: bunx opennextjs-cloudflare build
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: open-next-${{ github.sha }}
@@ -95,7 +95,7 @@ jobs:
         run: |
           bunx rimraf drizzle_flat
           bun run db:flatten
-          bun run write-preview-wrangler "$DB_NAME" "${{ steps.database.outputs.database-id }}" wrangler-preview.json
+          bun scripts/write-preview-wrangler.ts "$DB_NAME" "${{ steps.database.outputs.database-id }}" wrangler-preview.json
           bunx wrangler d1 migrations apply DB --remote --config wrangler-preview.json
       - name: Upload preview version
         env:
