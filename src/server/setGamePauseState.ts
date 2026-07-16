@@ -22,6 +22,15 @@ export class GameNotFoundError extends Error {
   }
 }
 
+export class PauseStateConflictError extends Error {
+  constructor(gameId: number, half: MatchHalf, desiredPaused: boolean) {
+    super(
+      `Game ${gameId} ${half} cannot be set to ${desiredPaused ? "paused" : "running"} in its current phase`,
+    );
+    this.name = "PauseStateConflictError";
+  }
+}
+
 async function countHalfToggles(
   userId: string,
   gameLocalId: number,
@@ -91,6 +100,30 @@ export async function setGamePauseState(
 
   const db = await getDb();
   const expectedParity = expectedParityForPauseInsert(desiredPaused);
+  const phaseGuard =
+    half === "firstHalf"
+      ? desiredPaused
+        ? sql`EXISTS (
+            SELECT 1 FROM games
+            WHERE user_id = ${userId}
+              AND local_id = ${gameLocalId}
+              AND first_half_started_at_ms IS NOT NULL
+              AND second_half_started_at_ms IS NULL
+          )`
+        : sql`EXISTS (
+            SELECT 1 FROM games
+            WHERE user_id = ${userId}
+              AND local_id = ${gameLocalId}
+              AND first_half_started_at_ms IS NOT NULL
+              AND halftime_started_at_ms IS NULL
+              AND second_half_started_at_ms IS NULL
+          )`
+      : sql`EXISTS (
+          SELECT 1 FROM games
+          WHERE user_id = ${userId}
+            AND local_id = ${gameLocalId}
+            AND second_half_started_at_ms IS NOT NULL
+        )`;
 
   // Attempt the conditional write first (same pattern as phase transitions).
   const insertedRow = await db.get<Record<string, unknown>>(sql`
@@ -102,6 +135,7 @@ export async function setGamePauseState(
         AND game_local_id = ${gameLocalId}
         AND half = ${half}
     ) % 2 = ${expectedParity}
+      AND ${phaseGuard}
     RETURNING id, user_id, client_id, game_local_id, half, toggled_at_ms
   `);
 
@@ -118,6 +152,10 @@ export async function setGamePauseState(
 
   const toggleCount = await countHalfToggles(userId, gameLocalId, half);
   const paused = pausedFromToggleCount(toggleCount);
+
+  if (paused !== desiredPaused) {
+    throw new PauseStateConflictError(gameLocalId, half, desiredPaused);
+  }
 
   return {
     applied: false,

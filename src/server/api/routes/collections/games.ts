@@ -14,6 +14,7 @@ import {
 } from "@/server/gamePhaseTransitions";
 import {
   GameNotFoundError,
+  PauseStateConflictError,
   setGamePauseState,
 } from "@/server/setGamePauseState";
 import {
@@ -227,6 +228,9 @@ export const gamesRoutes = new Hono<ApiEnv>()
       } catch (error) {
         if (error instanceof GameNotFoundError) {
           throw new HTTPException(404, { message: error.message });
+        }
+        if (error instanceof PauseStateConflictError) {
+          throw new HTTPException(409, { message: error.message });
         }
         throw error;
       }

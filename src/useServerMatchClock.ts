@@ -238,18 +238,11 @@ export function useServerMatchClock({
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
 
-  const setPaused = useCallback(
+  const requestPauseState = useCallback(
     async (half: MatchHalf, paused: boolean) => {
       if (!activeGameData) {
         return { applied: false as const };
       }
-
-      if (pausePendingRef.current) {
-        return { applied: false as const };
-      }
-
-      pausePendingRef.current = true;
-      setIsPausePending(true);
 
       try {
         const result = await setGamePauseStateMutation(activeGameData.gameId, {
@@ -262,14 +255,34 @@ export function useServerMatchClock({
         return result;
       } catch (error) {
         console.error("Failed to set match pause state", error);
-        await pauseTogglesCollection.utils.refetch();
+        try {
+          await pauseTogglesCollection.utils.refetch();
+        } catch (refetchError) {
+          console.error("Failed to refresh match pause state", refetchError);
+        }
         return { applied: false as const };
+      }
+    },
+    [activeGameData],
+  );
+
+  const setPaused = useCallback(
+    async (half: MatchHalf, paused: boolean) => {
+      if (pausePendingRef.current) {
+        return { applied: false as const };
+      }
+
+      pausePendingRef.current = true;
+      setIsPausePending(true);
+
+      try {
+        return await requestPauseState(half, paused);
       } finally {
         pausePendingRef.current = false;
         setIsPausePending(false);
       }
     },
-    [activeGameData],
+    [requestPauseState],
   );
 
   const startFirstHalf = useCallback(() => {
@@ -327,24 +340,23 @@ export function useServerMatchClock({
   }, [activeGameRecord, setMatchStatus]);
 
   const startHalftime = useCallback(() => {
-    if (!activeGameRecord) {
+    if (!activeGameRecord || pausePendingRef.current) {
       return;
     }
 
-    const shouldPauseFirstHalf = activeHalf === "firstHalf" && !paused;
+    pausePendingRef.current = true;
+    setIsPausePending(true);
 
     void (async () => {
       try {
-        const { game, applied } = await transitionGamePhaseMutation(
+        const { game } = await transitionGamePhaseMutation(
           activeGameRecord.id,
           "halftime",
         );
         applyGamePhaseLocally(game);
-        // Only the writer that actually applied HT may pause the clock,
-        // so concurrent idempotent tabs cannot resume with a second toggle.
-        if (applied && shouldPauseFirstHalf) {
-          await setPaused("firstHalf", true);
-        }
+        // Every successful or idempotent HT transition enforces the desired
+        // paused state. The server rejects stale resumes once HT has started.
+        await requestPauseState("firstHalf", true);
         setMatchStatus(matchStatusFromGame(game));
       } catch (error) {
         if (isPhaseConflictError(error)) {
@@ -356,9 +368,12 @@ export function useServerMatchClock({
           return;
         }
         console.error("Failed to start halftime", error);
+      } finally {
+        pausePendingRef.current = false;
+        setIsPausePending(false);
       }
     })();
-  }, [activeGameRecord, activeHalf, paused, setMatchStatus, setPaused]);
+  }, [activeGameRecord, requestPauseState, setMatchStatus]);
 
   const togglePause = useCallback(() => {
     if (activeHalf === null) {

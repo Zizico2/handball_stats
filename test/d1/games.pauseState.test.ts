@@ -151,6 +151,87 @@ describe("games pause-state API (D1)", () => {
     expect(res.status).toBe(404);
   });
 
+  test("rejects pause before the requested half starts", async () => {
+    const db = getTestDb();
+    await db
+      .update(schema.games)
+      .set({ firstHalfStartedAtMs: null })
+      .where(
+        and(
+          eq(schema.games.userId, USER_ID),
+          eq(schema.games.localId, GAME_ID),
+        ),
+      );
+
+    const res = await pauseStateRequest(GAME_ID, {
+      half: "firstHalf",
+      paused: true,
+    });
+
+    expect(res.status).toBe(409);
+    expect(await countToggles("firstHalf")).toBe(0);
+  });
+
+  test("allows halftime auto-pause but rejects a stale resume", async () => {
+    const db = getTestDb();
+    await db
+      .update(schema.games)
+      .set({ halftimeStartedAtMs: 2_000 })
+      .where(
+        and(
+          eq(schema.games.userId, USER_ID),
+          eq(schema.games.localId, GAME_ID),
+        ),
+      );
+
+    const pause = await pauseStateRequest(GAME_ID, {
+      half: "firstHalf",
+      paused: true,
+    });
+    expect(pause.status).toBe(200);
+
+    const resume = await pauseStateRequest(GAME_ID, {
+      half: "firstHalf",
+      paused: false,
+    });
+    expect(resume.status).toBe(409);
+    expect(await countToggles("firstHalf")).toBe(1);
+  });
+
+  test("halftime auto-pause wins when resume commits first", async () => {
+    expect(
+      (await pauseStateRequest(GAME_ID, { half: "firstHalf", paused: true }))
+        .status,
+    ).toBe(200);
+    expect(
+      (await pauseStateRequest(GAME_ID, { half: "firstHalf", paused: false }))
+        .status,
+    ).toBe(200);
+
+    const db = getTestDb();
+    await db
+      .update(schema.games)
+      .set({ halftimeStartedAtMs: 2_000 })
+      .where(
+        and(
+          eq(schema.games.userId, USER_ID),
+          eq(schema.games.localId, GAME_ID),
+        ),
+      );
+
+    const pause = await pauseStateRequest(GAME_ID, {
+      half: "firstHalf",
+      paused: true,
+    });
+    expect(pause.status).toBe(200);
+    expect((await pause.json()) as GamePauseStateResult).toMatchObject({
+      applied: true,
+      paused: true,
+      toggleCount: 3,
+    });
+    expect(await countToggles("firstHalf")).toBe(3);
+  });
+
   test("concurrent double-pause: one applied, one idempotent, clock paused", async () => {
     const [a, b] = await Promise.all([
       pauseStateRequest(GAME_ID, { half: "firstHalf", paused: true }),
