@@ -41,7 +41,9 @@ const STARTING_EVENTS = [
 async function getJson<T>(request: APIRequestContext, url: string): Promise<T> {
   const response = await request.get(url);
   if (!response.ok()) {
-    throw new Error(`GET ${url} failed: ${response.status()} ${await response.text()}`);
+    throw new Error(
+      `GET ${url} failed: ${response.status()} ${await response.text()}`,
+    );
   }
   return response.json() as Promise<T>;
 }
@@ -53,7 +55,9 @@ async function postJson(
 ): Promise<void> {
   const response = await request.post(url, { data });
   if (!response.ok()) {
-    throw new Error(`POST ${url} failed: ${response.status()} ${await response.text()}`);
+    throw new Error(
+      `POST ${url} failed: ${response.status()} ${await response.text()}`,
+    );
   }
 }
 
