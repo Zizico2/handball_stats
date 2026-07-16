@@ -50,8 +50,9 @@ jobs:
           trap 'rm -f "$secrets_file"' EXIT
           jq -n --arg key "$CLERK_SECRET_KEY" '{CLERK_SECRET_KEY: $key}' > "$secrets_file"
           OPEN_NEXT_DEPLOY=true bunx wrangler deploy \
+            --preview-alias beta-smoke \
             --message "Beta $GITHUB_SHA" \
             --tag "$GITHUB_SHA" \
             --secrets-file "$secrets_file"
       - name: Smoke test beta
-        run: curl --head --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 5 https://arcazzi.bernardobordadagua.com/
+        run: curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 5 https://beta-smoke-arcazzi.${{ vars.CLOUDFLARE_WORKERS_SUBDOMAIN }}.workers.dev/
