@@ -16,7 +16,10 @@ export default function ActiveGameMatchControlsMenu() {
   ) {
     disabledKeys.add("start-first-half");
   }
-  if (inGameControls.matchStatus !== "firstHalf") {
+  if (
+    inGameControls.matchStatus !== "firstHalf" ||
+    inGameControls.isPausePending
+  ) {
     disabledKeys.add("start-halftime");
   }
   if (
@@ -27,7 +30,8 @@ export default function ActiveGameMatchControlsMenu() {
   }
   if (
     inGameControls.matchStatus === null ||
-    inGameControls.matchStatus === "halftime"
+    inGameControls.matchStatus === "halftime" ||
+    inGameControls.isPausePending
   ) {
     disabledKeys.add("toggle-pause");
   }

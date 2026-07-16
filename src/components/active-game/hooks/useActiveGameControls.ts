@@ -39,6 +39,7 @@ export function useActiveGameControls({
     activeHalf,
     clearClockState,
     eventElapsedSeconds,
+    isPausePending,
     isRunning,
     minutes,
     seconds,
@@ -67,6 +68,7 @@ export function useActiveGameControls({
       hasActiveGame: activeGameData !== null,
       matchStatus,
       isRunning,
+      isPausePending,
       disableStartFirstHalf: firstHalfStartingPlayerNumbers.length === 0,
       disableStartSecondHalf: secondHalfStartingPlayerNumbers.length === 0,
       onEndMatch: handleEndMatch,
@@ -82,6 +84,7 @@ export function useActiveGameControls({
   }, [
     activeGameData,
     handleEndMatch,
+    isPausePending,
     isRunning,
     matchStatus,
     firstHalfStartingPlayerNumbers.length,

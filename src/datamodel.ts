@@ -333,6 +333,22 @@ export const pauseToggleSchema = z.object({
 });
 export type PauseToggle = z.infer<typeof pauseToggleSchema>;
 
+export const gamePauseStateBodySchema = z.object({
+  half: matchHalfSchema,
+  paused: z.boolean(),
+  clientId: z.uuid().optional(),
+});
+export type GamePauseStateBody = z.infer<typeof gamePauseStateBodySchema>;
+
+export const gamePauseStateResultSchema = z.object({
+  /** True only when this request inserted a pause toggle row. */
+  applied: z.boolean(),
+  paused: z.boolean(),
+  toggleCount: z.number().int().nonnegative(),
+  pauseToggle: pauseToggleSchema.nullable(),
+});
+export type GamePauseStateResult = z.infer<typeof gamePauseStateResultSchema>;
+
 export const matchClockSnapshotSchema = z.object({
   gameId: z.number(),
   serverNowMs: z.number(),

@@ -107,6 +107,22 @@ export async function transitionGamePhaseMutation(
   );
 }
 
+export async function setGamePauseStateMutation(
+  gameId: number,
+  body: {
+    half: "firstHalf" | "secondHalf";
+    paused: boolean;
+    clientId?: string;
+  },
+) {
+  return parseResponse(
+    apiClient.api.collections.games[":gameId"]["pause-state"].$post({
+      param: { gameId: String(gameId) },
+      json: body,
+    }),
+  );
+}
+
 export async function upsertActiveGameMutation(items: ActiveGame[]) {
   return parseResponse(
     apiClient.api.collections["active-game"].$put({ json: items }),
