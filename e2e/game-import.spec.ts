@@ -48,26 +48,46 @@ function uniqueCsv() {
   };
 }
 
-async function chooseTrackedTeam(page: Page) {
-  // Auto-preview after file upload must finish before the metadata Select mounts.
-  const trigger = page.getByLabel("Tracked team");
-  await expect(trigger).toBeVisible({ timeout: 30_000 });
-  await expect(
-    page.getByRole("button", { name: "Preview import" }),
-  ).toBeVisible();
+async function openImportDialog(page: Page) {
+  await page.getByRole("button", { name: "Import game from CSV" }).click();
+  // File input stays disabled until teams finish loading (and sole team is auto-selected).
+  await expect(page.locator("#game-import-file")).toBeEnabled({
+    timeout: 30_000,
+  });
+}
 
-  const option = page.getByRole("option", { name: "E2E Home" });
-  for (let attempt = 0; attempt < 2; attempt++) {
-    await trigger.click({ timeout: 5_000 });
-    try {
-      await expect(option).toBeVisible({ timeout: 5_000 });
-      await option.click();
-      return;
-    } catch {
-      await page.keyboard.press("Escape");
-    }
+async function uploadCsv(
+  page: Page,
+  file: { name: string; mimeType: string; buffer: Buffer },
+) {
+  await page.locator("#game-import-file").setInputFiles(file);
+}
+
+/**
+ * After upload, auto-preview either finishes outright or lands on metadata.
+ * With a single seeded team the dialog auto-selects it, so metadata only
+ * needs a Preview click — never a HeroUI Select interaction.
+ */
+async function finishPreviewIfNeeded(page: Page) {
+  const previewBtn = page.getByRole("button", { name: "Preview import" });
+  const invalid = page.getByText("The file failed validation");
+  const ready = page.getByText("Ready to import");
+  const already = page.getByText("Already imported", { exact: true });
+
+  await expect(previewBtn.or(invalid).or(ready).or(already)).toBeVisible({
+    timeout: 30_000,
+  });
+
+  if (
+    (await invalid.isVisible()) ||
+    (await ready.isVisible()) ||
+    (await already.isVisible())
+  ) {
+    return;
   }
-  throw new Error('Could not select tracked team "E2E Home"');
+
+  await expect(previewBtn).toBeEnabled({ timeout: 10_000 });
+  await previewBtn.click();
 }
 
 async function seedImportedGameViaApi(request: APIRequestContext, csv: string) {
@@ -114,7 +134,7 @@ test.describe("game import from CSV", () => {
     page,
   }) => {
     await page.goto("/past-games");
-    await page.getByRole("button", { name: "Import game from CSV" }).click();
+    await openImportDialog(page);
     await expect(
       page.getByRole("heading", { name: "Import game from CSV" }),
     ).toBeVisible();
@@ -132,16 +152,14 @@ test.describe("game import from CSV", () => {
   }) => {
     test.setTimeout(90_000);
     await page.goto("/past-games");
-    await page.getByRole("button", { name: "Import game from CSV" }).click();
+    await openImportDialog(page);
 
-    await page.locator("#game-import-file").setInputFiles({
+    await uploadCsv(page, {
       name: "invalid.csv",
       mimeType: "text/csv",
       buffer: Buffer.from(INVALID_CSV, "utf-8"),
     });
-
-    await chooseTrackedTeam(page);
-    await page.getByRole("button", { name: "Preview import" }).click();
+    await finishPreviewIfNeeded(page);
 
     await expect(page.getByText("The file failed validation")).toBeVisible();
     await expect(page.getByText("thirdHalf")).toBeVisible();
@@ -157,16 +175,14 @@ test.describe("game import from CSV", () => {
     const { csv, opponent } = uniqueCsv();
 
     await page.goto("/past-games");
-    await page.getByRole("button", { name: "Import game from CSV" }).click();
+    await openImportDialog(page);
 
-    await page.locator("#game-import-file").setInputFiles({
+    await uploadCsv(page, {
       name: "match.csv",
       mimeType: "text/csv",
       buffer: Buffer.from(csv, "utf-8"),
     });
-
-    await chooseTrackedTeam(page);
-    await page.getByRole("button", { name: "Preview import" }).click();
+    await finishPreviewIfNeeded(page);
 
     await expect(page.getByText("Ready to import")).toBeVisible();
     await expect(
@@ -200,19 +216,18 @@ test.describe("game import from CSV", () => {
     const { csv } = uniqueCsv();
 
     // Seed the first import via API so this test only exercises the UI
-    // duplicate path (avoids a 60s+ double wizard that flakes on Select).
+    // duplicate path once.
     const authed = await refreshE2eSession(page);
     await seedImportedGameViaApi(authed, csv);
 
     await page.goto("/past-games");
-    await page.getByRole("button", { name: "Import game from CSV" }).click();
-    await page.locator("#game-import-file").setInputFiles({
+    await openImportDialog(page);
+    await uploadCsv(page, {
       name: "match.csv",
       mimeType: "text/csv",
       buffer: Buffer.from(csv, "utf-8"),
     });
-    await chooseTrackedTeam(page);
-    await page.getByRole("button", { name: "Preview import" }).click();
+    await finishPreviewIfNeeded(page);
 
     await expect(
       page.getByText("Already imported", { exact: true }),

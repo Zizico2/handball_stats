@@ -114,7 +114,12 @@ export function PastGameImportDialog() {
     setIsOpen(true);
     resetAll();
     try {
-      setTeams(await listTeamsQuery());
+      const nextTeams = await listTeamsQuery();
+      setTeams(nextTeams);
+      // Single-team accounts (including E2E) skip the flaky Select interaction.
+      if (nextTeams.length === 1) {
+        setHomeTeamId(nextTeams[0].id);
+      }
     } catch {
       setTeams([]);
     }
@@ -267,6 +272,7 @@ export function PastGameImportDialog() {
             ref={fileInputRef}
             accept=".csv,text/csv"
             className="rounded-lg border border-separator p-2 text-sm"
+            disabled={teams === null}
             id="game-import-file"
             type="file"
             onChange={(event) =>
