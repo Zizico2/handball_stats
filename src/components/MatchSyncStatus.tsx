@@ -2,12 +2,12 @@
 
 import { Chip } from "@heroui/react";
 import { useAtomValue } from "jotai";
-import { matchSyncAtom } from "@/matchSyncAtom";
+import { isMatchSyncChipVisible, matchSyncAtom } from "@/matchSyncAtom";
 
 export function MatchSyncStatus() {
   const sync = useAtomValue(matchSyncAtom);
 
-  if (sync.status === "idle") {
+  if (!isMatchSyncChipVisible(sync)) {
     return null;
   }
 
