@@ -11,6 +11,7 @@ interface QuickSubDialogProps {
   pairs: QuickSubPair[];
   players: TeamPlayer[];
   activePlayerNumbers: Set<number>;
+  isSaving?: boolean;
   onQuickSub: (playerOut: number, playerIn: number) => void;
   onPickManually: () => void;
   onClose: () => void;
@@ -21,6 +22,7 @@ export function QuickSubDialog({
   pairs,
   players,
   activePlayerNumbers,
+  isSaving = false,
   onQuickSub,
   onPickManually,
   onClose,
@@ -55,29 +57,30 @@ export function QuickSubDialog({
                 playerIn = pair.playerNumberA;
               }
 
-              const isDisabled = disabledReason !== null;
+              const isDisabled = disabledReason !== null || isSaving;
 
               return (
                 <Button
                   key={pair.id}
                   className="flex h-auto flex-col gap-1 rounded-2xl py-5"
                   isDisabled={isDisabled}
-                  variant={isDisabled ? "outline" : "primary"}
+                  isPending={isSaving && disabledReason === null}
+                  variant={disabledReason !== null ? "outline" : "primary"}
                   onPress={() => {
-                    if (playerOut !== null && playerIn !== null) {
+                    if (playerOut !== null && playerIn !== null && !isSaving) {
                       onQuickSub(playerOut, playerIn);
                     }
                   }}
                 >
                   <div className="flex items-center justify-center gap-3">
                     <Typography.Paragraph
-                      className={`font-bold ${isDisabled ? "" : "text-danger"}`}
+                      className={`font-bold ${disabledReason !== null ? "" : "text-danger"}`}
                     >
                       {getPlayerLabel(pair.playerNumberA)}
                     </Typography.Paragraph>
                     <ArrowLeftRight className="size-4" />
                     <Typography.Paragraph
-                      className={`font-bold ${isDisabled ? "" : "text-success"}`}
+                      className={`font-bold ${disabledReason !== null ? "" : "text-success"}`}
                     >
                       {getPlayerLabel(pair.playerNumberB)}
                     </Typography.Paragraph>
@@ -113,6 +116,7 @@ export function QuickSubDialog({
       )}
       <Button
         className="rounded-2xl py-4"
+        isDisabled={isSaving}
         size="lg"
         variant="outline"
         onPress={onPickManually}

@@ -4,38 +4,52 @@ import { Button, Dropdown, Label } from "@heroui/react";
 import { useAtomValue } from "jotai";
 import { MoreVertical } from "lucide-react";
 import { inGameControlsAtom } from "@/inGameControlsAtoms";
+import { matchSyncAtom } from "@/matchSyncAtom";
 
 export default function ActiveGameMatchControlsMenu() {
   const inGameControls = useAtomValue(inGameControlsAtom);
+  const matchSync = useAtomValue(matchSyncAtom);
+  const hasUnresolvedMutation =
+    matchSync.status === "saving" || matchSync.status === "failed";
 
   const disabledKeys = new Set<string>();
 
   if (
     inGameControls.matchStatus !== null ||
-    inGameControls.disableStartFirstHalf
+    inGameControls.disableStartFirstHalf ||
+    inGameControls.isClockMutationPending ||
+    hasUnresolvedMutation
   ) {
     disabledKeys.add("start-first-half");
   }
   if (
     inGameControls.matchStatus !== "firstHalf" ||
-    inGameControls.isPausePending
+    inGameControls.isClockMutationPending ||
+    hasUnresolvedMutation
   ) {
     disabledKeys.add("start-halftime");
   }
   if (
     inGameControls.matchStatus !== "halftime" ||
-    inGameControls.disableStartSecondHalf
+    inGameControls.disableStartSecondHalf ||
+    inGameControls.isClockMutationPending ||
+    hasUnresolvedMutation
   ) {
     disabledKeys.add("start-second-half");
   }
   if (
     inGameControls.matchStatus === null ||
     inGameControls.matchStatus === "halftime" ||
-    inGameControls.isPausePending
+    inGameControls.isClockMutationPending ||
+    hasUnresolvedMutation
   ) {
     disabledKeys.add("toggle-pause");
   }
-  if (!inGameControls.hasActiveGame) {
+  if (
+    !inGameControls.hasActiveGame ||
+    inGameControls.isClockMutationPending ||
+    hasUnresolvedMutation
+  ) {
     disabledKeys.add("end-match");
   }
 

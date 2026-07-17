@@ -7,6 +7,7 @@ import {
   StartingLineupPrompt,
 } from "@/components/active-game/OnCourtChips";
 import { EventLog } from "@/components/event-log/EventLog";
+import { MatchSyncFailureCallout } from "@/components/MatchSyncFailureCallout";
 import type { EventGroup, PlayerEvent, TeamPlayer } from "@/datamodel";
 
 interface ActiveGameViewProps {
@@ -38,6 +39,7 @@ export function ActiveGameView({
     <div className="h-full w-full">
       <div className="mx-auto flex w-fit flex-col gap-4">
         <MatchClock minutes={matchClock.minutes} seconds={matchClock.seconds} />
+        <MatchSyncFailureCallout />
         {!hasActiveGame ? (
           <div className="flex flex-col gap-2">
             <Typography.Paragraph color="muted">
