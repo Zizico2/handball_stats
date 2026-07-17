@@ -57,6 +57,15 @@ export default defineConfig({
         storageState: authFile,
       },
     },
+    {
+      name: "undo-last-event",
+      testMatch: /undo-last-event\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: authFile,
+      },
+    },
   ],
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
