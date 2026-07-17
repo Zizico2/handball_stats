@@ -67,6 +67,9 @@ async function uploadCsv(
  * After upload, auto-preview either finishes outright or lands on metadata.
  * With a single seeded team the dialog auto-selects it, so metadata only
  * needs a Preview click — never a HeroUI Select interaction.
+ *
+ * Exact-duplicate previews render both "Ready to import" and "Already
+ * imported", so we must not assert a single `.or()` locator (strict mode).
  */
 async function finishPreviewIfNeeded(page: Page) {
   const previewBtn = page.getByRole("button", { name: "Preview import" });
@@ -74,14 +77,21 @@ async function finishPreviewIfNeeded(page: Page) {
   const ready = page.getByText("Ready to import");
   const already = page.getByText("Already imported", { exact: true });
 
-  await expect(previewBtn.or(invalid).or(ready).or(already)).toBeVisible({
-    timeout: 30_000,
-  });
+  await expect
+    .poll(
+      async () =>
+        (await previewBtn.isVisible()) ||
+        (await invalid.isVisible()) ||
+        (await ready.isVisible()) ||
+        (await already.isVisible()),
+      { timeout: 30_000 },
+    )
+    .toBe(true);
 
   if (
+    (await already.isVisible()) ||
     (await invalid.isVisible()) ||
-    (await ready.isVisible()) ||
-    (await already.isVisible())
+    (await ready.isVisible())
   ) {
     return;
   }
