@@ -45,8 +45,7 @@ export function UndoLastEventControl({
               <p>
                 This will remove{" "}
                 <strong>{eventLabel ?? "the last event"}</strong> from the match
-                log. Goal totals and on-court players will update
-                automatically.
+                log. Goal totals and on-court players will update automatically.
               </p>
             </AlertDialog.Body>
             <AlertDialog.Footer>

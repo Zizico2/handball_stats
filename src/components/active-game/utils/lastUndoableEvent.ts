@@ -18,7 +18,9 @@ export function getLastUndoableEvent(
 }
 
 function formatEventTypeLabel(eventType: string): string {
-  return eventType.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase());
+  return eventType
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (c) => c.toUpperCase());
 }
 
 export function formatUndoEventLabel(

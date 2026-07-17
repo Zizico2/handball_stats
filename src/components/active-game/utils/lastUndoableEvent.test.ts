@@ -81,10 +81,7 @@ function yellowCard(id: number, player: number): PlayerEvent {
 describe("getLastUndoableEvent", () => {
   test("returns null when only starting lineup exists", () => {
     expect(
-      getLastUndoableEvent([
-        startingPlayer(1, 7),
-        startingPlayer(2, 12),
-      ]),
+      getLastUndoableEvent([startingPlayer(1, 7), startingPlayer(2, 12)]),
     ).toBeNull();
   });
 
@@ -111,9 +108,9 @@ describe("formatUndoEventLabel", () => {
     expect(formatUndoEventLabel(shot(2, 7, false), getPlayerLabel)).toBe(
       "#7 — Shot (Miss)",
     );
-    expect(
-      formatUndoEventLabel(substitution(3, 7, 9), getPlayerLabel),
-    ).toBe("#7 → #9");
+    expect(formatUndoEventLabel(substitution(3, 7, 9), getPlayerLabel)).toBe(
+      "#7 → #9",
+    );
     expect(formatUndoEventLabel(yellowCard(4, 12), getPlayerLabel)).toBe(
       "#12 — Yellow Card",
     );

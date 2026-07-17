@@ -1,6 +1,6 @@
 import {
-  expect,
   type APIRequestContext,
+  expect,
   type Page,
   test,
 } from "@playwright/test";
@@ -101,7 +101,16 @@ test.describe("undo last event", () => {
   test.describe.configure({ mode: "serial" });
   test.skip(!hasAuth, "Requires CLERK_SECRET_KEY for Clerk testing helpers.");
 
-  test.beforeEach(async ({ request }) => {
+  test.beforeEach(async ({ page }) => {
+    // Refresh Clerk session cookies before API seeding. This project runs last
+    // in the Playwright suite; the static storageState from setup can expire
+    // by then, causing 401s on the bare `request` fixture.
+    await page.goto("/");
+    await expect(page.getByRole("link", { name: "Past Games" })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    const request = page.request;
     await seedE2eData(request);
     await removeBenchPlayer(request);
     await clearActiveGame(request);
@@ -147,14 +156,13 @@ test.describe("undo last event", () => {
 
   test("undoes a substitution and restores on-court players", async ({
     page,
-    request,
   }) => {
     test.setTimeout(60_000);
 
     // Start with the 2-player roster so lineup targetCount stays 2, then add a
     // bench player afterward (roster size would otherwise force selecting everyone).
     await startGameWithLineupAndFirstHalf(page);
-    await ensureBenchPlayer(request);
+    await ensureBenchPlayer(page.request);
     await page.reload();
     await expect(page.getByRole("button", { name: "Attack" })).toBeEnabled({
       timeout: 15_000,
