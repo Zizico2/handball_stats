@@ -58,6 +58,15 @@ export default defineConfig({
       },
     },
     {
+      name: "game-import",
+      testMatch: /game-import\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: authFile,
+      },
+    },
+    {
       name: "undo-last-event",
       testMatch: /undo-last-event\.spec\.ts/,
       dependencies: ["setup"],
