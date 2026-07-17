@@ -1,4 +1,9 @@
-import { expect, type APIRequestContext, type Page, test } from "@playwright/test";
+import {
+  type APIRequestContext,
+  expect,
+  type Page,
+  test,
+} from "@playwright/test";
 import { refreshE2eSession } from "./e2eAuth";
 import { E2E_TEAM_ID, seedE2eData } from "./seedE2eData";
 
@@ -65,10 +70,7 @@ async function chooseTrackedTeam(page: Page) {
   throw new Error('Could not select tracked team "E2E Home"');
 }
 
-async function seedImportedGameViaApi(
-  request: APIRequestContext,
-  csv: string,
-) {
+async function seedImportedGameViaApi(request: APIRequestContext, csv: string) {
   const file = {
     name: "match.csv",
     mimeType: "text/csv",
