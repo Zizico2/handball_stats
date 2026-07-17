@@ -13,6 +13,31 @@ import {
 } from "@/gameImport/validate";
 import { allocateLocalIds } from "@/server/allocateLocalId";
 
+/** D1 allows at most 100 bound parameters per statement. */
+export const D1_MAX_BOUND_PARAMETERS = 100;
+
+/** Columns bound by a `player_events` multi-row insert. */
+export const PLAYER_EVENT_INSERT_COLUMN_COUNT = 14;
+
+/** Columns bound by a `game_roster_snapshots` multi-row insert. */
+export const ROSTER_SNAPSHOT_INSERT_COLUMN_COUNT = 5;
+
+export function maxRowsPerInsert(columnCount: number): number {
+  return Math.max(1, Math.floor(D1_MAX_BOUND_PARAMETERS / columnCount));
+}
+
+export function chunkRows<T>(rows: T[], columnCount: number): T[][] {
+  if (rows.length === 0) {
+    return [];
+  }
+  const size = maxRowsPerInsert(columnCount);
+  const chunks: T[][] = [];
+  for (let index = 0; index < rows.length; index += size) {
+    chunks.push(rows.slice(index, index + size));
+  }
+  return chunks;
+}
+
 export type GameImportMetadata = {
   homeTeamId: number | null;
   /** YYYY-MM-DD; required for legacy files. */
@@ -296,12 +321,13 @@ export async function persistImportedGameAtomic(
     playerName: player.name,
   }));
 
-  const eventRows = canonical.events.map((entry, index) =>
-    playerEventToDbRow(
+  const eventRows = canonical.events.map((entry, index) => ({
+    ...playerEventToDbRow(
       { ...entry.event, id: eventIds[index], game_id: gameId },
       userId,
     ),
-  );
+    eventSequence: entry.sequence,
+  }));
 
   const provenanceRow: typeof schema.gameImports.$inferInsert = {
     userId,
@@ -313,16 +339,22 @@ export async function persistImportedGameAtomic(
     importedAt: input.importedAt,
   };
 
+  // Chunk multi-row inserts so each statement stays within D1's 100 bound
+  // parameter limit while remaining one atomic `db.batch()`.
+  const snapshotChunks = chunkRows(
+    snapshotRows,
+    ROSTER_SNAPSHOT_INSERT_COLUMN_COUNT,
+  );
+  const eventChunks = chunkRows(eventRows, PLAYER_EVENT_INSERT_COLUMN_COUNT);
+
   const statements = [
     db.insert(schema.games).values(gameRow),
-    ...(snapshotRows.length > 0
-      ? [db.insert(schema.gameRosterSnapshots).values(snapshotRows)]
-      : []),
-    ...(eventRows.length > 0
-      ? [db.insert(schema.playerEvents).values(eventRows)]
-      : []),
+    ...snapshotChunks.map((chunk) =>
+      db.insert(schema.gameRosterSnapshots).values(chunk),
+    ),
+    ...eventChunks.map((chunk) => db.insert(schema.playerEvents).values(chunk)),
     db.insert(schema.gameImports).values(provenanceRow),
-  ] as const;
+  ];
 
   await db.batch([statements[0], ...statements.slice(1)]);
 

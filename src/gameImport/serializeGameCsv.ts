@@ -2,6 +2,8 @@ import { ARCAZZI_GAME_V1, ARCAZZI_GAME_V1_HEADERS } from "./csvContract";
 import { serializeCsvRows } from "./serializeCsv";
 
 export type SerializableGameEvent = {
+  /** Optional explicit CSV sequence; defaults to array index when omitted. */
+  sequence?: number;
   player: number;
   half: string;
   ellapsedSeconds: number;
@@ -87,7 +89,7 @@ export function serializeArcazziGameV1(game: SerializableGame): string {
       blank,
       event.player,
       blank,
-      index,
+      event.sequence ?? index,
       event.half,
       event.ellapsedSeconds,
       event.eventType,

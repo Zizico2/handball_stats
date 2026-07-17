@@ -210,7 +210,19 @@ export async function getPastGameLog(
     // Prefer the immutable roster snapshot; fall back to the live roster for
     // games recorded before snapshots existed.
     players: snapshotRows.length > 0 ? snapshotRows : livePlayerRows,
-    events: eventRows.map(dbRowToPlayerEvent),
+    events: [...eventRows]
+      .sort((a, b) => {
+        if (a.half !== b.half) {
+          return a.half === "firstHalf" ? -1 : 1;
+        }
+        if (a.ellapsedSeconds !== b.ellapsedSeconds) {
+          return a.ellapsedSeconds - b.ellapsedSeconds;
+        }
+        const aOrder = a.eventSequence ?? a.localId;
+        const bOrder = b.eventSequence ?? b.localId;
+        return aOrder - bOrder;
+      })
+      .map(dbRowToPlayerEvent),
   };
 }
 
@@ -270,7 +282,9 @@ export async function getPastGamePlayerEventsCsv(
     if (a.ellapsedSeconds !== b.ellapsedSeconds) {
       return a.ellapsedSeconds - b.ellapsedSeconds;
     }
-    return a.localId - b.localId;
+    const aOrder = a.eventSequence ?? a.localId;
+    const bOrder = b.eventSequence ?? b.localId;
+    return aOrder - bOrder;
   });
 
   const csv = serializeArcazziGameV1({
@@ -279,7 +293,8 @@ export async function getPastGamePlayerEventsCsv(
     trackedTeamName: gameLog.game.homeTeamName,
     opponentName: gameLog.game.opponentName,
     roster: gameLog.players,
-    events: orderedRows.map((row) => ({
+    events: orderedRows.map((row, index) => ({
+      sequence: row.eventSequence ?? index,
       player: row.player,
       half: row.half,
       ellapsedSeconds: row.ellapsedSeconds,

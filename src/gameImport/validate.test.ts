@@ -179,6 +179,14 @@ describe("validateArcazziGameV1", () => {
     expectError(validateV1Text(text), "INVALID_TIMESTAMP");
   });
 
+  test("rejects calendar-impossible timestamps such as Feb 30", () => {
+    const text = VALID_V1_FIXTURE.replace(
+      "2026-03-01T18:30:00Z",
+      "2026-02-30T12:00:00Z",
+    );
+    expectError(validateV1Text(text), "INVALID_TIMESTAMP");
+  });
+
   test("rejects invalid integers and booleans", () => {
     expectError(
       validateV1Text(
@@ -454,6 +462,16 @@ describe("validateLegacyEventLogV0", () => {
   test("rejects an invalid match date", () => {
     const result = validateLegacy(VALID_LEGACY_FIXTURE, {
       matchDate: "03/01/2026",
+      opponent: null,
+      teamName: "Arcazzi",
+      roster: LEGACY_ROSTER,
+    });
+    expectError(result, "INVALID_MATCH_DATE");
+  });
+
+  test("rejects calendar-impossible match dates such as Feb 30", () => {
+    const result = validateLegacy(VALID_LEGACY_FIXTURE, {
+      matchDate: "2026-02-30",
       opponent: null,
       teamName: "Arcazzi",
       roster: LEGACY_ROSTER,

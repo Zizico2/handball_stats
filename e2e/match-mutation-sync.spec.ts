@@ -50,9 +50,15 @@ test.describe("match mutation sync states", () => {
   test.describe.configure({ mode: "serial" });
   test.skip(!hasAuth, "Requires CLERK_SECRET_KEY for Clerk testing helpers.");
 
-  test.beforeEach(async ({ request }) => {
-    await seedE2eData(request);
-    await clearActiveGame(request);
+  test.beforeEach(async ({ page }) => {
+    // Refresh Clerk session cookies before API seeding. Mid/late suite
+    // projects can hit 401s on the static storageState from setup.
+    await page.goto("/");
+    await expect(page.getByRole("link", { name: "Past Games" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await seedE2eData(page.request);
+    await clearActiveGame(page.request);
   });
 
   test("keeps start-game failure visible with retry", async ({ page }) => {

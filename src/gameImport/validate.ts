@@ -8,6 +8,7 @@ import {
   shotDirectionSchema,
   shotPosition,
 } from "@/datamodel";
+import { isStrictCalendarDate, parseStrictIsoTimestamp } from "./calendarDate";
 import {
   ARCAZZI_GAME_V1,
   ARCAZZI_GAME_V1_HEADERS,
@@ -140,8 +141,6 @@ export function inspectCsv(text: string): CsvInspection {
 }
 
 const STRICT_INT = /^-?\d+$/;
-const ISO_WITH_OFFSET =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/;
 
 function parseStrictInt(raw: string): number | null {
   if (!STRICT_INT.test(raw)) {
@@ -504,29 +503,16 @@ export function validateArcazziGameV1(
   );
 
   const rawStartedAt = matchRow.get("match_started_at");
-  let matchStartedAt: string | null = null;
-  if (!ISO_WITH_OFFSET.test(rawStartedAt)) {
+  const matchStartedAt: string | null = parseStrictIsoTimestamp(rawStartedAt);
+  if (matchStartedAt === null) {
     collector.add({
       code: "INVALID_TIMESTAMP",
       row: matchRow.line,
       column: "match_started_at",
       value: rawStartedAt,
       message:
-        "match_started_at must be an ISO 8601 timestamp with a UTC offset or Z (for example 2026-03-01T18:30:00Z).",
+        "match_started_at must be a real calendar ISO 8601 timestamp with a UTC offset or Z (for example 2026-03-01T18:30:00Z). Impossible dates such as 2026-02-30 are rejected.",
     });
-  } else {
-    const time = Date.parse(rawStartedAt);
-    if (Number.isNaN(time)) {
-      collector.add({
-        code: "INVALID_TIMESTAMP",
-        row: matchRow.line,
-        column: "match_started_at",
-        value: rawStartedAt,
-        message: "match_started_at is not a valid date/time.",
-      });
-    } else {
-      matchStartedAt = new Date(time).toISOString();
-    }
   }
 
   const trackedTeamName = requireText(matchRow, "tracked_team", "tracked_team");
@@ -911,8 +897,6 @@ export type LegacyImportMetadata = {
   roster: CanonicalRosterPlayer[];
 };
 
-const LEGACY_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
 /** Validates a `legacy-event-log-v0` file into the canonical import model. */
 export function validateLegacyEventLogV0(
   dataRows: RawCsvRow[],
@@ -920,11 +904,12 @@ export function validateLegacyEventLogV0(
 ): ImportValidationResult {
   const collector = new DiagnosticCollector();
 
-  if (!LEGACY_DATE.test(metadata.matchDate)) {
+  if (!isStrictCalendarDate(metadata.matchDate)) {
     collector.add({
       code: "INVALID_MATCH_DATE",
       value: metadata.matchDate,
-      message: "The match date must use the YYYY-MM-DD format.",
+      message:
+        "The match date must be a real calendar date in YYYY-MM-DD format (impossible dates such as 2026-02-30 are rejected).",
     });
     return { ok: false, diagnostics: collector.diagnostics };
   }

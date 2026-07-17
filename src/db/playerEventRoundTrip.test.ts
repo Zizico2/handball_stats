@@ -43,6 +43,7 @@ function dbShotRow(overrides: Partial<DbPlayerEvent> = {}): DbPlayerEvent {
     shotAim: "TopLeft",
     shotPosition: "9m+",
     substitutionPlayerIn: null,
+    eventSequence: null,
     ...overrides,
   };
 }

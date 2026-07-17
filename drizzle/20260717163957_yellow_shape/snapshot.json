@@ -1,0 +1,1133 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "id": "6e18afd5-5a49-452a-ad83-ec297b9e4173",
+  "prevIds": ["41a7fbde-9f20-47e8-bf50-00903ebae80c"],
+  "ddl": [
+    {
+      "name": "active_game",
+      "entityType": "tables"
+    },
+    {
+      "name": "game_imports",
+      "entityType": "tables"
+    },
+    {
+      "name": "game_roster_snapshots",
+      "entityType": "tables"
+    },
+    {
+      "name": "games",
+      "entityType": "tables"
+    },
+    {
+      "name": "pause_toggles",
+      "entityType": "tables"
+    },
+    {
+      "name": "player_events",
+      "entityType": "tables"
+    },
+    {
+      "name": "quick_sub_pairs",
+      "entityType": "tables"
+    },
+    {
+      "name": "team_players",
+      "entityType": "tables"
+    },
+    {
+      "name": "teams",
+      "entityType": "tables"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "active_game"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "active_game"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "local_id",
+      "entityType": "columns",
+      "table": "active_game"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "game_local_id",
+      "entityType": "columns",
+      "table": "active_game"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "home_team_local_id",
+      "entityType": "columns",
+      "table": "active_game"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "game_imports"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "game_imports"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "local_id",
+      "entityType": "columns",
+      "table": "game_imports"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "game_local_id",
+      "entityType": "columns",
+      "table": "game_imports"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "format_version",
+      "entityType": "columns",
+      "table": "game_imports"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "fingerprint",
+      "entityType": "columns",
+      "table": "game_imports"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "original_filename",
+      "entityType": "columns",
+      "table": "game_imports"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "imported_at",
+      "entityType": "columns",
+      "table": "game_imports"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "game_roster_snapshots"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "game_roster_snapshots"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "local_id",
+      "entityType": "columns",
+      "table": "game_roster_snapshots"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "game_local_id",
+      "entityType": "columns",
+      "table": "game_roster_snapshots"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "player_number",
+      "entityType": "columns",
+      "table": "game_roster_snapshots"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "player_name",
+      "entityType": "columns",
+      "table": "game_roster_snapshots"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "games"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "games"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "local_id",
+      "entityType": "columns",
+      "table": "games"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "home_team_local_id",
+      "entityType": "columns",
+      "table": "games"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "games"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "first_half_started_at_ms",
+      "entityType": "columns",
+      "table": "games"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "halftime_started_at_ms",
+      "entityType": "columns",
+      "table": "games"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "second_half_started_at_ms",
+      "entityType": "columns",
+      "table": "games"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'recorded'",
+      "generated": null,
+      "name": "source",
+      "entityType": "columns",
+      "table": "games"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "opponent_name",
+      "entityType": "columns",
+      "table": "games"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "tracked_team_name",
+      "entityType": "columns",
+      "table": "games"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "pause_toggles"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "pause_toggles"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "client_id",
+      "entityType": "columns",
+      "table": "pause_toggles"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "game_local_id",
+      "entityType": "columns",
+      "table": "pause_toggles"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "half",
+      "entityType": "columns",
+      "table": "pause_toggles"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "toggled_at_ms",
+      "entityType": "columns",
+      "table": "pause_toggles"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "player_events"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "player_events"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "local_id",
+      "entityType": "columns",
+      "table": "player_events"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "player",
+      "entityType": "columns",
+      "table": "player_events"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "game_local_id",
+      "entityType": "columns",
+      "table": "player_events"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ellapsed_seconds",
+      "entityType": "columns",
+      "table": "player_events"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event_type",
+      "entityType": "columns",
+      "table": "player_events"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event_group",
+      "entityType": "columns",
+      "table": "player_events"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "half",
+      "entityType": "columns",
+      "table": "player_events"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "shot_goal",
+      "entityType": "columns",
+      "table": "player_events"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "shot_direction",
+      "entityType": "columns",
+      "table": "player_events"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "shot_aim",
+      "entityType": "columns",
+      "table": "player_events"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "shot_position",
+      "entityType": "columns",
+      "table": "player_events"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "substitution_player_in",
+      "entityType": "columns",
+      "table": "player_events"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event_sequence",
+      "entityType": "columns",
+      "table": "player_events"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "quick_sub_pairs"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "quick_sub_pairs"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "local_id",
+      "entityType": "columns",
+      "table": "quick_sub_pairs"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "team_local_id",
+      "entityType": "columns",
+      "table": "quick_sub_pairs"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "player_number_a",
+      "entityType": "columns",
+      "table": "quick_sub_pairs"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "player_number_b",
+      "entityType": "columns",
+      "table": "quick_sub_pairs"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "team_players"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "team_players"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "local_id",
+      "entityType": "columns",
+      "table": "team_players"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "team_local_id",
+      "entityType": "columns",
+      "table": "team_players"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "team_players"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "number",
+      "entityType": "columns",
+      "table": "team_players"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "teams"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user_id",
+      "entityType": "columns",
+      "table": "teams"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "local_id",
+      "entityType": "columns",
+      "table": "teams"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "teams"
+    },
+    {
+      "columns": ["user_id", "game_local_id"],
+      "tableTo": "games",
+      "columnsTo": ["user_id", "local_id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_active_game_user_id_game_local_id_games_user_id_local_id_fk",
+      "entityType": "fks",
+      "table": "active_game"
+    },
+    {
+      "columns": ["user_id", "home_team_local_id"],
+      "tableTo": "teams",
+      "columnsTo": ["user_id", "local_id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_active_game_user_id_home_team_local_id_teams_user_id_local_id_fk",
+      "entityType": "fks",
+      "table": "active_game"
+    },
+    {
+      "columns": ["user_id", "game_local_id"],
+      "tableTo": "games",
+      "columnsTo": ["user_id", "local_id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_game_imports_user_id_game_local_id_games_user_id_local_id_fk",
+      "entityType": "fks",
+      "table": "game_imports"
+    },
+    {
+      "columns": ["user_id", "game_local_id"],
+      "tableTo": "games",
+      "columnsTo": ["user_id", "local_id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_game_roster_snapshots_user_id_game_local_id_games_user_id_local_id_fk",
+      "entityType": "fks",
+      "table": "game_roster_snapshots"
+    },
+    {
+      "columns": ["user_id", "home_team_local_id"],
+      "tableTo": "teams",
+      "columnsTo": ["user_id", "local_id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_games_user_id_home_team_local_id_teams_user_id_local_id_fk",
+      "entityType": "fks",
+      "table": "games"
+    },
+    {
+      "columns": ["user_id", "game_local_id"],
+      "tableTo": "games",
+      "columnsTo": ["user_id", "local_id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_pause_toggles_user_id_game_local_id_games_user_id_local_id_fk",
+      "entityType": "fks",
+      "table": "pause_toggles"
+    },
+    {
+      "columns": ["user_id", "game_local_id"],
+      "tableTo": "games",
+      "columnsTo": ["user_id", "local_id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_player_events_user_id_game_local_id_games_user_id_local_id_fk",
+      "entityType": "fks",
+      "table": "player_events"
+    },
+    {
+      "columns": ["user_id", "team_local_id"],
+      "tableTo": "teams",
+      "columnsTo": ["user_id", "local_id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_quick_sub_pairs_user_id_team_local_id_teams_user_id_local_id_fk",
+      "entityType": "fks",
+      "table": "quick_sub_pairs"
+    },
+    {
+      "columns": ["user_id", "team_local_id"],
+      "tableTo": "teams",
+      "columnsTo": ["user_id", "local_id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_team_players_user_id_team_local_id_teams_user_id_local_id_fk",
+      "entityType": "fks",
+      "table": "team_players"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "active_game_pk",
+      "table": "active_game",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "game_imports_pk",
+      "table": "game_imports",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "game_roster_snapshots_pk",
+      "table": "game_roster_snapshots",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "games_pk",
+      "table": "games",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "pause_toggles_pk",
+      "table": "pause_toggles",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "player_events_pk",
+      "table": "player_events",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "quick_sub_pairs_pk",
+      "table": "quick_sub_pairs",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "team_players_pk",
+      "table": "team_players",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "teams_pk",
+      "table": "teams",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        },
+        {
+          "value": "local_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "active_game_user_id_local_id_uq",
+      "entityType": "indexes",
+      "table": "active_game"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        },
+        {
+          "value": "local_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "game_imports_user_id_local_id_uq",
+      "entityType": "indexes",
+      "table": "game_imports"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        },
+        {
+          "value": "fingerprint",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "game_imports_user_id_fingerprint_uq",
+      "entityType": "indexes",
+      "table": "game_imports"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        },
+        {
+          "value": "game_local_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "game_imports_user_id_game_local_id_uq",
+      "entityType": "indexes",
+      "table": "game_imports"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        },
+        {
+          "value": "local_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "game_roster_snapshots_user_id_local_id_uq",
+      "entityType": "indexes",
+      "table": "game_roster_snapshots"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        },
+        {
+          "value": "game_local_id",
+          "isExpression": false
+        },
+        {
+          "value": "player_number",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "game_roster_snapshots_game_player_number_uq",
+      "entityType": "indexes",
+      "table": "game_roster_snapshots"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        },
+        {
+          "value": "local_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "games_user_id_local_id_uq",
+      "entityType": "indexes",
+      "table": "games"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        },
+        {
+          "value": "client_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "pause_toggles_client_id_uq",
+      "entityType": "indexes",
+      "table": "pause_toggles"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        },
+        {
+          "value": "local_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "player_events_user_id_local_id_uq",
+      "entityType": "indexes",
+      "table": "player_events"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        },
+        {
+          "value": "local_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "quick_sub_pairs_user_id_local_id_uq",
+      "entityType": "indexes",
+      "table": "quick_sub_pairs"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        },
+        {
+          "value": "local_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "team_players_user_id_local_id_uq",
+      "entityType": "indexes",
+      "table": "team_players"
+    },
+    {
+      "columns": [
+        {
+          "value": "user_id",
+          "isExpression": false
+        },
+        {
+          "value": "local_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "teams_user_id_local_id_uq",
+      "entityType": "indexes",
+      "table": "teams"
+    },
+    {
+      "value": "length(`fingerprint`) = 64",
+      "name": "game_imports_fingerprint_check",
+      "entityType": "checks",
+      "table": "game_imports"
+    },
+    {
+      "value": "`source` IN ('recorded', 'imported')",
+      "name": "games_source_check",
+      "entityType": "checks",
+      "table": "games"
+    },
+    {
+      "value": "`half` IN ('firstHalf', 'secondHalf')",
+      "name": "pause_toggles_half_check",
+      "entityType": "checks",
+      "table": "pause_toggles"
+    },
+    {
+      "value": "`half` IN ('firstHalf', 'secondHalf')",
+      "name": "player_events_half_check",
+      "entityType": "checks",
+      "table": "player_events"
+    },
+    {
+      "value": "`event_type` != 'shot' OR `shot_direction` IS NOT NULL",
+      "name": "shot_direction_required_for_shot",
+      "entityType": "checks",
+      "table": "player_events"
+    },
+    {
+      "value": "`event_type` != 'shot' OR `shot_position` IS NOT NULL",
+      "name": "shot_position_required_for_shot",
+      "entityType": "checks",
+      "table": "player_events"
+    }
+  ],
+  "renames": []
+}

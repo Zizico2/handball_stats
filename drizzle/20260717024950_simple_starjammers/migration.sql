@@ -24,7 +24,10 @@ CREATE TABLE `game_roster_snapshots` (
 ALTER TABLE `games` ADD `source` text DEFAULT 'recorded' NOT NULL;--> statement-breakpoint
 ALTER TABLE `games` ADD `opponent_name` text;--> statement-breakpoint
 ALTER TABLE `games` ADD `tracked_team_name` text;--> statement-breakpoint
-PRAGMA foreign_keys=OFF;--> statement-breakpoint
+-- D1 ignores PRAGMA foreign_keys=OFF; defer enforcement until end of transaction
+-- so child tables (active_game, player_events, pause_toggles) can keep referencing
+-- games while the table is rebuilt. See https://developers.cloudflare.com/d1/sql-api/foreign-keys/
+PRAGMA defer_foreign_keys = on;--> statement-breakpoint
 CREATE TABLE `__new_games` (
 	`id` integer PRIMARY KEY,
 	`user_id` text NOT NULL,
@@ -41,10 +44,10 @@ CREATE TABLE `__new_games` (
 	CONSTRAINT "games_source_check" CHECK(`source` IN ('recorded', 'imported'))
 );
 --> statement-breakpoint
-INSERT INTO `__new_games`(`id`, `user_id`, `local_id`, `home_team_local_id`, `created_at`, `first_half_started_at_ms`, `halftime_started_at_ms`, `second_half_started_at_ms`) SELECT `id`, `user_id`, `local_id`, `home_team_local_id`, `created_at`, `first_half_started_at_ms`, `halftime_started_at_ms`, `second_half_started_at_ms` FROM `games`;--> statement-breakpoint
+INSERT INTO `__new_games`(`id`, `user_id`, `local_id`, `home_team_local_id`, `created_at`, `first_half_started_at_ms`, `halftime_started_at_ms`, `second_half_started_at_ms`, `source`, `opponent_name`, `tracked_team_name`) SELECT `id`, `user_id`, `local_id`, `home_team_local_id`, `created_at`, `first_half_started_at_ms`, `halftime_started_at_ms`, `second_half_started_at_ms`, `source`, `opponent_name`, `tracked_team_name` FROM `games`;--> statement-breakpoint
 DROP TABLE `games`;--> statement-breakpoint
 ALTER TABLE `__new_games` RENAME TO `games`;--> statement-breakpoint
-PRAGMA foreign_keys=ON;--> statement-breakpoint
+PRAGMA defer_foreign_keys = off;--> statement-breakpoint
 CREATE UNIQUE INDEX `games_user_id_local_id_uq` ON `games` (`user_id`,`local_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `game_imports_user_id_local_id_uq` ON `game_imports` (`user_id`,`local_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `game_imports_user_id_fingerprint_uq` ON `game_imports` (`user_id`,`fingerprint`);--> statement-breakpoint

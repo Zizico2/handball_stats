@@ -466,4 +466,72 @@ describe("game imports API (D1)", () => {
     });
     expect(confirmWithoutFingerprint.status).toBe(422);
   });
+
+  test("persists event_sequence and orders equal-timestamp events by it", async () => {
+    const csv = [
+      V1_HEADER,
+      "arcazzi-game-v1,match,match-seq,2026-03-01T18:30:00Z,Arcazzi,,,,,,,,,,,,,",
+      "arcazzi-game-v1,player,,,,,7,Ana Silva,,,,,,,,,,",
+      "arcazzi-game-v1,event,match-seq,,,,7,,2,firstHalf,95,interception,defense,,,,,",
+      "arcazzi-game-v1,event,match-seq,,,,7,,0,firstHalf,95,shot,attack,true,OnTarget,TopLeft,9m+,",
+      "arcazzi-game-v1,event,match-seq,,,,7,,1,firstHalf,95,yellowCard,sanction,,,,,",
+      "",
+    ].join("\n");
+
+    const fingerprint = await previewFingerprint(csv);
+    const res = await importRequest("/confirm", {
+      csv,
+      fields: { homeTeamId: String(TEAM_ID), previewFingerprint: fingerprint },
+    });
+    expect(res.status).toBe(201);
+    const { gameId } = (await res.json()) as { gameId: number };
+
+    const db = getTestDb();
+    const events = await db
+      .select()
+      .from(schema.playerEvents)
+      .where(eq(schema.playerEvents.gameLocalId, gameId));
+    expect(events).toHaveLength(3);
+    expect(
+      [...events]
+        .sort((a, b) => (a.eventSequence ?? 0) - (b.eventSequence ?? 0))
+        .map((event) => [event.eventSequence, event.eventType]),
+    ).toEqual([
+      [0, "shot"],
+      [1, "yellowCard"],
+      [2, "interception"],
+    ]);
+  });
+
+  test("confirm succeeds when events exceed one D1 statement binding budget", async () => {
+    // 14 bound columns ⇒ 7 rows/statement. Eight events require two chunks.
+    const eventLines = Array.from({ length: 8 }, (_, index) => {
+      const type = index === 0 ? "shot" : "interception";
+      const group = index === 0 ? "attack" : "defense";
+      const shot = index === 0 ? "true,OnTarget,TopLeft,9m+," : ",,,,";
+      return `arcazzi-game-v1,event,match-chunk,,,,7,,${index},firstHalf,${index * 10},${type},${group},${shot}`;
+    });
+    const csv = [
+      V1_HEADER,
+      "arcazzi-game-v1,match,match-chunk,2026-03-01T18:30:00Z,Arcazzi,,,,,,,,,,,,,",
+      "arcazzi-game-v1,player,,,,,7,Ana Silva,,,,,,,,,,",
+      ...eventLines,
+      "",
+    ].join("\n");
+
+    const fingerprint = await previewFingerprint(csv);
+    const res = await importRequest("/confirm", {
+      csv,
+      fields: { homeTeamId: String(TEAM_ID), previewFingerprint: fingerprint },
+    });
+    expect(res.status).toBe(201);
+    const { gameId } = (await res.json()) as { gameId: number };
+
+    const db = getTestDb();
+    const events = await db
+      .select()
+      .from(schema.playerEvents)
+      .where(eq(schema.playerEvents.gameLocalId, gameId));
+    expect(events).toHaveLength(8);
+  });
 });

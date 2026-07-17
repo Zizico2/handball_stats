@@ -224,6 +224,12 @@ export const playerEvents = sqliteTable(
     shotAim: text("shot_aim"),
     shotPosition: text("shot_position"),
     substitutionPlayerIn: integer("substitution_player_in"),
+    /**
+     * Stable ordering within a half/elapsed-second bucket. Populated for
+     * imported CSV rows from `event_sequence`; null for live-recorded events
+     * (which fall back to `local_id` for tie-breaks).
+     */
+    eventSequence: integer("event_sequence"),
   },
   (table) => [
     uniqueIndex("player_events_user_id_local_id_uq").on(

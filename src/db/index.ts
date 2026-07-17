@@ -123,6 +123,7 @@ export function playerEventToDbRow(
     shotAim: null as string | null,
     shotPosition: null as string | null,
     substitutionPlayerIn: null as number | null,
+    eventSequence: null as number | null,
   };
 
   if (event.eventType === "shot") {

@@ -29,8 +29,14 @@ const INVALID_CSV = [
 test.describe("game import from CSV", () => {
   test.skip(!hasAuth, "Clerk credentials are required");
 
-  test.beforeEach(async ({ request }) => {
-    await seedE2eData(request);
+  test.beforeEach(async ({ page }) => {
+    // Refresh Clerk session cookies before API seeding. Late Playwright
+    // projects can hit 401s on the static storageState from setup.
+    await page.goto("/");
+    await expect(page.getByRole("link", { name: "Past Games" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await seedE2eData(page.request);
   });
 
   test("dialog opens, template link exists, cancel writes nothing", async ({

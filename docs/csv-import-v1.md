@@ -36,7 +36,7 @@ format_version,record_type,match_external_id,match_started_at,tracked_team,oppon
 | column | value |
 | --- | --- |
 | `match_external_id` | required correlation ID; repeated on every event row; never used as a database ID |
-| `match_started_at` | ISO 8601 with offset or `Z`, e.g. `2026-03-01T18:30:00Z` |
+| `match_started_at` | ISO 8601 with offset or `Z`, e.g. `2026-03-01T18:30:00Z`. Impossible calendar dates (e.g. `2026-02-30`) are rejected. |
 | `tracked_team` | required label snapshot of your team |
 | `opponent` | optional label |
 
@@ -51,7 +51,7 @@ all other data columns must be empty. Players with zero events are preserved.
 
 | column | value |
 | --- | --- |
-| `event_sequence` | unique non-negative integer; defines order |
+| `event_sequence` | unique non-negative integer; defines order within the match and is persisted so equal-timestamp events keep that order on history/export |
 | `player_number` | must exist in the roster |
 | `half` | `firstHalf` or `secondHalf` |
 | `elapsed_seconds` | integer ≥ 0 (overtime within a half is allowed) |
