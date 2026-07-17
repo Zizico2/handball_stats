@@ -19,8 +19,11 @@ interface ActiveGameViewProps {
   matchClock: { minutes: number; seconds: number };
   onRecordEvent: (group: EventGroup) => void;
   onSetStartingLineup: () => void;
+  onUndoLastEvent: () => void;
   selectedTeamPlayers: TeamPlayer[];
   startingPlayerNumbers: number[];
+  undoDisabled: boolean;
+  undoEventLabel: string | null;
 }
 
 export function ActiveGameView({
@@ -32,8 +35,11 @@ export function ActiveGameView({
   matchClock,
   onRecordEvent,
   onSetStartingLineup,
+  onUndoLastEvent,
   selectedTeamPlayers,
   startingPlayerNumbers,
+  undoDisabled,
+  undoEventLabel,
 }: ActiveGameViewProps) {
   return (
     <div className="h-full w-full">
@@ -62,7 +68,13 @@ export function ActiveGameView({
           onRecordEvent={onRecordEvent}
         />
       </div>
-      <EventLog events={activeGameEvents} getPlayerLabel={getPlayerLabel} />
+      <EventLog
+        events={activeGameEvents}
+        getPlayerLabel={getPlayerLabel}
+        undoDisabled={undoDisabled}
+        undoEventLabel={undoEventLabel}
+        onUndoLastEvent={onUndoLastEvent}
+      />
     </div>
   );
 }

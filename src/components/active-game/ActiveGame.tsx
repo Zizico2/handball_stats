@@ -14,6 +14,10 @@ import {
   awaitPlayerEventPersistence,
   insertPlayerEvent,
 } from "@/components/active-game/utils/insertPlayerEvent";
+import {
+  formatUndoEventLabel,
+  getLastUndoableEvent,
+} from "@/components/active-game/utils/lastUndoableEvent";
 import type { EventGroup, PlayerEvent } from "@/datamodel";
 import { eventMachine } from "@/event_form_fsm";
 import { usePlayerLabelMap } from "@/hooks/usePlayerLabelMap";
@@ -32,6 +36,7 @@ function ActiveGame() {
   const [quickSubDialogOpen, setQuickSubDialogOpen] = useState(false);
   const [isSavingStarting7, setIsSavingStarting7] = useState(false);
   const [isSavingQuickSub, setIsSavingQuickSub] = useState(false);
+  const [isUndoingLastEvent, setIsUndoingLastEvent] = useState(false);
   const matchSync = useAtomValue(matchSyncAtom);
 
   const {
@@ -64,6 +69,12 @@ function ActiveGame() {
     teamPlayers.data,
     activeGameData?.homeTeamId,
   );
+
+  const lastUndoableEvent = getLastUndoableEvent(activeGameEvents);
+  const undoEventLabel =
+    lastUndoableEvent == null
+      ? null
+      : formatUndoEventLabel(lastUndoableEvent, getPlayerLabel);
 
   const [state, send] = useMachine(
     eventMachine.provide({
@@ -249,6 +260,53 @@ function ActiveGame() {
     });
   };
 
+  const undoEventById = useCallback(
+    async (eventId: number) => {
+      if (isUndoingLastEvent || matchSync.status === "saving") {
+        return;
+      }
+
+      setIsUndoingLastEvent(true);
+      beginMatchSaving();
+
+      try {
+        if (playerEventsCollection.get(eventId) === undefined) {
+          await playerEventsCollection.utils.refetch();
+          if (playerEventsCollection.get(eventId) === undefined) {
+            markMatchSaved();
+            return;
+          }
+        }
+
+        const tx = playerEventsCollection.delete(eventId);
+        await awaitPlayerEventDeletionPersistence(tx, eventId);
+        markMatchSaved();
+      } catch (error) {
+        console.error("Failed to undo last event", error);
+        markMatchFailed(
+          "Could not undo the last event. Please try again.",
+          () => {
+            void undoEventById(eventId);
+          },
+        );
+      } finally {
+        setIsUndoingLastEvent(false);
+      }
+    },
+    [isUndoingLastEvent, matchSync.status],
+  );
+
+  const handleUndoLastEvent = useCallback(() => {
+    const event = getLastUndoableEvent(activeGameEvents);
+    if (event == null) {
+      return;
+    }
+    void undoEventById(event.id);
+  }, [activeGameEvents, undoEventById]);
+
+  const hasUnresolvedMutation =
+    matchSync.status === "saving" || matchSync.status === "failed";
+
   return (
     <>
       <ActiveGameView
@@ -259,10 +317,11 @@ function ActiveGame() {
           selectedTeamPlayers.length === 0 ||
           startingPlayerNumbers.length === 0 ||
           !(matchStatus === "firstHalf" || matchStatus === "secondHalf") ||
-          matchSync.status === "saving" ||
+          hasUnresolvedMutation ||
           isPersistingEvent ||
           isSavingStarting7 ||
-          isSavingQuickSub
+          isSavingQuickSub ||
+          isUndoingLastEvent
         }
         getPlayerLabel={getPlayerLabel}
         hasActiveGame={activeGameData != null}
@@ -273,8 +332,18 @@ function ActiveGame() {
             setStarting7DialogOpen(true);
           }
         }}
+        onUndoLastEvent={handleUndoLastEvent}
         selectedTeamPlayers={selectedTeamPlayers}
         startingPlayerNumbers={startingPlayerNumbers}
+        undoDisabled={
+          lastUndoableEvent == null ||
+          hasUnresolvedMutation ||
+          isPersistingEvent ||
+          isSavingStarting7 ||
+          isSavingQuickSub ||
+          isUndoingLastEvent
+        }
+        undoEventLabel={undoEventLabel}
       />
       <ActiveGameEventDialogs
         activeGameGameId={activeGame.data?.gameId ?? null}
