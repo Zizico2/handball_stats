@@ -198,6 +198,7 @@ export function PastGameImportDialog() {
         setWizard({ step: "success", gameId: body.gameId });
         router.refresh();
         setIsOpen(false);
+        resetAll();
         router.push(`/past-games/${body.gameId}`);
         return;
       }

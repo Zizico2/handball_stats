@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, type APIRequestContext, type Page, test } from "@playwright/test";
 import { refreshE2eSession } from "./e2eAuth";
-import { seedE2eData } from "./seedE2eData";
+import { E2E_TEAM_ID, seedE2eData } from "./seedE2eData";
 
 const hasAuth = Boolean(process.env.CLERK_SECRET_KEY);
 
@@ -31,27 +31,73 @@ const INVALID_CSV = [
   "",
 ].join("\n");
 
-async function chooseTrackedTeam(page: import("@playwright/test").Page) {
+function uniqueCsv() {
+  const stamp = Date.now();
+  // Unique opponent avoids "likely duplicate" conflicts with prior CI imports
+  // on the shared preview DB (same team + calendar day + opponent).
+  const opponent = `Rivals ${stamp}`;
+  const startedAt = new Date(stamp).toISOString().replace(/\.\d{3}Z$/, "Z");
+  return {
+    csv: v1Csv(`e2e-${stamp}`, startedAt, opponent),
+    opponent,
+  };
+}
+
+async function chooseTrackedTeam(page: Page) {
   // Auto-preview after file upload must finish before the metadata Select mounts.
   const trigger = page.getByLabel("Tracked team");
-  await expect(trigger).toBeVisible({ timeout: 20_000 });
+  await expect(trigger).toBeVisible({ timeout: 30_000 });
   await expect(
     page.getByRole("button", { name: "Preview import" }),
   ).toBeVisible();
 
   const option = page.getByRole("option", { name: "E2E Home" });
-  // HeroUI Select popovers are occasionally slow / miss the first click in CI.
-  for (let attempt = 0; attempt < 3; attempt++) {
-    await trigger.click();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await trigger.click({ timeout: 5_000 });
     try {
       await expect(option).toBeVisible({ timeout: 5_000 });
       await option.click();
       return;
     } catch {
-      await page.keyboard.press("Escape").catch(() => undefined);
+      await page.keyboard.press("Escape");
     }
   }
   throw new Error('Could not select tracked team "E2E Home"');
+}
+
+async function seedImportedGameViaApi(
+  request: APIRequestContext,
+  csv: string,
+) {
+  const file = {
+    name: "match.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(csv, "utf-8"),
+  };
+
+  const preview = await request.post("/api/game-imports/preview", {
+    multipart: {
+      file,
+      homeTeamId: String(E2E_TEAM_ID),
+    },
+  });
+  expect(preview.ok(), await preview.text()).toBeTruthy();
+  const previewBody = (await preview.json()) as {
+    status: string;
+    fingerprint?: string;
+  };
+  expect(previewBody.status).toBe("ready");
+  expect(previewBody.fingerprint).toBeTruthy();
+
+  const confirm = await request.post("/api/game-imports/confirm", {
+    multipart: {
+      file,
+      homeTeamId: String(E2E_TEAM_ID),
+      previewFingerprint: previewBody.fingerprint as string,
+      allowLikelyDuplicate: "false",
+    },
+  });
+  expect(confirm.status(), await confirm.text()).toBe(201);
 }
 
 test.describe("game import from CSV", () => {
@@ -82,7 +128,7 @@ test.describe("game import from CSV", () => {
   test("invalid file shows diagnostics with literal markup and no confirm", async ({
     page,
   }) => {
-    test.setTimeout(60_000);
+    test.setTimeout(90_000);
     await page.goto("/past-games");
     await page.getByRole("button", { name: "Import game from CSV" }).click();
 
@@ -102,17 +148,11 @@ test.describe("game import from CSV", () => {
     ).toBeHidden();
   });
 
-  test("valid preview and confirm creates an Imported game, duplicates blocked", async ({
+  test("valid preview and confirm creates an Imported game", async ({
     page,
   }) => {
-    test.setTimeout(60_000);
-    const stamp = Date.now();
-    const externalId = `e2e-${stamp}`;
-    // Unique opponent avoids "likely duplicate" conflicts with prior CI imports
-    // on the shared preview DB (same team + calendar day + opponent).
-    const opponent = `Rivals ${stamp}`;
-    const startedAt = new Date(stamp).toISOString().replace(/\.\d{3}Z$/, "Z");
-    const csv = v1Csv(externalId, startedAt, opponent);
+    test.setTimeout(90_000);
+    const { csv, opponent } = uniqueCsv();
 
     await page.goto("/past-games");
     await page.getByRole("button", { name: "Import game from CSV" }).click();
@@ -149,7 +189,20 @@ test.describe("game import from CSV", () => {
     await expect(
       page.getByText("Imported", { exact: true }).first(),
     ).toBeVisible();
+  });
 
+  test("re-importing the same file is blocked as Already imported", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const { csv } = uniqueCsv();
+
+    // Seed the first import via API so this test only exercises the UI
+    // duplicate path (avoids a 60s+ double wizard that flakes on Select).
+    const authed = await refreshE2eSession(page);
+    await seedImportedGameViaApi(authed, csv);
+
+    await page.goto("/past-games");
     await page.getByRole("button", { name: "Import game from CSV" }).click();
     await page.locator("#game-import-file").setInputFiles({
       name: "match.csv",
