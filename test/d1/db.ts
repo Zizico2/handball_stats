@@ -12,6 +12,8 @@ export async function resetAppTables() {
   const db = getTestDb();
   const allRows = sql`1 = 1`;
   await db.delete(schema.activeGame).where(allRows);
+  await db.delete(schema.gameImports).where(allRows);
+  await db.delete(schema.gameRosterSnapshots).where(allRows);
   await db.delete(schema.pauseToggles).where(allRows);
   await db.delete(schema.playerEvents).where(allRows);
   await db.delete(schema.games).where(allRows);

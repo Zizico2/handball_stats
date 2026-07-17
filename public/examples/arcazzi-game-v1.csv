@@ -1,0 +1,11 @@
+format_version,record_type,match_external_id,match_started_at,tracked_team,opponent,player_number,player_name,event_sequence,half,elapsed_seconds,event_type,event_group,shot_goal,shot_direction,shot_aim,shot_position,substitution_player_in
+arcazzi-game-v1,match,example-match-1,2026-03-01T18:30:00Z,Arcazzi,Rivals HC,,,,,,,,,,,,
+arcazzi-game-v1,player,,,,,7,Ana Silva,,,,,,,,,,
+arcazzi-game-v1,player,,,,,9,Bruna Costa,,,,,,,,,,
+arcazzi-game-v1,player,,,,,11,Carla Dias,,,,,,,,,,
+arcazzi-game-v1,event,example-match-1,,,,7,,0,firstHalf,0,startingPlayer,substitution,,,,,
+arcazzi-game-v1,event,example-match-1,,,,9,,1,firstHalf,0,startingPlayer,substitution,,,,,
+arcazzi-game-v1,event,example-match-1,,,,7,,2,firstHalf,95,shot,attack,true,OnTarget,TopLeft,9m+,
+arcazzi-game-v1,event,example-match-1,,,,9,,3,firstHalf,240,shot,attack,false,OffTarget,,6m+,
+arcazzi-game-v1,event,example-match-1,,,,7,,4,secondHalf,120,substitution,substitution,,,,,11
+arcazzi-game-v1,event,example-match-1,,,,11,,5,secondHalf,300,interception,defense,,,,,

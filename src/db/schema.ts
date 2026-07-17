@@ -79,6 +79,9 @@ export const games = sqliteTable(
     firstHalfStartedAtMs: integer("first_half_started_at_ms"),
     halftimeStartedAtMs: integer("halftime_started_at_ms"),
     secondHalfStartedAtMs: integer("second_half_started_at_ms"),
+    source: text("source").notNull().default("recorded"),
+    opponentName: text("opponent_name"),
+    trackedTeamName: text("tracked_team_name"),
   },
   (table) => [
     uniqueIndex("games_user_id_local_id_uq").on(table.userId, table.localId),
@@ -86,6 +89,73 @@ export const games = sqliteTable(
       columns: [table.userId, table.homeTeamLocalId],
       foreignColumns: [teams.userId, teams.localId],
     }),
+    check(
+      "games_source_check",
+      sql.raw(`\`${table.source.name}\` IN ('recorded', 'imported')`),
+    ),
+  ],
+);
+
+export const gameRosterSnapshots = sqliteTable(
+  "game_roster_snapshots",
+  {
+    id: integer().primaryKey(),
+    userId: text("user_id").notNull(),
+    localId: integer("local_id").notNull(),
+    gameLocalId: integer("game_local_id").notNull(),
+    playerNumber: integer("player_number").notNull(),
+    playerName: text("player_name").notNull(),
+  },
+  (table) => [
+    uniqueIndex("game_roster_snapshots_user_id_local_id_uq").on(
+      table.userId,
+      table.localId,
+    ),
+    uniqueIndex("game_roster_snapshots_game_player_number_uq").on(
+      table.userId,
+      table.gameLocalId,
+      table.playerNumber,
+    ),
+    foreignKey({
+      columns: [table.userId, table.gameLocalId],
+      foreignColumns: [games.userId, games.localId],
+    }),
+  ],
+);
+
+export const gameImports = sqliteTable(
+  "game_imports",
+  {
+    id: integer().primaryKey(),
+    userId: text("user_id").notNull(),
+    localId: integer("local_id").notNull(),
+    gameLocalId: integer("game_local_id").notNull(),
+    formatVersion: text("format_version").notNull(),
+    fingerprint: text("fingerprint").notNull(),
+    originalFilename: text("original_filename").notNull(),
+    importedAt: text("imported_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("game_imports_user_id_local_id_uq").on(
+      table.userId,
+      table.localId,
+    ),
+    uniqueIndex("game_imports_user_id_fingerprint_uq").on(
+      table.userId,
+      table.fingerprint,
+    ),
+    uniqueIndex("game_imports_user_id_game_local_id_uq").on(
+      table.userId,
+      table.gameLocalId,
+    ),
+    foreignKey({
+      columns: [table.userId, table.gameLocalId],
+      foreignColumns: [games.userId, games.localId],
+    }),
+    check(
+      "game_imports_fingerprint_check",
+      sql.raw(`length(\`${table.fingerprint.name}\`) = 64`),
+    ),
   ],
 );
 
