@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { refreshE2eSession } from "./e2eAuth";
 import { seedE2eData } from "./seedE2eData";
 
 const hasAuth = Boolean(process.env.CLERK_SECRET_KEY);
@@ -6,7 +7,8 @@ const hasAuth = Boolean(process.env.CLERK_SECRET_KEY);
 test.describe("active game empty state", () => {
   test.skip(!hasAuth, "Requires CLERK_SECRET_KEY for Clerk testing helpers.");
 
-  test.beforeEach(async ({ request }) => {
+  test.beforeEach(async ({ page }) => {
+    const request = await refreshE2eSession(page);
     await seedE2eData(request);
   });
 

@@ -159,6 +159,106 @@ export async function deletePauseToggleMutation(id: string) {
   );
 }
 
+import type { ImportDiagnostic } from "@/gameImport/types";
+import type {
+  GameImportDuplicateStatus,
+  GameImportPreview,
+} from "@/server/gameImport";
+
+export type GameImportPreviewResponse =
+  | { status: "needs_metadata"; formatVersion: string; missing: string[] }
+  | { status: "invalid"; diagnostics: ImportDiagnostic[] }
+  | (Omit<GameImportPreview, "status"> & { status: "ready" });
+
+export type GameImportConfirmResponse =
+  | { gameId: number; source: "imported" }
+  | { status: "invalid"; diagnostics: ImportDiagnostic[] }
+  | {
+      status: "conflict";
+      code: "PREVIEW_STALE" | "EXACT_DUPLICATE" | "LIKELY_DUPLICATE";
+      existingGameId?: number;
+    };
+
+export type GameImportRequestFields = {
+  file: File;
+  homeTeamId?: number;
+  matchDate?: string;
+  opponent?: string;
+};
+
+function gameImportFormData(
+  fields: GameImportRequestFields,
+  confirm?: { previewFingerprint: string; allowLikelyDuplicate: boolean },
+): FormData {
+  const form = new FormData();
+  form.set("file", fields.file);
+  if (fields.homeTeamId !== undefined) {
+    form.set("homeTeamId", String(fields.homeTeamId));
+  }
+  if (fields.matchDate !== undefined && fields.matchDate !== "") {
+    form.set("matchDate", fields.matchDate);
+  }
+  if (fields.opponent !== undefined && fields.opponent !== "") {
+    form.set("opponent", fields.opponent);
+  }
+  if (confirm) {
+    form.set("previewFingerprint", confirm.previewFingerprint);
+    form.set(
+      "allowLikelyDuplicate",
+      confirm.allowLikelyDuplicate ? "true" : "false",
+    );
+  }
+  return form;
+}
+
+export async function previewGameImportMutation(
+  fields: GameImportRequestFields,
+): Promise<{ httpStatus: number; body: GameImportPreviewResponse }> {
+  const response = await fetch("/api/game-imports/preview", {
+    method: "POST",
+    body: gameImportFormData(fields),
+  });
+
+  if (!response.ok && response.status !== 422) {
+    throw new Error(await readErrorMessage(response));
+  }
+
+  return {
+    httpStatus: response.status,
+    body: (await response.json()) as GameImportPreviewResponse,
+  };
+}
+
+export async function confirmGameImportMutation(
+  fields: GameImportRequestFields,
+  confirm: { previewFingerprint: string; allowLikelyDuplicate: boolean },
+): Promise<{ httpStatus: number; body: GameImportConfirmResponse }> {
+  const response = await fetch("/api/game-imports/confirm", {
+    method: "POST",
+    body: gameImportFormData(fields, confirm),
+  });
+
+  if (!response.ok && response.status !== 409 && response.status !== 422) {
+    throw new Error(await readErrorMessage(response));
+  }
+
+  return {
+    httpStatus: response.status,
+    body: (await response.json()) as GameImportConfirmResponse,
+  };
+}
+
+async function readErrorMessage(response: Response): Promise<string> {
+  try {
+    const text = await response.text();
+    return text || `Request failed with status ${response.status}`;
+  } catch {
+    return `Request failed with status ${response.status}`;
+  }
+}
+
+export type { GameImportDuplicateStatus };
+
 export async function getMatchClockSnapshotQuery(gameId: number) {
   return parseResponse(
     apiClient.api.collections["match-clock"][":gameId"].$get({

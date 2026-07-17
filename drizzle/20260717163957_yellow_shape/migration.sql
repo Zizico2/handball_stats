@@ -1,0 +1,1 @@
+ALTER TABLE `player_events` ADD `event_sequence` integer;

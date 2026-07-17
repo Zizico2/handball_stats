@@ -10,6 +10,10 @@ import {
   dbRowToGame,
 } from "@/db";
 import * as schema from "@/db/schema";
+import { allocateLocalIds } from "@/server/allocateLocalId";
+
+export type DbGameRosterSnapshotInsert =
+  typeof schema.gameRosterSnapshots.$inferInsert;
 
 export class StartGameConflictError extends Error {
   constructor(message = "An active game already exists") {
@@ -63,10 +67,14 @@ export async function insertGameAndActiveMarkerAtomic(
   db: AppDb,
   gameRow: DbGameInsert,
   activeRow: DbActiveGameInsert,
+  rosterSnapshotRows: DbGameRosterSnapshotInsert[] = [],
 ): Promise<{ game: DbGame; activeGame: DbActiveGame }> {
   const [gamesRows, activeRows] = await db.batch([
     db.insert(schema.games).values(gameRow).returning(),
     db.insert(schema.activeGame).values(activeRow).returning(),
+    ...(rosterSnapshotRows.length > 0
+      ? [db.insert(schema.gameRosterSnapshots).values(rosterSnapshotRows)]
+      : []),
   ]);
 
   return {
@@ -131,11 +139,36 @@ export async function startGame(
     throw new StartGameTeamNotFoundError(input.homeTeamId);
   }
 
+  const rosterPlayers = await db
+    .select({
+      number: schema.teamPlayers.number,
+      name: schema.teamPlayers.name,
+    })
+    .from(schema.teamPlayers)
+    .where(
+      and(
+        eq(schema.teamPlayers.userId, userId),
+        eq(schema.teamPlayers.teamLocalId, input.homeTeamId),
+      ),
+    );
+
+  const snapshotIds = allocateLocalIds(rosterPlayers.length);
+  const rosterSnapshotRows: DbGameRosterSnapshotInsert[] = rosterPlayers.map(
+    (player, index) => ({
+      userId,
+      localId: snapshotIds[index],
+      gameLocalId: input.id,
+      playerNumber: player.number,
+      playerName: player.name,
+    }),
+  );
+
   try {
     const { game, activeGame } = await insertGameAndActiveMarkerAtomic(
       db,
-      gameInsertRow(input, userId),
+      { ...gameInsertRow(input, userId), trackedTeamName: team.name },
       activeGameInsertRow(input, userId),
+      rosterSnapshotRows,
     );
 
     return {

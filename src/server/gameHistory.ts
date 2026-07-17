@@ -3,28 +3,19 @@ import { and, desc, eq } from "drizzle-orm";
 import { dbRowToPlayerEvent } from "@/db";
 import { PLAYER_EVENTS_CSV_COLUMN_KEYS } from "@/db/playerEventCsv";
 import * as schema from "@/db/schema";
+import { serializeArcazziGameV1 } from "@/gameImport/serializeGameCsv";
 import { getDb } from "@/server/db";
 
 export { PLAYER_EVENTS_CSV_COLUMN_KEYS };
 
-function toCsvCell(value: unknown) {
-  if (value === null || value === undefined) {
-    return "";
-  }
-
-  const text = String(value);
-
-  if (/[",\n\r]/.test(text)) {
-    return `"${text.replaceAll('"', '""')}"`;
-  }
-
-  return text;
-}
+export type GameSource = "recorded" | "imported";
 
 export interface PastGameSummary {
   id: number;
   createdAt: string;
   homeTeamName: string;
+  opponentName: string | null;
+  source: GameSource;
   score: number;
   eventCount: number;
 }
@@ -34,12 +25,18 @@ export interface PastGameLog {
     id: number;
     createdAt: string;
     homeTeamName: string;
+    opponentName: string | null;
+    source: GameSource;
   };
   players: Array<{
     name: string;
     number: number;
   }>;
   events: ReturnType<typeof dbRowToPlayerEvent>[];
+}
+
+function gameSource(raw: string): GameSource {
+  return raw === "imported" ? "imported" : "recorded";
 }
 
 export async function listPastGames(): Promise<PastGameSummary[]> {
@@ -110,9 +107,14 @@ export async function listPastGames(): Promise<PastGameSummary[]> {
       return {
         id: game.localId,
         createdAt: game.createdAt,
+        // Prefer the immutable snapshot label; fall back to the live team
+        // for games recorded before snapshots existed.
         homeTeamName:
+          game.trackedTeamName ??
           teamNamesById.get(game.homeTeamLocalId) ??
           `Team #${game.homeTeamLocalId}`,
+        opponentName: game.opponentName,
+        source: gameSource(game.source),
         score: stats.score,
         eventCount: stats.eventCount,
       };
@@ -143,51 +145,84 @@ export async function getPastGameLog(
     return null;
   }
 
-  const [teamRows, playerRows, eventRows] = await Promise.all([
-    db
-      .select({
-        localId: schema.teams.localId,
-        name: schema.teams.name,
-      })
-      .from(schema.teams)
-      .where(
-        and(
-          eq(schema.teams.userId, userId),
-          eq(schema.teams.localId, game.homeTeamLocalId),
+  const [teamRows, snapshotRows, livePlayerRows, eventRows] = await Promise.all(
+    [
+      db
+        .select({
+          localId: schema.teams.localId,
+          name: schema.teams.name,
+        })
+        .from(schema.teams)
+        .where(
+          and(
+            eq(schema.teams.userId, userId),
+            eq(schema.teams.localId, game.homeTeamLocalId),
+          ),
+        )
+        .limit(1),
+      db
+        .select({
+          name: schema.gameRosterSnapshots.playerName,
+          number: schema.gameRosterSnapshots.playerNumber,
+        })
+        .from(schema.gameRosterSnapshots)
+        .where(
+          and(
+            eq(schema.gameRosterSnapshots.userId, userId),
+            eq(schema.gameRosterSnapshots.gameLocalId, gameId),
+          ),
         ),
-      )
-      .limit(1),
-    db
-      .select({
-        name: schema.teamPlayers.name,
-        number: schema.teamPlayers.number,
-      })
-      .from(schema.teamPlayers)
-      .where(
-        and(
-          eq(schema.teamPlayers.userId, userId),
-          eq(schema.teamPlayers.teamLocalId, game.homeTeamLocalId),
+      db
+        .select({
+          name: schema.teamPlayers.name,
+          number: schema.teamPlayers.number,
+        })
+        .from(schema.teamPlayers)
+        .where(
+          and(
+            eq(schema.teamPlayers.userId, userId),
+            eq(schema.teamPlayers.teamLocalId, game.homeTeamLocalId),
+          ),
         ),
-      ),
-    db
-      .select()
-      .from(schema.playerEvents)
-      .where(
-        and(
-          eq(schema.playerEvents.userId, userId),
-          eq(schema.playerEvents.gameLocalId, gameId),
+      db
+        .select()
+        .from(schema.playerEvents)
+        .where(
+          and(
+            eq(schema.playerEvents.userId, userId),
+            eq(schema.playerEvents.gameLocalId, gameId),
+          ),
         ),
-      ),
-  ]);
+    ],
+  );
 
   return {
     game: {
       id: game.localId,
       createdAt: game.createdAt,
-      homeTeamName: teamRows[0]?.name ?? `Team #${game.homeTeamLocalId}`,
+      homeTeamName:
+        game.trackedTeamName ??
+        teamRows[0]?.name ??
+        `Team #${game.homeTeamLocalId}`,
+      opponentName: game.opponentName,
+      source: gameSource(game.source),
     },
-    players: playerRows,
-    events: eventRows.map(dbRowToPlayerEvent),
+    // Prefer the immutable roster snapshot; fall back to the live roster for
+    // games recorded before snapshots existed.
+    players: snapshotRows.length > 0 ? snapshotRows : livePlayerRows,
+    events: [...eventRows]
+      .sort((a, b) => {
+        if (a.half !== b.half) {
+          return a.half === "firstHalf" ? -1 : 1;
+        }
+        if (a.ellapsedSeconds !== b.ellapsedSeconds) {
+          return a.ellapsedSeconds - b.ellapsedSeconds;
+        }
+        const aOrder = a.eventSequence ?? a.localId;
+        const bOrder = b.eventSequence ?? b.localId;
+        return aOrder - bOrder;
+      })
+      .map(dbRowToPlayerEvent),
   };
 }
 
@@ -224,26 +259,57 @@ export async function getPastGamePlayerEventsTableRows(
     );
 }
 
+/**
+ * Exports a past game as the shared `arcazzi-game-v1` contract, using the
+ * same serializer module the importer validates against.
+ */
 export async function getPastGamePlayerEventsCsv(
   gameId: number,
 ): Promise<{ fileName: string; csv: string } | null> {
-  const rows = await getPastGamePlayerEventsTableRows(gameId);
+  const [gameLog, rows] = await Promise.all([
+    getPastGameLog(gameId),
+    getPastGamePlayerEventsTableRows(gameId),
+  ]);
 
-  if (rows === null) {
+  if (gameLog === null || rows === null) {
     return null;
   }
 
-  const headers = PLAYER_EVENTS_CSV_COLUMN_KEYS.map((key) => String(key));
-  const csvRows = [headers.join(",")];
+  const orderedRows = [...rows].sort((a, b) => {
+    if (a.half !== b.half) {
+      return a.half === "firstHalf" ? -1 : 1;
+    }
+    if (a.ellapsedSeconds !== b.ellapsedSeconds) {
+      return a.ellapsedSeconds - b.ellapsedSeconds;
+    }
+    const aOrder = a.eventSequence ?? a.localId;
+    const bOrder = b.eventSequence ?? b.localId;
+    return aOrder - bOrder;
+  });
 
-  for (const row of rows) {
-    csvRows.push(
-      PLAYER_EVENTS_CSV_COLUMN_KEYS.map((key) => toCsvCell(row[key])).join(","),
-    );
-  }
+  const csv = serializeArcazziGameV1({
+    matchExternalId: `game-${gameId}`,
+    matchStartedAt: gameLog.game.createdAt,
+    trackedTeamName: gameLog.game.homeTeamName,
+    opponentName: gameLog.game.opponentName,
+    roster: gameLog.players,
+    events: orderedRows.map((row, index) => ({
+      sequence: row.eventSequence ?? index,
+      player: row.player,
+      half: row.half,
+      ellapsedSeconds: row.ellapsedSeconds,
+      eventType: row.eventType,
+      eventGroup: row.eventGroup,
+      shotGoal: row.eventType === "shot" ? (row.shotGoal ?? false) : null,
+      shotDirection: row.shotDirection,
+      shotAim: row.shotAim,
+      shotPosition: row.shotPosition,
+      substitutionPlayerIn: row.substitutionPlayerIn,
+    })),
+  });
 
   return {
-    fileName: `game-${gameId}-player-events.csv`,
-    csv: `${csvRows.join("\n")}\n`,
+    fileName: `game-${gameId}-arcazzi-game-v1.csv`,
+    csv,
   };
 }
