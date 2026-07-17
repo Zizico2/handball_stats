@@ -6,6 +6,7 @@ import {
   type SetStateAction,
   useCallback,
   useEffect,
+  useRef,
 } from "react";
 import { activeGameCollection } from "@/collections";
 import type { ActiveGame, Game } from "@/datamodel";
@@ -14,6 +15,11 @@ import {
   initialActiveGameControlsState,
   type MatchStatus,
 } from "@/inGameControlsAtoms";
+import {
+  beginMatchSaving,
+  markMatchFailed,
+  markMatchSaved,
+} from "@/matchSyncAtom";
 import { useServerMatchClock } from "@/useServerMatchClock";
 
 interface UseActiveGameControlsParams {
@@ -34,6 +40,7 @@ export function useActiveGameControls({
   setMatchStatus,
 }: UseActiveGameControlsParams) {
   const setActiveGameControls = useSetAtom(inGameControlsAtom);
+  const endMatchPendingRef = useRef(false);
 
   const {
     activeHalf,
@@ -55,12 +62,37 @@ export function useActiveGameControls({
   });
 
   const handleEndMatch = useCallback(() => {
-    if (!activeGameData) {
+    if (!activeGameData || endMatchPendingRef.current) {
       return;
     }
 
-    activeGameCollection.delete(activeGameData.id);
-    clearClockState();
+    endMatchPendingRef.current = true;
+    beginMatchSaving();
+
+    void (async () => {
+      try {
+        const transaction = activeGameCollection.delete(activeGameData.id);
+        try {
+          await transaction.isPersisted.promise;
+        } catch (error) {
+          await activeGameCollection.utils.refetch();
+          if (activeGameCollection.get(activeGameData.id) !== undefined) {
+            throw error;
+          }
+        }
+
+        clearClockState();
+        markMatchSaved();
+      } catch (error) {
+        console.error("Failed to end match", error);
+        markMatchFailed(
+          "Could not end the match. Retry, or reload the match.",
+          handleEndMatch,
+        );
+      } finally {
+        endMatchPendingRef.current = false;
+      }
+    })();
   }, [activeGameData, clearClockState]);
 
   useEffect(() => {

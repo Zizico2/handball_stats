@@ -10,6 +10,7 @@ import { ActiveGameView } from "@/components/active-game/ActiveGameView";
 import { useActiveGameControls } from "@/components/active-game/hooks/useActiveGameControls";
 import { useActiveGameData } from "@/components/active-game/hooks/useActiveGameData";
 import {
+  awaitPlayerEventDeletionPersistence,
   awaitPlayerEventPersistence,
   insertPlayerEvent,
 } from "@/components/active-game/utils/insertPlayerEvent";
@@ -153,7 +154,9 @@ function ActiveGame() {
         );
 
         await Promise.all([
-          ...deleteTxs.map((tx) => tx.isPersisted.promise),
+          ...deleteTxs.map((tx, index) =>
+            awaitPlayerEventDeletionPersistence(tx, existingStarting[index].id),
+          ),
           ...insertTxs.map((tx) => awaitPlayerEventPersistence(tx)),
         ]);
 

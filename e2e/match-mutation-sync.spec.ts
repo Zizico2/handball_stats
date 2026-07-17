@@ -47,6 +47,7 @@ async function startGameWithLineupAndFirstHalf(page: Page) {
 }
 
 test.describe("match mutation sync states", () => {
+  test.describe.configure({ mode: "serial" });
   test.skip(!hasAuth, "Requires CLERK_SECRET_KEY for Clerk testing helpers.");
 
   test.beforeEach(async ({ request }) => {
@@ -90,6 +91,29 @@ test.describe("match mutation sync states", () => {
         name: "Retry",
       }),
     ).toBeVisible();
+  });
+
+  test("reconciles a committed game start when its response is lost", async ({
+    page,
+  }) => {
+    let intercepted = false;
+    await page.route("**/api/collections/games/start", async (route) => {
+      if (route.request().method() === "POST" && !intercepted) {
+        intercepted = true;
+        await route.fetch();
+        await route.abort("failed");
+        return;
+      }
+      await route.continue();
+    });
+
+    await page.goto("/new-game");
+    const startGame = page.getByRole("button", { name: "Start Game" });
+    await expect(startGame).toBeEnabled({ timeout: 15_000 });
+    await startGame.click();
+
+    await expect(page).toHaveURL(/\/active-game/);
+    await expect(page.getByTestId("match-sync-failure")).toHaveCount(0);
   });
 
   test("keeps clock mutation failure visible with retry", async ({ page }) => {
@@ -194,6 +218,78 @@ test.describe("match mutation sync states", () => {
         name: "Retry",
       }),
     ).toBeVisible();
+    await page.getByRole("button", { name: "Match controls" }).click();
+    await expect(
+      page.getByRole("menuitem", { name: "Start Halftime" }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole("menuitem", { name: "End Match" }),
+    ).toBeDisabled();
     await expect(page.getByText(/Position: 9m\+/)).toHaveCount(0);
+  });
+
+  test("reconciles a committed event when its response is lost", async ({
+    page,
+  }) => {
+    await startGameWithLineupAndFirstHalf(page);
+
+    let intercepted = false;
+    await page.route("**/api/collections/player-events", async (route) => {
+      if (route.request().method() === "POST" && !intercepted) {
+        intercepted = true;
+        await route.fetch();
+        await route.abort("failed");
+        return;
+      }
+      await route.continue();
+    });
+
+    await page.getByRole("button", { name: "Attack" }).click();
+    await page.getByRole("button", { name: "Shot" }).click();
+    await page.getByRole("button", { name: /#7/ }).click();
+    await page.getByRole("button", { name: "9m+" }).click();
+    await page.getByRole("button", { name: "Top left" }).click();
+    await page.getByRole("button", { name: "Goal", exact: true }).click();
+
+    await expect(page.getByTestId("match-sync-status")).toHaveAttribute(
+      "data-status",
+      "saved",
+      { timeout: 15_000 },
+    );
+    await expect(page.getByText(/Position: 9m\+/)).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByTestId("match-sync-failure")).toHaveCount(0);
+    await page.unrouteAll({ behavior: "wait" });
+  });
+
+  test("keeps end-match failure visible and retries it", async ({ page }) => {
+    await startGameWithLineupAndFirstHalf(page);
+
+    let shouldFail = true;
+    await page.route("**/api/collections/active-game", async (route) => {
+      if (route.request().method() === "DELETE" && shouldFail) {
+        shouldFail = false;
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "simulated end failure" }),
+        });
+        return;
+      }
+      await route.continue();
+    });
+
+    await page.getByRole("button", { name: "Match controls" }).click();
+    await page.getByRole("menuitem", { name: "End Match" }).click();
+    const failure = page.getByTestId("match-sync-failure");
+    await expect(failure).toBeVisible({ timeout: 15_000 });
+    await failure.getByRole("button", { name: "Retry" }).click();
+
+    await expect(
+      page.getByText("No active game.", { exact: false }),
+    ).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });

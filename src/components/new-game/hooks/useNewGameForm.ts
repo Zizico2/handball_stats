@@ -58,8 +58,27 @@ export function useNewGameForm({
 
       markMatchSaved();
       onStarted();
-    } catch {
-      const message = "Could not start the game. Please try again.";
+    } catch (error) {
+      try {
+        await Promise.all([
+          gamesCollection.utils.refetch(),
+          activeGameCollection.utils.refetch(),
+        ]);
+        const reconciledActiveGame = activeGameCollection.get(1);
+        if (
+          reconciledActiveGame?.gameId === nextGameId &&
+          reconciledActiveGame.homeTeamId === selectedTeamId
+        ) {
+          markMatchSaved();
+          onStarted();
+          return;
+        }
+      } catch (reconcileError) {
+        console.error("Failed to reconcile game start", reconcileError);
+      }
+
+      console.error("Failed to start game", error);
+      const message = "Could not start the game. Retry, or reload this page.";
       setStartError(message);
       markMatchFailed(message, () => {
         void handleStartNewGame();
