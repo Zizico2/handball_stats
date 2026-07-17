@@ -7,10 +7,14 @@ const hasAuth = Boolean(process.env.CLERK_SECRET_KEY);
 const V1_HEADER =
   "format_version,record_type,match_external_id,match_started_at,tracked_team,opponent,player_number,player_name,event_sequence,half,elapsed_seconds,event_type,event_group,shot_goal,shot_direction,shot_aim,shot_position,substitution_player_in";
 
-function v1Csv(externalId: string, startedAt: string): string {
+function v1Csv(
+  externalId: string,
+  startedAt: string,
+  opponent: string,
+): string {
   return [
     V1_HEADER,
-    `arcazzi-game-v1,match,${externalId},${startedAt},E2E Imported Team,Rivals HC,,,,,,,,,,,,`,
+    `arcazzi-game-v1,match,${externalId},${startedAt},E2E Imported Team,${opponent},,,,,,,,,,,,`,
     "arcazzi-game-v1,player,,,,,7,Alex,,,,,,,,,,",
     "arcazzi-game-v1,player,,,,,12,Blake,,,,,,,,,,",
     `arcazzi-game-v1,event,${externalId},,,,7,,0,firstHalf,95,shot,attack,true,OnTarget,TopLeft,9m+,`,
@@ -85,9 +89,13 @@ test.describe("game import from CSV", () => {
     page,
   }) => {
     test.setTimeout(60_000);
-    const externalId = `e2e-${Date.now()}`;
-    const startedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
-    const csv = v1Csv(externalId, startedAt);
+    const stamp = Date.now();
+    const externalId = `e2e-${stamp}`;
+    // Unique opponent avoids "likely duplicate" conflicts with prior CI imports
+    // on the shared preview DB (same team + calendar day + opponent).
+    const opponent = `Rivals ${stamp}`;
+    const startedAt = new Date(stamp).toISOString().replace(/\.\d{3}Z$/, "Z");
+    const csv = v1Csv(externalId, startedAt, opponent);
 
     await page.goto("/past-games");
     await page.getByRole("button", { name: "Import game from CSV" }).click();
@@ -106,13 +114,17 @@ test.describe("game import from CSV", () => {
       page.getByText("E2E Imported Team", { exact: true }),
     ).toBeVisible();
 
-    await page.getByRole("button", { name: "Import completed game" }).click();
+    const importButton = page.getByRole("button", {
+      name: "Import completed game",
+    });
+    await expect(importButton).toBeEnabled({ timeout: 5_000 });
+    await importButton.click();
 
     await expect(page).toHaveURL(/\/past-games\/\d+/, { timeout: 20_000 });
     await expect(page.getByText("Imported", { exact: true })).toBeVisible();
     await expect(
       page.getByRole("heading", {
-        name: "E2E Imported Team vs Rivals HC",
+        name: `E2E Imported Team vs ${opponent}`,
       }),
     ).toBeVisible();
 
@@ -130,7 +142,9 @@ test.describe("game import from CSV", () => {
     await chooseTrackedTeam(page);
     await page.getByRole("button", { name: "Preview import" }).click();
 
-    await expect(page.getByText("Already imported")).toBeVisible();
+    await expect(
+      page.getByText("Already imported", { exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Import completed game" }),
     ).toBeDisabled();
