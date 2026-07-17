@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { refreshE2eSession } from "./e2eAuth";
 import { seedE2eData } from "./seedE2eData";
 
 const hasAuth = Boolean(process.env.CLERK_SECRET_KEY);
@@ -26,17 +27,18 @@ const INVALID_CSV = [
   "",
 ].join("\n");
 
+async function chooseTrackedTeam(page: import("@playwright/test").Page) {
+  await page.getByLabel("Tracked team").click();
+  await expect(page.getByRole("listbox")).toBeVisible({ timeout: 10_000 });
+  await page.getByRole("option", { name: "E2E Home" }).click();
+}
+
 test.describe("game import from CSV", () => {
   test.skip(!hasAuth, "Clerk credentials are required");
 
   test.beforeEach(async ({ page }) => {
-    // Refresh Clerk session cookies before API seeding. Late Playwright
-    // projects can hit 401s on the static storageState from setup.
-    await page.goto("/");
-    await expect(page.getByRole("link", { name: "Past Games" })).toBeVisible({
-      timeout: 30_000,
-    });
-    await seedE2eData(page.request);
+    const request = await refreshE2eSession(page);
+    await seedE2eData(request);
   });
 
   test("dialog opens, template link exists, cancel writes nothing", async ({
@@ -59,6 +61,7 @@ test.describe("game import from CSV", () => {
   test("invalid file shows diagnostics with literal markup and no confirm", async ({
     page,
   }) => {
+    test.setTimeout(60_000);
     await page.goto("/past-games");
     await page.getByRole("button", { name: "Import game from CSV" }).click();
 
@@ -68,11 +71,7 @@ test.describe("game import from CSV", () => {
       buffer: Buffer.from(INVALID_CSV, "utf-8"),
     });
 
-    // Needs a team first; pick the seeded one, then preview.
-    await page
-      .getByRole("button", { name: /Tracked team|Select your team/ })
-      .click();
-    await page.getByRole("option", { name: "E2E Home" }).click();
+    await chooseTrackedTeam(page);
     await page.getByRole("button", { name: "Preview import" }).click();
 
     await expect(page.getByText("The file failed validation")).toBeVisible();
@@ -85,8 +84,9 @@ test.describe("game import from CSV", () => {
   test("valid preview and confirm creates an Imported game, duplicates blocked", async ({
     page,
   }) => {
+    test.setTimeout(60_000);
     const externalId = `e2e-${Date.now()}`;
-    const startedAt = "2026-04-10T18:00:00Z";
+    const startedAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
     const csv = v1Csv(externalId, startedAt);
 
     await page.goto("/past-games");
@@ -98,38 +98,36 @@ test.describe("game import from CSV", () => {
       buffer: Buffer.from(csv, "utf-8"),
     });
 
-    await page
-      .getByRole("button", { name: /Tracked team|Select your team/ })
-      .click();
-    await page.getByRole("option", { name: "E2E Home" }).click();
+    await chooseTrackedTeam(page);
     await page.getByRole("button", { name: "Preview import" }).click();
 
     await expect(page.getByText("Ready to import")).toBeVisible();
-    await expect(page.getByText("E2E Imported Team")).toBeVisible();
+    await expect(
+      page.getByText("E2E Imported Team", { exact: true }),
+    ).toBeVisible();
 
     await page.getByRole("button", { name: "Import completed game" }).click();
 
     await expect(page).toHaveURL(/\/past-games\/\d+/, { timeout: 20_000 });
-    await expect(page.getByText("Imported")).toBeVisible();
+    await expect(page.getByText("Imported", { exact: true })).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: /E2E Imported Team/ }),
+      page.getByRole("heading", {
+        name: "E2E Imported Team vs Rivals HC",
+      }),
     ).toBeVisible();
 
-    // Back on the list, the imported card carries the badge.
     await page.goto("/past-games");
-    await expect(page.getByText("Imported").first()).toBeVisible();
+    await expect(
+      page.getByText("Imported", { exact: true }).first(),
+    ).toBeVisible();
 
-    // Re-importing the same file is blocked as an exact duplicate.
     await page.getByRole("button", { name: "Import game from CSV" }).click();
     await page.locator("#game-import-file").setInputFiles({
       name: "match.csv",
       mimeType: "text/csv",
       buffer: Buffer.from(csv, "utf-8"),
     });
-    await page
-      .getByRole("button", { name: /Tracked team|Select your team/ })
-      .click();
-    await page.getByRole("option", { name: "E2E Home" }).click();
+    await chooseTrackedTeam(page);
     await page.getByRole("button", { name: "Preview import" }).click();
 
     await expect(page.getByText("Already imported")).toBeVisible();

@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { refreshE2eSession } from "./e2eAuth";
 import { seedE2eData } from "./seedE2eData";
 
 const hasAuth = Boolean(process.env.CLERK_SECRET_KEY);
@@ -37,6 +38,9 @@ async function startGameWithLineupAndFirstHalf(page: Page) {
 
   await page.getByText("#7 Alex").click();
   await page.getByText("#12 Blake").click();
+  await expect(page.getByRole("button", { name: "Save Lineup" })).toBeEnabled({
+    timeout: 5_000,
+  });
   await page.getByRole("button", { name: "Save Lineup" }).click();
 
   await page.getByRole("button", { name: "Match controls" }).click();
@@ -51,14 +55,9 @@ test.describe("match mutation sync states", () => {
   test.skip(!hasAuth, "Requires CLERK_SECRET_KEY for Clerk testing helpers.");
 
   test.beforeEach(async ({ page }) => {
-    // Refresh Clerk session cookies before API seeding. Mid/late suite
-    // projects can hit 401s on the static storageState from setup.
-    await page.goto("/");
-    await expect(page.getByRole("link", { name: "Past Games" })).toBeVisible({
-      timeout: 30_000,
-    });
-    await seedE2eData(page.request);
-    await clearActiveGame(page.request);
+    const request = await refreshE2eSession(page);
+    await seedE2eData(request);
+    await clearActiveGame(request);
   });
 
   test("keeps start-game failure visible with retry", async ({ page }) => {
