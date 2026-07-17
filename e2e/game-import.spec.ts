@@ -32,9 +32,26 @@ const INVALID_CSV = [
 ].join("\n");
 
 async function chooseTrackedTeam(page: import("@playwright/test").Page) {
-  await page.getByLabel("Tracked team").click();
-  await expect(page.getByRole("listbox")).toBeVisible({ timeout: 10_000 });
-  await page.getByRole("option", { name: "E2E Home" }).click();
+  // Auto-preview after file upload must finish before the metadata Select mounts.
+  const trigger = page.getByLabel("Tracked team");
+  await expect(trigger).toBeVisible({ timeout: 20_000 });
+  await expect(
+    page.getByRole("button", { name: "Preview import" }),
+  ).toBeVisible();
+
+  const option = page.getByRole("option", { name: "E2E Home" });
+  // HeroUI Select popovers are occasionally slow / miss the first click in CI.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await trigger.click();
+    try {
+      await expect(option).toBeVisible({ timeout: 5_000 });
+      await option.click();
+      return;
+    } catch {
+      await page.keyboard.press("Escape").catch(() => undefined);
+    }
+  }
+  throw new Error('Could not select tracked team "E2E Home"');
 }
 
 test.describe("game import from CSV", () => {
