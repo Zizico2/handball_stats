@@ -27,7 +27,7 @@ export function parseCsvText(text: string): ParseCsvResult {
       skip_empty_lines: true,
       trim: false,
       info: true,
-    }) as Array<{
+    }) as unknown as Array<{
       record: string[];
       info: { lines: number };
     }>;

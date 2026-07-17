@@ -36,7 +36,12 @@ export type DetectedFormat =
 
 export type CsvInspection =
   | { ok: false; diagnostics: DiagnosticCollector["diagnostics"] }
-  | { ok: true; format: DetectedFormat; header: RawCsvRow; dataRows: RawCsvRow[] };
+  | {
+      ok: true;
+      format: DetectedFormat;
+      header: RawCsvRow;
+      dataRows: RawCsvRow[];
+    };
 
 function headersMatch(cells: string[], expected: readonly string[]): boolean {
   return (
@@ -77,7 +82,8 @@ export function inspectCsv(text: string): CsvInspection {
   if (!header) {
     collector.add({
       code: "EMPTY_FILE",
-      message: "The file has no header row. Download the template and start from it.",
+      message:
+        "The file has no header row. Download the template and start from it.",
     });
     return { ok: false, diagnostics: collector.diagnostics };
   }
@@ -610,7 +616,10 @@ export function validateArcazziGameV1(
     roster.push({ number, name });
   }
 
-  if (roster.length < IMPORT_MIN_PLAYERS || roster.length > IMPORT_MAX_PLAYERS) {
+  if (
+    roster.length < IMPORT_MIN_PLAYERS ||
+    roster.length > IMPORT_MAX_PLAYERS
+  ) {
     collector.add({
       code: "ROSTER_SIZE",
       value: String(roster.length),
@@ -647,7 +656,8 @@ export function validateArcazziGameV1(
         row: row.line,
         column: "match_external_id",
         value: row.get("match_external_id"),
-        message: "All event rows must repeat the match_external_id of the match row.",
+        message:
+          "All event rows must repeat the match_external_id of the match row.",
       });
     }
 
@@ -941,9 +951,7 @@ export function validateLegacyEventLogV0(
     return { ok: false, diagnostics: collector.diagnostics };
   }
 
-  const rosterNumbers = new Set(
-    metadata.roster.map((player) => player.number),
-  );
+  const rosterNumbers = new Set(metadata.roster.map((player) => player.number));
 
   if (
     metadata.roster.length < IMPORT_MIN_PLAYERS ||
@@ -1132,7 +1140,13 @@ export function validateLegacyEventLogV0(
     sequence += 1;
   }
 
-  crossRowChecks(collector, metadata.roster, events, "player", "substitutionPlayerIn");
+  crossRowChecks(
+    collector,
+    metadata.roster,
+    events,
+    "player",
+    "substitutionPlayerIn",
+  );
 
   return finishResult(collector, () => ({
     formatVersion: LEGACY_EVENT_LOG_V0,

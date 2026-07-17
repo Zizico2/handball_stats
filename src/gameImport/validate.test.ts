@@ -187,7 +187,9 @@ describe("validateArcazziGameV1", () => {
       "INVALID_INTEGER",
     );
     expectError(
-      validateV1Text(VALID_V1_FIXTURE.replace(",true,OnTarget,", ",yes,OnTarget,")),
+      validateV1Text(
+        VALID_V1_FIXTURE.replace(",true,OnTarget,", ",yes,OnTarget,"),
+      ),
       "INVALID_BOOLEAN",
     );
   });
@@ -198,7 +200,9 @@ describe("validateArcazziGameV1", () => {
       "INVALID_ENUM",
     );
     expectError(
-      validateV1Text(VALID_V1_FIXTURE.replace("OnTarget,TopLeft", "Sideways,TopLeft")),
+      validateV1Text(
+        VALID_V1_FIXTURE.replace("OnTarget,TopLeft", "Sideways,TopLeft"),
+      ),
       "INVALID_ENUM",
     );
   });
@@ -212,7 +216,9 @@ describe("validateArcazziGameV1", () => {
     const result = validateV1Text(offTargetGoal);
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      const diagnostic = result.diagnostics.find((d) => d.code === "INVALID_EVENT");
+      const diagnostic = result.diagnostics.find(
+        (d) => d.code === "INVALID_EVENT",
+      );
       expect(diagnostic?.column).toBe("shot_goal");
     }
 
@@ -250,7 +256,10 @@ describe("validateArcazziGameV1", () => {
     );
     expectError(
       validateV1Text(
-        VALID_V1_FIXTURE.replace(",9,,1,firstHalf,240,", ",9,,0,firstHalf,240,"),
+        VALID_V1_FIXTURE.replace(
+          ",9,,1,firstHalf,240,",
+          ",9,,0,firstHalf,240,",
+        ),
       ),
       "DUPLICATE_EVENT_SEQUENCE",
     );
@@ -294,7 +303,9 @@ describe("validateArcazziGameV1", () => {
 
   test("rejects decreasing elapsed seconds within a half", () => {
     expectError(
-      validateV1Text(VALID_V1_FIXTURE.replace(",1,firstHalf,240,", ",1,firstHalf,10,")),
+      validateV1Text(
+        VALID_V1_FIXTURE.replace(",1,firstHalf,240,", ",1,firstHalf,10,"),
+      ),
       "ELAPSED_DECREASED",
     );
   });
@@ -327,7 +338,9 @@ describe("validateArcazziGameV1", () => {
     ].join("\n");
     void withStarters;
     const result = expectOk(validateV1Text(lines));
-    expect(result.warnings.map((w) => w.code)).toContain("LINEUP_REPLAY_SKIPPED");
+    expect(result.warnings.map((w) => w.code)).toContain(
+      "LINEUP_REPLAY_SKIPPED",
+    );
   });
 
   test("rejects nonzero starting-player elapsed and duplicates", () => {
@@ -407,7 +420,7 @@ describe("validateArcazziGameV1", () => {
 describe("validateLegacyEventLogV0", () => {
   function validateLegacy(
     text: string,
-    metadata = {
+    metadata: Parameters<typeof validateLegacyEventLogV0>[1] = {
       matchDate: "2026-03-01",
       opponent: "Rivals HC",
       teamName: "Arcazzi",
@@ -433,10 +446,7 @@ describe("validateLegacyEventLogV0", () => {
 
   test("rejects player numbers missing from the selected roster", () => {
     const result = validateLegacy(
-      VALID_LEGACY_FIXTURE.replace(
-        "7,95,shot",
-        "42,95,shot",
-      ),
+      VALID_LEGACY_FIXTURE.replace("7,95,shot", "42,95,shot"),
     );
     expectError(result, "PLAYER_NOT_IN_ROSTER");
   });

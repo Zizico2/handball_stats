@@ -1,4 +1,4 @@
-import { Typography } from "@heroui/react";
+import { Chip, Typography } from "@heroui/react";
 import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { AppNextLink } from "@/components/AppNextLink";
@@ -38,9 +38,17 @@ export async function PastGameDetailContent({
   return (
     <>
       <div>
-        <Typography.Heading level={3}>
-          {gameLog.game.homeTeamName}
-        </Typography.Heading>
+        <div className="flex flex-wrap items-center gap-2">
+          <Typography.Heading level={3}>
+            {gameLog.game.homeTeamName}
+            {gameLog.game.opponentName
+              ? ` vs ${gameLog.game.opponentName}`
+              : ""}
+          </Typography.Heading>
+          {gameLog.game.source === "imported" ? (
+            <Chip variant="secondary">Imported</Chip>
+          ) : null}
+        </div>
         <GameMetaLine
           className="mt-2"
           createdAt={gameLog.game.createdAt}

@@ -1,4 +1,7 @@
-import { ARCAZZI_GAME_V1_HEADERS, LEGACY_EVENT_LOG_V0_HEADERS } from "./csvContract";
+import {
+  ARCAZZI_GAME_V1_HEADERS,
+  LEGACY_EVENT_LOG_V0_HEADERS,
+} from "./csvContract";
 
 export const V1_HEADER_LINE = ARCAZZI_GAME_V1_HEADERS.join(",");
 export const LEGACY_HEADER_LINE = LEGACY_EVENT_LOG_V0_HEADERS.join(",");

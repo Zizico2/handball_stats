@@ -24,7 +24,12 @@ describe("serializeCsv", () => {
   });
 
   test("serializeCsvRows joins rows with a trailing newline", () => {
-    expect(serializeCsvRows([["a", "b"], ["1", "2"]])).toBe("a,b\n1,2\n");
+    expect(
+      serializeCsvRows([
+        ["a", "b"],
+        ["1", "2"],
+      ]),
+    ).toBe("a,b\n1,2\n");
   });
 });
 

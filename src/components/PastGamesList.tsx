@@ -1,4 +1,4 @@
-import { Card, Typography } from "@heroui/react";
+import { Card, Chip, Typography } from "@heroui/react";
 import { ChevronRight } from "lucide-react";
 import { AppNextLink } from "@/components/AppNextLink";
 import { GameMetaLine } from "@/components/game/GameMetaLine";
@@ -33,9 +33,15 @@ export async function PastGamesList() {
             <Card.Content className="p-4">
               <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                 <div>
-                  <Typography.Heading level={5}>
-                    {game.homeTeamName}
-                  </Typography.Heading>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Typography.Heading level={5}>
+                      {game.homeTeamName}
+                      {game.opponentName ? ` vs ${game.opponentName}` : ""}
+                    </Typography.Heading>
+                    {game.source === "imported" ? (
+                      <Chip variant="secondary">Imported</Chip>
+                    ) : null}
+                  </div>
                   <GameMetaLine
                     className="mt-1"
                     createdAt={game.createdAt}

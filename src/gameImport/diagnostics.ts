@@ -9,9 +9,7 @@ export function truncateDiagnosticValue(value: string): string {
   if (codePoints.length <= IMPORT_MAX_DIAGNOSTIC_VALUE_CODE_POINTS) {
     return value;
   }
-  return codePoints
-    .slice(0, IMPORT_MAX_DIAGNOSTIC_VALUE_CODE_POINTS)
-    .join("");
+  return codePoints.slice(0, IMPORT_MAX_DIAGNOSTIC_VALUE_CODE_POINTS).join("");
 }
 
 export function makeDiagnostic(input: {

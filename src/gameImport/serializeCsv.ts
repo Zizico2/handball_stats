@@ -29,6 +29,8 @@ export function toCsvCell(value: unknown): string {
   return text;
 }
 
-export function serializeCsvRows(rows: ReadonlyArray<readonly unknown[]>): string {
+export function serializeCsvRows(
+  rows: ReadonlyArray<readonly unknown[]>,
+): string {
   return `${rows.map((row) => row.map(toCsvCell).join(",")).join("\n")}\n`;
 }
