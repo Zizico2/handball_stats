@@ -1,30 +1,21 @@
-import { Button, Chip, Typography } from "@heroui/react";
+import { Chip, Typography } from "@heroui/react";
 import { AlertCallout, AlertCalloutButton } from "@/components/ui/AlertCallout";
 import type { TeamPlayer } from "@/datamodel";
 
 interface OnCourtChipsProps {
   activePlayerNumbers: Set<number>;
   selectedTeamPlayers: TeamPlayer[];
-  onEditStartingLineup?: () => void;
 }
 
 export function OnCourtChips({
   activePlayerNumbers,
   selectedTeamPlayers,
-  onEditStartingLineup,
 }: OnCourtChipsProps) {
   return (
     <div className="my-2 w-full">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <Typography.Paragraph color="muted" className="font-bold">
-          On Court ({activePlayerNumbers.size})
-        </Typography.Paragraph>
-        {onEditStartingLineup ? (
-          <Button size="sm" variant="ghost" onPress={onEditStartingLineup}>
-            Edit Starting Lineup
-          </Button>
-        ) : null}
-      </div>
+      <Typography.Paragraph color="muted" className="mb-2 font-bold">
+        On Court ({activePlayerNumbers.size})
+      </Typography.Paragraph>
       <div className="flex flex-wrap gap-2">
         {Array.from(activePlayerNumbers).map((num) => {
           const player = selectedTeamPlayers.find(

@@ -25,14 +25,13 @@ export function PickStarting7Dialog({
   onSave,
   onClose,
 }: PickStarting7DialogProps) {
-  const rosterNumbers = new Set(players.map((player) => player.number));
-  const initial = resolveInitialStartingSelection(
-    currentStartingNumbers,
-    activePlayerNumbers,
-    rosterNumbers,
+  const [selected, setSelected] = useState(() =>
+    resolveInitialStartingSelection(
+      currentStartingNumbers,
+      activePlayerNumbers,
+      new Set(players.map((player) => player.number)),
+    ),
   );
-  const [selected, setSelected] = useState<number[]>(initial.selected);
-  const droppedCount = initial.droppedCount;
 
   const handleToggle = (number: number) => {
     setSelected((prev) =>
@@ -67,35 +66,26 @@ export function PickStarting7Dialog({
                 ` (Currently selected: ${selected.length})`}
             </Typography.Paragraph>
 
-            {droppedCount > 0 ? (
-              <Typography.Paragraph
-                color="muted"
-                data-testid="starting-lineup-roster-gap"
-              >
-                {droppedCount === 1
-                  ? "1 previously selected player is no longer on the roster."
-                  : `${droppedCount} previously selected players are no longer on the roster.`}{" "}
-                Complete the lineup with current roster players.
-              </Typography.Paragraph>
-            ) : null}
-
             <div className="max-h-[300px] overflow-y-auto rounded-lg border border-separator">
               {players.map((player) => {
                 const isChecked = selected.includes(player.number);
                 return (
-                  <Checkbox
+                  <div
                     key={player.number}
-                    className="w-full"
-                    isSelected={isChecked}
-                    onChange={() => handleToggle(player.number)}
+                    className="px-3 py-2 hover:bg-surface-secondary"
                   >
-                    <Checkbox.Content className="w-full px-3 py-2 hover:bg-surface-secondary">
-                      <Checkbox.Control>
-                        <Checkbox.Indicator />
-                      </Checkbox.Control>
-                      {formatPlayerLabel(player.number, [player])}
-                    </Checkbox.Content>
-                  </Checkbox>
+                    <Checkbox
+                      isSelected={isChecked}
+                      onChange={() => handleToggle(player.number)}
+                    >
+                      <Checkbox.Content>
+                        <Checkbox.Control>
+                          <Checkbox.Indicator />
+                        </Checkbox.Control>
+                        {formatPlayerLabel(player.number, [player])}
+                      </Checkbox.Content>
+                    </Checkbox>
+                  </div>
                 );
               })}
             </div>

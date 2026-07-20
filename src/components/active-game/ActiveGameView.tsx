@@ -116,7 +116,6 @@ export function ActiveGameView({
           <OnCourtChips
             activePlayerNumbers={activePlayerNumbers}
             selectedTeamPlayers={selectedTeamPlayers}
-            onEditStartingLineup={onSetStartingLineup}
           />
         )}
         <EventGroupButtons
