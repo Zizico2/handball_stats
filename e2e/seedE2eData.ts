@@ -88,12 +88,43 @@ export async function seedE2eData(request: APIRequestContext): Promise<void> {
     await postJson(request, `${collections}/teams`, [TEAM]);
   }
 
-  const teamPlayers = await getJson<Array<{ id: number }>>(
+  const teamPlayers = await getJson<Array<{ id: number; teamId?: number }>>(
     request,
     `${collections}/team-players`,
   );
+  const expectedPlayerIds = new Set<number>(PLAYERS.map((player) => player.id));
+
+  // Preview DBs are reused across CI runs. Extra roster players (e.g. undo
+  // bench players) raise the starting-lineup target count and leave Save
+  // Lineup disabled when specs only select Alex/Blake.
+  const stalePlayerIds = teamPlayers
+    .filter(
+      (row) =>
+        (row.teamId === undefined || row.teamId === E2E_TEAM_ID) &&
+        !expectedPlayerIds.has(row.id),
+    )
+    .map((row) => row.id);
+  if (stalePlayerIds.length > 0) {
+    const response = await request.delete(`${collections}/team-players`, {
+      data: stalePlayerIds,
+    });
+    if (!response.ok() && response.status() !== 204) {
+      throw new Error(
+        `DELETE ${collections}/team-players failed: ${response.status()} ${await response.text()}`,
+      );
+    }
+  }
+
+  const playersAfterPrune =
+    stalePlayerIds.length > 0
+      ? await getJson<Array<{ id: number }>>(
+          request,
+          `${collections}/team-players`,
+        )
+      : teamPlayers;
+
   for (const player of PLAYERS) {
-    if (!teamPlayers.some((row) => row.id === player.id)) {
+    if (!playersAfterPrune.some((row) => row.id === player.id)) {
       await postJson(request, `${collections}/team-players`, [player]);
     }
   }

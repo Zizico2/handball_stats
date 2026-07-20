@@ -4,6 +4,7 @@ import {
   type Page,
   test,
 } from "@playwright/test";
+import { refreshE2eSession } from "./e2eAuth";
 import { E2E_GAME_ID, E2E_TEAM_ID, seedE2eData } from "./seedE2eData";
 
 const hasAuth = Boolean(process.env.CLERK_SECRET_KEY);
@@ -132,7 +133,8 @@ test.describe("home hub and match UX polish", () => {
   test.describe.configure({ mode: "serial" });
   test.skip(!hasAuth, "Requires CLERK_SECRET_KEY for Clerk testing helpers.");
 
-  test.beforeEach(async ({ request }) => {
+  test.beforeEach(async ({ page }) => {
+    const request = await refreshE2eSession(page);
     await seedE2eData(request);
   });
 
@@ -158,9 +160,8 @@ test.describe("home hub and match UX polish", () => {
 
   test("signed-in home shows create-team hub when user has no teams", async ({
     page,
-    request,
   }) => {
-    await deleteAllTeams(request);
+    await deleteAllTeams(page.request);
 
     await page.goto("/");
 
@@ -178,9 +179,8 @@ test.describe("home hub and match UX polish", () => {
 
   test("signed-in home shows add-players hub when roster is empty", async ({
     page,
-    request,
   }) => {
-    await deleteAllPlayers(request);
+    await deleteAllPlayers(page.request);
 
     await page.goto("/");
 
@@ -195,16 +195,15 @@ test.describe("home hub and match UX polish", () => {
       page.getByRole("button", { name: "Add players" }),
     ).toBeVisible();
 
-    await request.post("/api/collections/team-players", {
+    await page.request.post("/api/collections/team-players", {
       data: [...PLAYERS],
     });
   });
 
   test("signed-in home shows resume-match hub with phase and clock", async ({
     page,
-    request,
   }) => {
-    await startActiveGame(request, E2E_GAME_ID + 40);
+    await startActiveGame(page.request, E2E_GAME_ID + 40);
 
     await page.goto("/");
 
@@ -225,9 +224,8 @@ test.describe("home hub and match UX polish", () => {
 
   test("new game blocks empty roster and links to team setup", async ({
     page,
-    request,
   }) => {
-    await deleteAllPlayers(request);
+    await deleteAllPlayers(page.request);
 
     await page.goto("/new-game");
 
@@ -239,7 +237,7 @@ test.describe("home hub and match UX polish", () => {
       page.getByRole("button", { name: "Start Game" }),
     ).toBeDisabled();
 
-    await request.post("/api/collections/team-players", {
+    await page.request.post("/api/collections/team-players", {
       data: [...PLAYERS],
     });
   });
@@ -247,9 +245,8 @@ test.describe("home hub and match UX polish", () => {
   for (const viewport of VIEWPORTS) {
     test(`active game layout at ${viewport.name} keeps gutters and touch targets`, async ({
       page,
-      request,
     }) => {
-      await startActiveGame(request, E2E_GAME_ID + 50 + viewport.width);
+      await startActiveGame(page.request, E2E_GAME_ID + 50 + viewport.width);
 
       await page.setViewportSize({
         width: viewport.width,
@@ -264,11 +261,8 @@ test.describe("home hub and match UX polish", () => {
     });
   }
 
-  test("end-match confirmation focuses Continue match", async ({
-    page,
-    request,
-  }) => {
-    await startActiveGame(request, E2E_GAME_ID + 90);
+  test("end-match confirmation focuses Continue match", async ({ page }) => {
+    await startActiveGame(page.request, E2E_GAME_ID + 90);
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/active-game");
