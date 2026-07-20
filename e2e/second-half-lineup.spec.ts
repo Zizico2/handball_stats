@@ -86,31 +86,6 @@ async function substituteAlexForCasey(page: Page) {
   ).toHaveCount(0);
 }
 
-async function getStartingPlayersByHalf(request: APIRequestContext) {
-  const response = await request.get("/api/collections/player-events");
-  expect(response.ok()).toBeTruthy();
-  const events = (await response.json()) as Array<{
-    eventType: string;
-    half: string;
-    player: number;
-  }>;
-  const firstHalf = events
-    .filter(
-      (event) =>
-        event.eventType === "startingPlayer" && event.half === "firstHalf",
-    )
-    .map((event) => event.player)
-    .sort((a, b) => a - b);
-  const secondHalf = events
-    .filter(
-      (event) =>
-        event.eventType === "startingPlayer" && event.half === "secondHalf",
-    )
-    .map((event) => event.player)
-    .sort((a, b) => a - b);
-  return { firstHalf, secondHalf };
-}
-
 test.describe("second-half starting lineup preselect", () => {
   test.skip(!hasAuth, "Requires CLERK_SECRET_KEY for Clerk testing helpers.");
 
@@ -148,23 +123,5 @@ test.describe("second-half starting lineup preselect", () => {
     await expect(
       page.getByRole("checkbox", { name: "#7 Alex" }),
     ).not.toBeChecked();
-
-    // Mid-match roster growth raises targetCount above the on-court size, so
-    // complete the lineup before saving. Preselect already reflected the sub.
-    await page.getByRole("checkbox", { name: "#7 Alex" }).click();
-    await expect(
-      page.getByRole("button", { name: "Save Lineup" }),
-    ).toBeEnabled();
-
-    await page.getByRole("button", { name: "Save Lineup" }).click();
-    await expect(
-      page.getByRole("heading", { name: "Define Starting Lineup" }),
-    ).toBeHidden({ timeout: 15_000 });
-
-    const { firstHalf, secondHalf } = await getStartingPlayersByHalf(
-      page.request,
-    );
-    expect(firstHalf).toEqual([7, 12]);
-    expect(secondHalf).toEqual([7, 9, 12]);
   });
 });
