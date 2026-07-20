@@ -181,10 +181,11 @@ export default function ActiveGameMatchControlsMenu() {
                     const gameId = inGameControls.gameId;
                     const ended = await inGameControls.onEndMatch();
                     setIsEnding(false);
+                    // Always dismiss so sync-failure callouts remain reachable.
+                    setEndConfirmOpen(false);
                     if (!ended) {
                       return;
                     }
-                    setEndConfirmOpen(false);
                     if (gameId != null) {
                       router.push(`/past-games/${gameId}`);
                     }

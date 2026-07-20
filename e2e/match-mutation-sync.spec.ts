@@ -278,6 +278,10 @@ test.describe("match mutation sync states", () => {
 
     await page.getByRole("button", { name: "Match controls" }).click();
     await page.getByRole("menuitem", { name: "End Match" }).click();
+    await expect(
+      page.getByRole("heading", { name: "End this match?" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "End match" }).click();
     const failure = page.getByTestId("match-sync-failure");
     await expect(failure).toBeVisible({ timeout: 15_000 });
     await failure.getByRole("button", { name: "Retry" }).click();
