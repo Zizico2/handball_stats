@@ -12,7 +12,7 @@ export function OnCourtChips({
   selectedTeamPlayers,
 }: OnCourtChipsProps) {
   return (
-    <div className="mx-auto my-2 w-full max-w-[400px]">
+    <div className="my-2 w-full">
       <Typography.Paragraph color="muted" className="mb-2 font-bold">
         On Court ({activePlayerNumbers.size})
       </Typography.Paragraph>
@@ -40,17 +40,19 @@ export function StartingLineupPrompt({
   onSetStartingLineup,
 }: StartingLineupPromptProps) {
   return (
-    <AlertCallout
-      className="mx-auto max-w-[400px]"
-      variant="warning"
-      action={
-        <AlertCalloutButton onPress={onSetStartingLineup}>
-          Set Starting Lineup
-        </AlertCalloutButton>
-      }
-    >
-      Starting lineup is not defined yet. Set the starting players to enable
-      accurate tracking of who is on court.
-    </AlertCallout>
+    <div className="w-full" data-testid="starting-lineup-prompt">
+      <AlertCallout
+        className="w-full"
+        variant="warning"
+        action={
+          <AlertCalloutButton onPress={onSetStartingLineup}>
+            Set Starting Lineup
+          </AlertCalloutButton>
+        }
+      >
+        Starting lineup is not defined yet. Set the starting players to enable
+        accurate tracking of who is on court.
+      </AlertCallout>
+    </div>
   );
 }

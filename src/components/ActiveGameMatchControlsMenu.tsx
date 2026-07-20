@@ -163,7 +163,12 @@ export default function ActiveGameMatchControlsMenu() {
               </ul>
             </AlertDialog.Body>
             <AlertDialog.Footer>
-              <Button slot="close" variant="primary" isDisabled={isEnding}>
+              <Button
+                autoFocus
+                slot="close"
+                variant="primary"
+                isDisabled={isEnding}
+              >
                 Continue match
               </Button>
               <Button
