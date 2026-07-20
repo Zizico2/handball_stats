@@ -2,6 +2,7 @@
 
 import { Button, Checkbox, Modal, Typography } from "@heroui/react";
 import { useState } from "react";
+import { resolveInitialStartingSelection } from "@/components/active-game/utils/resolveInitialStartingSelection";
 import type { TeamPlayer } from "@/datamodel";
 import { formatPlayerLabel } from "@/lib/display/formatPlayerLabel";
 
@@ -9,6 +10,7 @@ interface PickStarting7DialogProps {
   open: boolean;
   players: TeamPlayer[];
   currentStartingNumbers: number[];
+  activePlayerNumbers: Set<number>;
   isSaving?: boolean;
   onSave: (numbers: number[]) => void;
   onClose: () => void;
@@ -18,11 +20,19 @@ export function PickStarting7Dialog({
   open,
   players,
   currentStartingNumbers,
+  activePlayerNumbers,
   isSaving = false,
   onSave,
   onClose,
 }: PickStarting7DialogProps) {
-  const [selected, setSelected] = useState<number[]>(currentStartingNumbers);
+  const rosterNumbers = new Set(players.map((player) => player.number));
+  const initial = resolveInitialStartingSelection(
+    currentStartingNumbers,
+    activePlayerNumbers,
+    rosterNumbers,
+  );
+  const [selected, setSelected] = useState<number[]>(initial.selected);
+  const droppedCount = initial.droppedCount;
 
   const handleToggle = (number: number) => {
     setSelected((prev) =>
@@ -57,26 +67,35 @@ export function PickStarting7Dialog({
                 ` (Currently selected: ${selected.length})`}
             </Typography.Paragraph>
 
+            {droppedCount > 0 ? (
+              <Typography.Paragraph
+                color="muted"
+                data-testid="starting-lineup-roster-gap"
+              >
+                {droppedCount === 1
+                  ? "1 previously selected player is no longer on the roster."
+                  : `${droppedCount} previously selected players are no longer on the roster.`}{" "}
+                Complete the lineup with current roster players.
+              </Typography.Paragraph>
+            ) : null}
+
             <div className="max-h-[300px] overflow-y-auto rounded-lg border border-separator">
               {players.map((player) => {
                 const isChecked = selected.includes(player.number);
                 return (
-                  <div
+                  <Checkbox
                     key={player.number}
-                    className="px-3 py-2 hover:bg-surface-secondary"
+                    className="w-full"
+                    isSelected={isChecked}
+                    onChange={() => handleToggle(player.number)}
                   >
-                    <Checkbox
-                      isSelected={isChecked}
-                      onChange={() => handleToggle(player.number)}
-                    >
-                      <Checkbox.Content>
-                        <Checkbox.Control>
-                          <Checkbox.Indicator />
-                        </Checkbox.Control>
-                        {formatPlayerLabel(player.number, [player])}
-                      </Checkbox.Content>
-                    </Checkbox>
-                  </div>
+                    <Checkbox.Content className="w-full px-3 py-2 hover:bg-surface-secondary">
+                      <Checkbox.Control>
+                        <Checkbox.Indicator />
+                      </Checkbox.Control>
+                      {formatPlayerLabel(player.number, [player])}
+                    </Checkbox.Content>
+                  </Checkbox>
                 );
               })}
             </div>

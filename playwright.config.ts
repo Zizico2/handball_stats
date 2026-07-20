@@ -75,6 +75,15 @@ export default defineConfig({
         storageState: authFile,
       },
     },
+    {
+      name: "second-half-lineup",
+      testMatch: /second-half-lineup\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: authFile,
+      },
+    },
   ],
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined

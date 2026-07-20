@@ -110,6 +110,7 @@ export function ActiveGameEventDialogs({
       />
       {starting7DialogOpen ? (
         <PickStarting7Dialog
+          activePlayerNumbers={activePlayerNumbers}
           currentStartingNumbers={startingPlayerNumbers}
           isSaving={isSavingStarting7}
           open={starting7DialogOpen}
