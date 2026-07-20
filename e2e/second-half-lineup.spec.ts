@@ -148,6 +148,10 @@ test.describe("second-half starting lineup preselect", () => {
     await expect(
       page.getByRole("checkbox", { name: "#7 Alex" }),
     ).not.toBeChecked();
+
+    // Mid-match roster growth raises targetCount above the on-court size, so
+    // complete the lineup before saving. Preselect already reflected the sub.
+    await page.getByText("#7 Alex").click();
     await expect(
       page.getByRole("button", { name: "Save Lineup" }),
     ).toBeEnabled();
@@ -161,6 +165,6 @@ test.describe("second-half starting lineup preselect", () => {
       page.request,
     );
     expect(firstHalf).toEqual([7, 12]);
-    expect(secondHalf).toEqual([9, 12]);
+    expect(secondHalf).toEqual([7, 9, 12]);
   });
 });
