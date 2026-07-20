@@ -21,6 +21,60 @@ const VIEWPORTS = [
 ] as const;
 
 async function deleteAllTeams(request: APIRequestContext) {
+  // Preview DBs keep past games that FK-reference teams. Wipe dependents in
+  // the same order as test/d1/db.ts before deleting teams.
+  const activeGames = await request.get("/api/collections/active-game");
+  expect(activeGames.ok()).toBeTruthy();
+  const activeRows = (await activeGames.json()) as Array<{ id: number }>;
+  if (activeRows.length > 0) {
+    const deleted = await request.delete("/api/collections/active-game", {
+      data: activeRows.map((row) => row.id),
+    });
+    expect(deleted.ok() || deleted.status() === 204).toBeTruthy();
+  }
+
+  const pauseToggles = await request.get("/api/collections/pause-toggles");
+  expect(pauseToggles.ok()).toBeTruthy();
+  const pauseRows = (await pauseToggles.json()) as Array<{ id: string }>;
+  for (const row of pauseRows) {
+    const deleted = await request.delete(
+      `/api/collections/pause-toggles/${row.id}`,
+    );
+    expect(deleted.ok() || deleted.status() === 204).toBeTruthy();
+  }
+
+  const events = await request.get("/api/collections/player-events");
+  expect(events.ok()).toBeTruthy();
+  const eventRows = (await events.json()) as Array<{ id: number }>;
+  if (eventRows.length > 0) {
+    const deleted = await request.delete("/api/collections/player-events", {
+      data: eventRows.map((row) => row.id),
+    });
+    expect(deleted.ok() || deleted.status() === 204).toBeTruthy();
+  }
+
+  const games = await request.get("/api/collections/games");
+  expect(games.ok()).toBeTruthy();
+  const gameRows = (await games.json()) as Array<{ id: number }>;
+  if (gameRows.length > 0) {
+    const deleted = await request.delete("/api/collections/games", {
+      data: gameRows.map((row) => row.id),
+    });
+    expect(deleted.ok() || deleted.status() === 204).toBeTruthy();
+  }
+
+  const pairs = await request.get("/api/collections/quick-sub-pairs");
+  expect(pairs.ok()).toBeTruthy();
+  const pairRows = (await pairs.json()) as Array<{ id: number }>;
+  if (pairRows.length > 0) {
+    const deleted = await request.delete("/api/collections/quick-sub-pairs", {
+      data: pairRows.map((row) => row.id),
+    });
+    expect(deleted.ok() || deleted.status() === 204).toBeTruthy();
+  }
+
+  await deleteAllPlayers(request);
+
   const teams = await request.get("/api/collections/teams");
   expect(teams.ok()).toBeTruthy();
   const rows = (await teams.json()) as Array<{ id: number }>;

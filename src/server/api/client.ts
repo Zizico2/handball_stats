@@ -95,6 +95,10 @@ export async function upsertGamesMutation(items: Game[]) {
   return parseResponse(apiClient.api.collections.games.$put({ json: items }));
 }
 
+export async function deleteGamesMutation(ids: number[]) {
+  await parseResponse(apiClient.api.collections.games.$delete({ json: ids }));
+}
+
 export async function transitionGamePhaseMutation(
   gameId: number,
   to: "firstHalf" | "halftime" | "secondHalf",
