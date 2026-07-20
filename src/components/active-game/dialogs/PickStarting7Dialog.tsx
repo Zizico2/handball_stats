@@ -2,6 +2,7 @@
 
 import { Button, Checkbox, Modal, Typography } from "@heroui/react";
 import { useState } from "react";
+import { resolveInitialStartingSelection } from "@/components/active-game/utils/resolveInitialStartingSelection";
 import type { TeamPlayer } from "@/datamodel";
 import { formatPlayerLabel } from "@/lib/display/formatPlayerLabel";
 
@@ -9,6 +10,7 @@ interface PickStarting7DialogProps {
   open: boolean;
   players: TeamPlayer[];
   currentStartingNumbers: number[];
+  activePlayerNumbers: Set<number>;
   isSaving?: boolean;
   onSave: (numbers: number[]) => void;
   onClose: () => void;
@@ -18,11 +20,18 @@ export function PickStarting7Dialog({
   open,
   players,
   currentStartingNumbers,
+  activePlayerNumbers,
   isSaving = false,
   onSave,
   onClose,
 }: PickStarting7DialogProps) {
-  const [selected, setSelected] = useState<number[]>(currentStartingNumbers);
+  const [selected, setSelected] = useState(() =>
+    resolveInitialStartingSelection(
+      currentStartingNumbers,
+      activePlayerNumbers,
+      new Set(players.map((player) => player.number)),
+    ),
+  );
 
   const handleToggle = (number: number) => {
     setSelected((prev) =>

@@ -27,7 +27,7 @@ test.describe("human preview smoke", () => {
 
     await page.goto("/past-games");
     await expect(
-      page.getByRole("heading", { name: "Past Games" }),
+      page.getByRole("heading", { name: "Past Games", exact: true }),
     ).toBeVisible();
   });
 });
