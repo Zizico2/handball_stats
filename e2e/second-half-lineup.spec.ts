@@ -141,13 +141,13 @@ test.describe("second-half starting lineup preselect", () => {
 
     await expect(
       page.getByRole("checkbox", { name: "#9 Casey" }),
-    ).toHaveAttribute("aria-checked", "true");
+    ).toBeChecked();
     await expect(
       page.getByRole("checkbox", { name: "#12 Blake" }),
-    ).toHaveAttribute("aria-checked", "true");
+    ).toBeChecked();
     await expect(
       page.getByRole("checkbox", { name: "#7 Alex" }),
-    ).toHaveAttribute("aria-checked", "false");
+    ).not.toBeChecked();
     await expect(
       page.getByRole("button", { name: "Save Lineup" }),
     ).toBeEnabled();
