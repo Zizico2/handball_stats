@@ -14,6 +14,7 @@
     "check": "biome check . && bun run typecheck",
     "test:instant": "playwright test --project=instant-nav",
     "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test --config=playwright.smoke.config.ts",
     "test:shot": "playwright test --project=shot-event",
     "test:unit": "bun test src",
     "test:d1": "rimraf drizzle_flat && bun run db:flatten && vitest run --config vitest.config.mts",

@@ -10,7 +10,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: process.env.CI ? [["github"], ["list"]] : "list",
   use: {
     baseURL,
@@ -78,10 +78,17 @@ export default defineConfig({
   ],
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
-    : {
-        command: "node node_modules/next/dist/bin/next dev",
-        url: baseURL,
-        reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
-      },
+    : process.env.E2E_CLOUDFLARE_LOCAL === "1"
+      ? {
+          command: "bun scripts/start-e2e-worker.ts",
+          url: baseURL,
+          reuseExistingServer: false,
+          timeout: 120_000,
+        }
+      : {
+          command: "node node_modules/next/dist/bin/next dev",
+          url: baseURL,
+          reuseExistingServer: !process.env.CI,
+          timeout: 120_000,
+        },
 });

@@ -1,11 +1,6 @@
-import {
-  type APIRequestContext,
-  expect,
-  type Page,
-  test,
-} from "@playwright/test";
-import { refreshE2eSession } from "./e2eAuth";
-import { E2E_TEAM_ID, seedE2eData } from "./seedE2eData";
+import type { APIRequestContext, Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
+import { E2E_TEAM_ID } from "./seedE2eData";
 
 const hasAuth = Boolean(process.env.CLERK_SECRET_KEY);
 
@@ -15,20 +10,6 @@ const BENCH_PLAYER = {
   name: "Casey",
   number: 9,
 } as const;
-
-async function clearActiveGame(request: APIRequestContext) {
-  const response = await request.get("/api/collections/active-game");
-  expect(response.ok()).toBeTruthy();
-  const activeGames = (await response.json()) as Array<{ id: number }>;
-  if (activeGames.length === 0) {
-    return;
-  }
-
-  const deleteResponse = await request.delete("/api/collections/active-game", {
-    data: activeGames.map((game) => game.id),
-  });
-  expect(deleteResponse.status()).toBe(204);
-}
 
 async function ensureBenchPlayer(request: APIRequestContext) {
   const response = await request.get("/api/collections/team-players");
@@ -88,15 +69,7 @@ async function confirmUndoLastEvent(page: Page, undoButtonName: RegExp) {
 }
 
 test.describe("undo last event", () => {
-  test.describe.configure({ mode: "serial" });
   test.skip(!hasAuth, "Requires CLERK_SECRET_KEY for Clerk testing helpers.");
-
-  test.beforeEach(async ({ page }) => {
-    const request = await refreshE2eSession(page);
-    // seedE2eData prunes extra roster players so lineup targetCount stays 2.
-    await seedE2eData(request);
-    await clearActiveGame(request);
-  });
 
   test("undoes a goal shot from the match log", async ({ page }) => {
     test.setTimeout(60_000);

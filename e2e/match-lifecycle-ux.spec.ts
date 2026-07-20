@@ -1,18 +1,13 @@
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import {
-  type APIRequestContext,
-  expect,
-  type Page,
-  test,
-} from "@playwright/test";
-import { refreshE2eSession } from "./e2eAuth";
-import { E2E_GAME_ID, E2E_TEAM_ID, seedE2eData } from "./seedE2eData";
+  E2E_GAME_ID,
+  E2E_TEAM_ID,
+  resetE2eData,
+  seedE2eTeam,
+} from "./seedE2eData";
 
 const hasAuth = Boolean(process.env.CLERK_SECRET_KEY);
-
-const PLAYERS = [
-  { id: 1, teamId: E2E_TEAM_ID, name: "Alex", number: 7 },
-  { id: 2, teamId: E2E_TEAM_ID, name: "Blake", number: 12 },
-] as const;
 
 const VIEWPORTS = [
   { name: "320px", width: 320, height: 720 },
@@ -20,87 +15,10 @@ const VIEWPORTS = [
   { name: "desktop", width: 1280, height: 800 },
 ] as const;
 
-async function deleteAllTeams(request: APIRequestContext) {
-  // Preview DBs keep past games that FK-reference teams. Wipe dependents in
-  // the same order as test/d1/db.ts before deleting teams.
-  const activeGames = await request.get("/api/collections/active-game");
-  expect(activeGames.ok()).toBeTruthy();
-  const activeRows = (await activeGames.json()) as Array<{ id: number }>;
-  if (activeRows.length > 0) {
-    const deleted = await request.delete("/api/collections/active-game", {
-      data: activeRows.map((row) => row.id),
-    });
-    expect(deleted.ok() || deleted.status() === 204).toBeTruthy();
-  }
-
-  const pauseToggles = await request.get("/api/collections/pause-toggles");
-  expect(pauseToggles.ok()).toBeTruthy();
-  const pauseRows = (await pauseToggles.json()) as Array<{ id: string }>;
-  for (const row of pauseRows) {
-    const deleted = await request.delete(
-      `/api/collections/pause-toggles/${row.id}`,
-    );
-    expect(deleted.ok() || deleted.status() === 204).toBeTruthy();
-  }
-
-  const events = await request.get("/api/collections/player-events");
-  expect(events.ok()).toBeTruthy();
-  const eventRows = (await events.json()) as Array<{ id: number }>;
-  if (eventRows.length > 0) {
-    const deleted = await request.delete("/api/collections/player-events", {
-      data: eventRows.map((row) => row.id),
-    });
-    expect(deleted.ok() || deleted.status() === 204).toBeTruthy();
-  }
-
-  const games = await request.get("/api/collections/games");
-  expect(games.ok()).toBeTruthy();
-  const gameRows = (await games.json()) as Array<{ id: number }>;
-  if (gameRows.length > 0) {
-    const deleted = await request.delete("/api/collections/games", {
-      data: gameRows.map((row) => row.id),
-    });
-    expect(deleted.ok() || deleted.status() === 204).toBeTruthy();
-  }
-
-  const pairs = await request.get("/api/collections/quick-sub-pairs");
-  expect(pairs.ok()).toBeTruthy();
-  const pairRows = (await pairs.json()) as Array<{ id: number }>;
-  if (pairRows.length > 0) {
-    const deleted = await request.delete("/api/collections/quick-sub-pairs", {
-      data: pairRows.map((row) => row.id),
-    });
-    expect(deleted.ok() || deleted.status() === 204).toBeTruthy();
-  }
-
-  await deleteAllPlayers(request);
-
-  const teams = await request.get("/api/collections/teams");
-  expect(teams.ok()).toBeTruthy();
-  const rows = (await teams.json()) as Array<{ id: number }>;
-  if (rows.length === 0) {
-    return;
-  }
-  const deleted = await request.delete("/api/collections/teams", {
-    data: rows.map((row) => row.id),
-  });
-  expect(deleted.ok() || deleted.status() === 204).toBeTruthy();
-}
-
-async function deleteAllPlayers(request: APIRequestContext) {
-  const players = await request.get("/api/collections/team-players");
-  expect(players.ok()).toBeTruthy();
-  const rows = (await players.json()) as Array<{ id: number }>;
-  if (rows.length === 0) {
-    return;
-  }
-  const deleted = await request.delete("/api/collections/team-players", {
-    data: rows.map((row) => row.id),
-  });
-  expect(deleted.ok() || deleted.status() === 204).toBeTruthy();
-}
-
-async function startActiveGame(request: APIRequestContext, gameId: number) {
+async function startActiveGame(
+  request: import("@playwright/test").APIRequestContext,
+  gameId: number,
+) {
   const start = await request.post("/api/collections/games/start", {
     data: {
       id: gameId,
@@ -184,13 +102,7 @@ async function assertContentGridAlignment(page: Page) {
 }
 
 test.describe("home hub and match UX polish", () => {
-  test.describe.configure({ mode: "serial" });
   test.skip(!hasAuth, "Requires CLERK_SECRET_KEY for Clerk testing helpers.");
-
-  test.beforeEach(async ({ page }) => {
-    const request = await refreshE2eSession(page);
-    await seedE2eData(request);
-  });
 
   test("signed-in home shows start-game hub with recent game link", async ({
     page,
@@ -215,7 +127,7 @@ test.describe("home hub and match UX polish", () => {
   test("signed-in home shows create-team hub when user has no teams", async ({
     page,
   }) => {
-    await deleteAllTeams(page.request);
+    await resetE2eData(page.request);
 
     await page.goto("/");
 
@@ -234,7 +146,8 @@ test.describe("home hub and match UX polish", () => {
   test("signed-in home shows add-players hub when roster is empty", async ({
     page,
   }) => {
-    await deleteAllPlayers(page.request);
+    await resetE2eData(page.request);
+    await seedE2eTeam(page.request);
 
     await page.goto("/");
 
@@ -248,10 +161,6 @@ test.describe("home hub and match UX polish", () => {
     await expect(
       page.getByRole("button", { name: "Add players" }),
     ).toBeVisible();
-
-    await page.request.post("/api/collections/team-players", {
-      data: [...PLAYERS],
-    });
   });
 
   test("signed-in home shows resume-match hub with phase and clock", async ({
@@ -279,7 +188,8 @@ test.describe("home hub and match UX polish", () => {
   test("new game blocks empty roster and links to team setup", async ({
     page,
   }) => {
-    await deleteAllPlayers(page.request);
+    await resetE2eData(page.request);
+    await seedE2eTeam(page.request);
 
     await page.goto("/new-game");
 
@@ -290,10 +200,6 @@ test.describe("home hub and match UX polish", () => {
     await expect(
       page.getByRole("button", { name: "Start Game" }),
     ).toBeDisabled();
-
-    await page.request.post("/api/collections/team-players", {
-      data: [...PLAYERS],
-    });
   });
 
   for (const viewport of VIEWPORTS) {

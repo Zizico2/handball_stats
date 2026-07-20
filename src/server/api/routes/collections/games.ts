@@ -1,13 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
-import {
-  and,
-  eq,
-  getColumns,
-  inArray,
-  isNotNull,
-  isNull,
-  sql,
-} from "drizzle-orm";
+import { and, eq, getColumns, isNotNull, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
@@ -31,7 +23,7 @@ import {
   StartGameTeamNotFoundError,
   startGame,
 } from "@/server/startGame";
-import { gamesArraySchema, idsSchema } from "./shared";
+import { gamesArraySchema } from "./shared";
 
 const gameIdParamSchema = z.object({
   gameId: z.coerce.number().int().positive(),
@@ -277,24 +269,4 @@ export const gamesRoutes = new Hono<ApiEnv>()
       .returning();
 
     return c.json(inserted.map(dbRowToGame));
-  })
-  .delete("/", zValidator("json", idsSchema), async (c) => {
-    const ids = c.req.valid("json");
-    const { userId } = c.env;
-    const db = await getDb();
-
-    if (ids.length === 0) {
-      return c.body(null, 204);
-    }
-
-    await db
-      .delete(schema.games)
-      .where(
-        and(
-          eq(schema.games.userId, userId),
-          inArray(schema.games.localId, ids),
-        ),
-      );
-
-    return c.body(null, 204);
   });
