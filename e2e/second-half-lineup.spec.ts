@@ -151,7 +151,7 @@ test.describe("second-half starting lineup preselect", () => {
 
     // Mid-match roster growth raises targetCount above the on-court size, so
     // complete the lineup before saving. Preselect already reflected the sub.
-    await page.getByText("#7 Alex").click();
+    await page.getByRole("checkbox", { name: "#7 Alex" }).click();
     await expect(
       page.getByRole("button", { name: "Save Lineup" }),
     ).toBeEnabled();
