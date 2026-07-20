@@ -26,6 +26,13 @@ async function seedTeam() {
     localId: TEAM_ID,
     name: "Home",
   });
+  await db.insert(schema.teamPlayers).values({
+    userId: USER_ID,
+    localId: 1,
+    teamLocalId: TEAM_ID,
+    name: "Alex",
+    number: 7,
+  });
 }
 
 function startRequest(body: {
@@ -127,6 +134,24 @@ describe("games start API (D1)", () => {
     expect(res.status).toBe(404);
 
     const db = getTestDb();
+    const games = await db.select().from(schema.games);
+    const active = await db.select().from(schema.activeGame);
+    expect(games).toHaveLength(0);
+    expect(active).toHaveLength(0);
+  });
+
+  test("POST /start returns 400 when the roster is empty", async () => {
+    const db = getTestDb();
+    await db.delete(schema.teamPlayers);
+
+    const res = await startRequest({
+      id: GAME_ID,
+      homeTeamId: TEAM_ID,
+      createdAt: "2026-01-02T00:00:00.000Z",
+    });
+
+    expect(res.status).toBe(400);
+
     const games = await db.select().from(schema.games);
     const active = await db.select().from(schema.activeGame);
     expect(games).toHaveLength(0);

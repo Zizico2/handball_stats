@@ -14,6 +14,7 @@ import {
   inGameControlsAtom,
   initialActiveGameControlsState,
   type MatchStatus,
+  resolvePrimaryClockAction,
 } from "@/inGameControlsAtoms";
 import {
   beginMatchSaving,
@@ -25,19 +26,25 @@ import { useServerMatchClock } from "@/useServerMatchClock";
 interface UseActiveGameControlsParams {
   activeGameData: ActiveGame | null;
   activeGameRecord: Game | null;
+  eventCount: number;
   firstHalfStartingPlayerNumbers: number[];
+  goals: number;
   secondHalfStartingPlayerNumbers: number[];
   matchStatus: MatchStatus | null;
   setMatchStatus: Dispatch<SetStateAction<MatchStatus | null>>;
+  teamName: string | null;
 }
 
 export function useActiveGameControls({
   activeGameData,
   activeGameRecord,
+  eventCount,
   firstHalfStartingPlayerNumbers,
+  goals,
   secondHalfStartingPlayerNumbers,
   matchStatus,
   setMatchStatus,
+  teamName,
 }: UseActiveGameControlsParams) {
   const setActiveGameControls = useSetAtom(inGameControlsAtom);
   const endMatchPendingRef = useRef(false);
@@ -61,48 +68,70 @@ export function useActiveGameControls({
     setMatchStatus,
   });
 
-  const handleEndMatch = useCallback(() => {
+  const handleEndMatch = useCallback(async () => {
     if (!activeGameData || endMatchPendingRef.current) {
-      return;
+      return false;
     }
 
     endMatchPendingRef.current = true;
     beginMatchSaving();
 
-    void (async () => {
+    try {
+      const transaction = activeGameCollection.delete(activeGameData.id);
       try {
-        const transaction = activeGameCollection.delete(activeGameData.id);
-        try {
-          await transaction.isPersisted.promise;
-        } catch (error) {
-          await activeGameCollection.utils.refetch();
-          if (activeGameCollection.get(activeGameData.id) !== undefined) {
-            throw error;
-          }
-        }
-
-        clearClockState();
-        markMatchSaved();
+        await transaction.isPersisted.promise;
       } catch (error) {
-        console.error("Failed to end match", error);
-        markMatchFailed(
-          "Could not end the match. Retry, or reload the match.",
-          handleEndMatch,
-        );
-      } finally {
-        endMatchPendingRef.current = false;
+        await activeGameCollection.utils.refetch();
+        if (activeGameCollection.get(activeGameData.id) !== undefined) {
+          throw error;
+        }
       }
-    })();
+
+      clearClockState();
+      markMatchSaved();
+      return true;
+    } catch (error) {
+      console.error("Failed to end match", error);
+      markMatchFailed(
+        "Could not end the match. Retry, or reload the match.",
+        () => {
+          void handleEndMatch();
+        },
+      );
+      return false;
+    } finally {
+      endMatchPendingRef.current = false;
+    }
   }, [activeGameData, clearClockState]);
 
   useEffect(() => {
+    const disableStartFirstHalf = firstHalfStartingPlayerNumbers.length === 0;
+    const disableStartSecondHalf = secondHalfStartingPlayerNumbers.length === 0;
+    const primary = resolvePrimaryClockAction({
+      hasActiveGame: activeGameData !== null,
+      matchStatus,
+      isRunning,
+      isClockMutationPending,
+      disableStartFirstHalf,
+      disableStartSecondHalf,
+    });
+
     setActiveGameControls({
       hasActiveGame: activeGameData !== null,
       matchStatus,
       isRunning,
       isClockMutationPending,
-      disableStartFirstHalf: firstHalfStartingPlayerNumbers.length === 0,
-      disableStartSecondHalf: secondHalfStartingPlayerNumbers.length === 0,
+      disableStartFirstHalf,
+      disableStartSecondHalf,
+      teamName,
+      gameId: activeGameData?.gameId ?? null,
+      clockMinutes: minutes,
+      clockSeconds: seconds,
+      goals,
+      eventCount,
+      primaryClockAction: primary.action,
+      primaryClockActionLabel: primary.label,
+      primaryClockActionDisabled: primary.disabled,
       onEndMatch: handleEndMatch,
       onStartFirstHalf: startFirstHalf,
       onStartSecondHalf: startSecondHalf,
@@ -115,16 +144,21 @@ export function useActiveGameControls({
     };
   }, [
     activeGameData,
+    eventCount,
+    goals,
     handleEndMatch,
     isClockMutationPending,
     isRunning,
     matchStatus,
+    minutes,
     firstHalfStartingPlayerNumbers.length,
     secondHalfStartingPlayerNumbers.length,
+    seconds,
     setActiveGameControls,
     startFirstHalf,
     startHalftime,
     startSecondHalf,
+    teamName,
     togglePause,
   ]);
 
@@ -132,6 +166,7 @@ export function useActiveGameControls({
     activeHalf,
     eventElapsedSeconds,
     handleEndMatch,
+    isRunning,
     minutes,
     seconds,
   };

@@ -1,10 +1,6 @@
-import {
-  type APIRequestContext,
-  expect,
-  type Page,
-  test,
-} from "@playwright/test";
-import { E2E_TEAM_ID, seedE2eData } from "./seedE2eData";
+import type { APIRequestContext, Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
+import { E2E_TEAM_ID } from "./seedE2eData";
 
 const hasAuth = Boolean(process.env.CLERK_SECRET_KEY);
 
@@ -14,20 +10,6 @@ const BENCH_PLAYER = {
   name: "Casey",
   number: 9,
 } as const;
-
-async function clearActiveGame(request: APIRequestContext) {
-  const response = await request.get("/api/collections/active-game");
-  expect(response.ok()).toBeTruthy();
-  const activeGames = (await response.json()) as Array<{ id: number }>;
-  if (activeGames.length === 0) {
-    return;
-  }
-
-  const deleteResponse = await request.delete("/api/collections/active-game", {
-    data: activeGames.map((game) => game.id),
-  });
-  expect(deleteResponse.status()).toBe(204);
-}
 
 async function ensureBenchPlayer(request: APIRequestContext) {
   const response = await request.get("/api/collections/team-players");
@@ -41,20 +23,6 @@ async function ensureBenchPlayer(request: APIRequestContext) {
     data: [BENCH_PLAYER],
   });
   expect(createResponse.ok()).toBeTruthy();
-}
-
-async function removeBenchPlayer(request: APIRequestContext) {
-  const response = await request.get("/api/collections/team-players");
-  expect(response.ok()).toBeTruthy();
-  const players = (await response.json()) as Array<{ id: number }>;
-  if (!players.some((player) => player.id === BENCH_PLAYER.id)) {
-    return;
-  }
-
-  const deleteResponse = await request.delete("/api/collections/team-players", {
-    data: [BENCH_PLAYER.id],
-  });
-  expect(deleteResponse.status()).toBe(204);
 }
 
 async function startGameWithLineupAndFirstHalf(page: Page) {
@@ -77,6 +45,9 @@ async function startGameWithLineupAndFirstHalf(page: Page) {
 
   await page.getByText("#7 Alex").click();
   await page.getByText("#12 Blake").click();
+  await expect(page.getByRole("button", { name: "Save Lineup" })).toBeEnabled({
+    timeout: 5_000,
+  });
   await page.getByRole("button", { name: "Save Lineup" }).click();
 
   await page.getByRole("button", { name: "Match controls" }).click();
@@ -98,23 +69,7 @@ async function confirmUndoLastEvent(page: Page, undoButtonName: RegExp) {
 }
 
 test.describe("undo last event", () => {
-  test.describe.configure({ mode: "serial" });
   test.skip(!hasAuth, "Requires CLERK_SECRET_KEY for Clerk testing helpers.");
-
-  test.beforeEach(async ({ page }) => {
-    // Refresh Clerk session cookies before API seeding. This project runs last
-    // in the Playwright suite; the static storageState from setup can expire
-    // by then, causing 401s on the bare `request` fixture.
-    await page.goto("/");
-    await expect(page.getByRole("link", { name: "Past Games" })).toBeVisible({
-      timeout: 30_000,
-    });
-
-    const request = page.request;
-    await seedE2eData(request);
-    await removeBenchPlayer(request);
-    await clearActiveGame(request);
-  });
 
   test("undoes a goal shot from the match log", async ({ page }) => {
     test.setTimeout(60_000);

@@ -2,10 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { clerk, clerkSetup } from "@clerk/testing/playwright";
 import { expect, test as setup } from "@playwright/test";
-import { seedE2eData } from "./seedE2eData";
 
 const authFile = path.join("playwright", ".auth", "user.json");
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 const testEmail = process.env.E2E_CLERK_EMAIL ?? "e2e+clerk_test@example.com";
 
 setup.describe.configure({ mode: "serial" });
@@ -25,17 +23,4 @@ setup("authenticate", async ({ page }) => {
   });
 
   await page.context().storageState({ path: authFile });
-});
-
-setup("seed e2e data", async ({ playwright }) => {
-  const request = await playwright.request.newContext({
-    baseURL,
-    storageState: authFile,
-  });
-
-  try {
-    await seedE2eData(request);
-  } finally {
-    await request.dispose();
-  }
 });

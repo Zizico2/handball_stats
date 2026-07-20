@@ -8,7 +8,21 @@ async function handleRequest(request: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  return apiApp.fetch(request, { userId });
+  let apiRequest = request;
+  if (new URL(request.url).pathname === "/api/e2e/reset") {
+    const headers = new Headers(request.headers);
+    const resetAuthorization = headers.get("x-e2e-reset-authorization");
+    headers.delete("x-e2e-reset-authorization");
+    if (resetAuthorization) {
+      headers.set("Authorization", resetAuthorization);
+    }
+    apiRequest = new Request(request.url, { method: request.method, headers });
+  }
+
+  return apiApp.fetch(apiRequest, {
+    userId,
+    E2E_RESET_TOKEN: process.env.E2E_RESET_TOKEN,
+  });
 }
 
 export {

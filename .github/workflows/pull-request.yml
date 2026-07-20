@@ -14,8 +14,21 @@ concurrency:
   cancel-in-progress: ${{ github.event.action != 'closed' }}
 
 jobs:
+  quality:
+    name: Quality
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+
   tests:
-    name: Tests
+    name: Unit and D1 tests
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -30,6 +43,7 @@ jobs:
   cloudflare-build:
     name: Cloudflare build
     if: github.event.action != 'closed'
+    needs: [quality, tests]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -54,15 +68,83 @@ jobs:
           include-hidden-files: true
           retention-days: 1
 
-  preview-e2e:
-    name: Preview E2E
+  local-e2e:
+    name: Local Worker E2E
     if: >-
       github.event_name == 'pull_request' &&
       github.event.action != 'closed' &&
       github.event.pull_request.head.repo.full_name == github.repository
-    needs: [tests, cloudflare-build]
+    needs: cloudflare-build
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment:
+      name: preview
+      deployment: false
+    env:
+      CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PREVIEW_PUBLISHABLE_KEY }}
+      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+      E2E_CLERK_EMAIL: ${{ secrets.E2E_CLERK_EMAIL }}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PREVIEW_PUBLISHABLE_KEY }}
+      PLAYWRIGHT_PORT: 8789
+      E2E_CLOUDFLARE_LOCAL: 1
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: open-next-${{ github.sha }}
+          path: .open-next
+      - name: Prepare fresh local D1 and Worker secrets
+        run: |
+          umask 077
+          state_dir="$RUNNER_TEMP/e2e-d1-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          env_file="$RUNNER_TEMP/e2e-worker-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.env"
+          reset_token="$(openssl rand -hex 32)"
+          echo "::add-mask::$reset_token"
+          mkdir -p "$state_dir"
+          printf 'CLERK_SECRET_KEY=%s\nNEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=%s\nE2E_RESET_TOKEN=%s\n' \
+            "$CLERK_SECRET_KEY" "$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" "$reset_token" > "$env_file"
+          chmod 600 "$env_file"
+          echo "E2E_D1_STATE_DIR=$state_dir" >> "$GITHUB_ENV"
+          echo "E2E_WRANGLER_ENV_FILE=$env_file" >> "$GITHUB_ENV"
+          echo "E2E_RESET_TOKEN=$reset_token" >> "$GITHUB_ENV"
+          bunx rimraf drizzle_flat
+          bun run db:flatten
+          bunx wrangler d1 migrations apply DB --local --config wrangler-e2e.toml --persist-to "$state_dir"
+      - name: Install Playwright browser
+        run: bunx playwright install --with-deps chromium
+      - name: Run full suite against local OpenNext Worker
+        run: bun run test:e2e
+      - name: Upload local Playwright diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: playwright-local-${{ github.event.pull_request.number }}-${{ github.sha }}
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Remove local E2E state and secrets
+        if: always()
+        run: |
+          rm -rf "$E2E_D1_STATE_DIR"
+          rm -f "$E2E_WRANGLER_ENV_FILE"
+
+  deploy-preview:
+    name: Deploy human preview
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    needs: cloudflare-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      url: ${{ steps.preview.outputs.url }}
     environment:
       name: preview
       url: ${{ steps.preview.outputs.url }}
@@ -114,20 +196,35 @@ jobs:
       - name: Publish preview URL
         id: preview
         run: echo "url=https://pr-$PR_NUMBER-arcazzi.${{ vars.CLOUDFLARE_WORKERS_SUBDOMAIN }}.workers.dev" >> "$GITHUB_OUTPUT"
+
+  preview-smoke:
+    name: Human preview smoke
+    needs: deploy-preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: preview
+      deployment: false
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
       - name: Install Playwright browser
         run: bunx playwright install --with-deps chromium
-      - name: Run remote Playwright suite
+      - name: Run read-only preview smoke suite
         env:
-          PLAYWRIGHT_BASE_URL: ${{ steps.preview.outputs.url }}
+          PLAYWRIGHT_BASE_URL: ${{ needs.deploy-preview.outputs.url }}
           CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PREVIEW_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           E2E_CLERK_EMAIL: ${{ secrets.E2E_CLERK_EMAIL }}
-        run: bun run test:e2e
-      - name: Upload Playwright diagnostics
+        run: bun run test:e2e:smoke
+      - name: Upload preview-smoke diagnostics
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: playwright-${{ github.event.pull_request.number }}-${{ github.sha }}
+          name: playwright-smoke-${{ github.event.pull_request.number }}-${{ github.sha }}
           path: |
             playwright-report
             test-results

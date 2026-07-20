@@ -2,8 +2,15 @@ import { atom } from "jotai";
 
 export type MatchStatus = "firstHalf" | "halftime" | "secondHalf";
 
+export type PrimaryClockAction =
+  | "start-first-half"
+  | "start-halftime"
+  | "start-second-half"
+  | "toggle-pause"
+  | null;
+
 interface ActiveGameControlActions {
-  onEndMatch: () => void;
+  onEndMatch: () => Promise<boolean>;
   onStartFirstHalf: () => void;
   onStartSecondHalf: () => void;
   onStartHalftime: () => void;
@@ -17,9 +24,68 @@ export interface ActiveGameControlsState extends ActiveGameControlActions {
   isClockMutationPending: boolean;
   disableStartFirstHalf: boolean;
   disableStartSecondHalf: boolean;
+  teamName: string | null;
+  gameId: number | null;
+  clockMinutes: number;
+  clockSeconds: number;
+  goals: number;
+  eventCount: number;
+  primaryClockAction: PrimaryClockAction;
+  primaryClockActionLabel: string | null;
+  primaryClockActionDisabled: boolean;
 }
 
 const noop = () => {};
+const asyncNoop = async () => false;
+
+export function resolvePrimaryClockAction(params: {
+  hasActiveGame: boolean;
+  matchStatus: MatchStatus | null;
+  isRunning: boolean;
+  isClockMutationPending: boolean;
+  disableStartFirstHalf: boolean;
+  disableStartSecondHalf: boolean;
+}): {
+  action: PrimaryClockAction;
+  label: string | null;
+  disabled: boolean;
+} {
+  const {
+    hasActiveGame,
+    matchStatus,
+    isRunning,
+    isClockMutationPending,
+    disableStartFirstHalf,
+    disableStartSecondHalf,
+  } = params;
+
+  if (!hasActiveGame) {
+    return { action: null, label: null, disabled: true };
+  }
+
+  if (matchStatus === null) {
+    return {
+      action: "start-first-half",
+      label: "Start first half",
+      disabled: disableStartFirstHalf || isClockMutationPending,
+    };
+  }
+
+  if (matchStatus === "halftime") {
+    return {
+      action: "start-second-half",
+      label: "Start second half",
+      disabled: disableStartSecondHalf || isClockMutationPending,
+    };
+  }
+
+  // firstHalf / secondHalf: pause and resume stay primary; phase changes live in overflow.
+  return {
+    action: "toggle-pause",
+    label: isRunning ? "Pause" : "Resume",
+    disabled: isClockMutationPending,
+  };
+}
 
 export const initialActiveGameControlsState: ActiveGameControlsState = {
   hasActiveGame: false,
@@ -28,7 +94,16 @@ export const initialActiveGameControlsState: ActiveGameControlsState = {
   isClockMutationPending: false,
   disableStartFirstHalf: true,
   disableStartSecondHalf: true,
-  onEndMatch: noop,
+  teamName: null,
+  gameId: null,
+  clockMinutes: 0,
+  clockSeconds: 0,
+  goals: 0,
+  eventCount: 0,
+  primaryClockAction: null,
+  primaryClockActionLabel: null,
+  primaryClockActionDisabled: true,
+  onEndMatch: asyncNoop,
   onStartFirstHalf: noop,
   onStartSecondHalf: noop,
   onStartHalftime: noop,

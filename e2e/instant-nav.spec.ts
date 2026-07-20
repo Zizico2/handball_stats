@@ -1,5 +1,5 @@
 import { instant } from "@next/playwright";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const hasAuth = Boolean(process.env.CLERK_SECRET_KEY);
 

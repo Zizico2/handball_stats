@@ -8,6 +8,7 @@ import {
   playerEventsCollection,
   quickSubPairsCollection,
   teamPlayersCollection,
+  teamsCollection,
 } from "@/collections";
 import { getActivePlayers } from "@/components/active-game/utils/activePlayers";
 import { useNextLocalId } from "@/hooks/useNextLocalId";
@@ -23,6 +24,8 @@ export function useActiveGameData(matchStatus: MatchStatus | null) {
   const activeGame = useLiveSuspenseQuery((q) =>
     q.from({ activeGame: activeGameCollection }).findOne(),
   );
+
+  const teams = useLiveSuspenseQuery((q) => q.from({ team: teamsCollection }));
 
   const teamPlayers = useLiveSuspenseQuery((q) =>
     q.from({ player: teamPlayersCollection }),
@@ -124,6 +127,16 @@ export function useActiveGameData(matchStatus: MatchStatus | null) {
     [activeGameData?.homeTeamId, quickSubPairs.data],
   );
 
+  const teamName = useMemo(() => {
+    if (activeGameData == null) {
+      return null;
+    }
+    return (
+      teams.data.find((team) => team.id === activeGameData.homeTeamId)?.name ??
+      null
+    );
+  }, [activeGameData, teams.data]);
+
   return {
     activeGame,
     activeGameData,
@@ -136,6 +149,7 @@ export function useActiveGameData(matchStatus: MatchStatus | null) {
     secondHalfStartingPlayerNumbers,
     selectedTeamPlayers,
     startingPlayerNumbers,
+    teamName,
     teamPlayers,
     teamQuickSubPairs,
   };

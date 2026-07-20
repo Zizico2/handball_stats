@@ -1,26 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const hasAuth = Boolean(process.env.CLERK_SECRET_KEY);
 
 test.describe("shot event creation", () => {
   test.skip(!hasAuth, "Requires CLERK_SECRET_KEY for Clerk testing helpers.");
-
-  test.beforeEach(async ({ request }) => {
-    const response = await request.get("/api/collections/active-game");
-    expect(response.ok()).toBeTruthy();
-    const activeGames = (await response.json()) as Array<{ id: number }>;
-    if (activeGames.length === 0) {
-      return;
-    }
-
-    const deleteResponse = await request.delete(
-      "/api/collections/active-game",
-      {
-        data: activeGames.map((game) => game.id),
-      },
-    );
-    expect(deleteResponse.status()).toBe(204);
-  });
 
   test("records shot position through the live event dialogs", async ({
     page,
@@ -48,6 +31,9 @@ test.describe("shot event creation", () => {
     // HeroUI checkbox control intercepts pointer events on the native input.
     await page.getByText("#7 Alex").click();
     await page.getByText("#12 Blake").click();
+    await expect(page.getByRole("button", { name: "Save Lineup" })).toBeEnabled(
+      { timeout: 5_000 },
+    );
     await page.getByRole("button", { name: "Save Lineup" }).click();
 
     await page.getByRole("button", { name: "Match controls" }).click();

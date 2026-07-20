@@ -1,0 +1,19 @@
+"$schema" = "./node_modules/wrangler/config-schema.json"
+main = ".open-next/worker.js"
+name = "arcazzi-e2e"
+compatibility_date = "2026-02-10"
+compatibility_flags = ["nodejs_compat"]
+
+[dev]
+host = "localhost:8789"
+port = 8789
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "arcazzi-e2e"
+database_id = "00000000-0000-0000-0000-000000000002"
+migrations_dir = "drizzle_flat"

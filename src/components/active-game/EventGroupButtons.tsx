@@ -15,7 +15,7 @@ export function EventGroupButtons({
     <div className="mt-2 w-full">
       <div className="grid grid-cols-2 gap-4">
         <Button
-          className="h-auto bg-warning py-3 text-warning-foreground shadow-md"
+          className="min-h-11 h-auto bg-warning py-3 text-warning-foreground shadow-md"
           isDisabled={disabled}
           variant="primary"
           onPress={() => onRecordEvent("attack")}
@@ -24,7 +24,7 @@ export function EventGroupButtons({
           Attack
         </Button>
         <Button
-          className="h-auto bg-accent py-3 text-accent-foreground shadow-md"
+          className="min-h-11 h-auto bg-accent py-3 text-accent-foreground shadow-md"
           isDisabled={disabled}
           variant="primary"
           onPress={() => onRecordEvent("defense")}
@@ -33,7 +33,7 @@ export function EventGroupButtons({
           Defense
         </Button>
         <Button
-          className="h-auto bg-danger py-3 text-danger-foreground shadow-md"
+          className="min-h-11 h-auto bg-danger py-3 text-danger-foreground shadow-md"
           isDisabled={disabled}
           variant="primary"
           onPress={() => onRecordEvent("sanction")}
@@ -42,7 +42,7 @@ export function EventGroupButtons({
           Sanction
         </Button>
         <Button
-          className="h-auto bg-success py-3 text-success-foreground shadow-md"
+          className="min-h-11 h-auto bg-success py-3 text-success-foreground shadow-md"
           isDisabled={disabled}
           variant="primary"
           onPress={() => onRecordEvent("substitution")}

@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { ActiveGame, Game } from "@/datamodel";
 import {
   type AppDb,
@@ -10,6 +10,7 @@ import {
   dbRowToGame,
 } from "@/db";
 import * as schema from "@/db/schema";
+import { MIN_ROSTER_SIZE } from "@/lib/roster/minRosterSize";
 
 export class StartGameConflictError extends Error {
   constructor(message = "An active game already exists") {
@@ -22,6 +23,18 @@ export class StartGameTeamNotFoundError extends Error {
   constructor(teamId: number) {
     super(`Team ${teamId} not found`);
     this.name = "StartGameTeamNotFoundError";
+  }
+}
+
+export class StartGameRosterTooSmallError extends Error {
+  readonly playerCount: number;
+
+  constructor(playerCount: number) {
+    super(
+      `Team needs at least ${MIN_ROSTER_SIZE} player${MIN_ROSTER_SIZE === 1 ? "" : "s"} to start a game (found ${playerCount})`,
+    );
+    this.name = "StartGameRosterTooSmallError";
+    this.playerCount = playerCount;
   }
 }
 
@@ -129,6 +142,22 @@ export async function startGame(
 
   if (!team) {
     throw new StartGameTeamNotFoundError(input.homeTeamId);
+  }
+
+  const rosterCountRow = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(schema.teamPlayers)
+    .where(
+      and(
+        eq(schema.teamPlayers.userId, userId),
+        eq(schema.teamPlayers.teamLocalId, input.homeTeamId),
+      ),
+    )
+    .get();
+
+  const playerCount = Number(rosterCountRow?.count ?? 0);
+  if (playerCount < MIN_ROSTER_SIZE) {
+    throw new StartGameRosterTooSmallError(playerCount);
   }
 
   try {

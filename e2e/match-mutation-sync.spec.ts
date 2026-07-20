@@ -1,21 +1,7 @@
-import { expect, type Page, test } from "@playwright/test";
-import { seedE2eData } from "./seedE2eData";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const hasAuth = Boolean(process.env.CLERK_SECRET_KEY);
-
-async function clearActiveGame(request: Parameters<typeof seedE2eData>[0]) {
-  const response = await request.get("/api/collections/active-game");
-  expect(response.ok()).toBeTruthy();
-  const activeGames = (await response.json()) as Array<{ id: number }>;
-  if (activeGames.length === 0) {
-    return;
-  }
-
-  const deleteResponse = await request.delete("/api/collections/active-game", {
-    data: activeGames.map((game) => game.id),
-  });
-  expect(deleteResponse.status()).toBe(204);
-}
 
 async function startGameWithLineupAndFirstHalf(page: Page) {
   await page.goto("/new-game");
@@ -37,6 +23,9 @@ async function startGameWithLineupAndFirstHalf(page: Page) {
 
   await page.getByText("#7 Alex").click();
   await page.getByText("#12 Blake").click();
+  await expect(page.getByRole("button", { name: "Save Lineup" })).toBeEnabled({
+    timeout: 5_000,
+  });
   await page.getByRole("button", { name: "Save Lineup" }).click();
 
   await page.getByRole("button", { name: "Match controls" }).click();
@@ -47,13 +36,7 @@ async function startGameWithLineupAndFirstHalf(page: Page) {
 }
 
 test.describe("match mutation sync states", () => {
-  test.describe.configure({ mode: "serial" });
   test.skip(!hasAuth, "Requires CLERK_SECRET_KEY for Clerk testing helpers.");
-
-  test.beforeEach(async ({ request }) => {
-    await seedE2eData(request);
-    await clearActiveGame(request);
-  });
 
   test("keeps start-game failure visible with retry", async ({ page }) => {
     test.setTimeout(60_000);
@@ -278,6 +261,10 @@ test.describe("match mutation sync states", () => {
 
     await page.getByRole("button", { name: "Match controls" }).click();
     await page.getByRole("menuitem", { name: "End Match" }).click();
+    await expect(
+      page.getByRole("heading", { name: "End this match?" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "End match" }).click();
     const failure = page.getByTestId("match-sync-failure");
     await expect(failure).toBeVisible({ timeout: 15_000 });
     await failure.getByRole("button", { name: "Retry" }).click();

@@ -1,14 +1,9 @@
-import { expect, test } from "@playwright/test";
-import { seedE2eData } from "./seedE2eData";
+import { expect, test } from "./fixtures";
 
 const hasAuth = Boolean(process.env.CLERK_SECRET_KEY);
 
 test.describe("active game empty state", () => {
   test.skip(!hasAuth, "Requires CLERK_SECRET_KEY for Clerk testing helpers.");
-
-  test.beforeEach(async ({ request }) => {
-    await seedE2eData(request);
-  });
 
   test("shows empty state when user has teams but no active game", async ({
     page,
