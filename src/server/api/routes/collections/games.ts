@@ -19,6 +19,7 @@ import {
 } from "@/server/setGamePauseState";
 import {
   StartGameConflictError,
+  StartGameRosterTooSmallError,
   StartGameTeamNotFoundError,
   startGame,
 } from "@/server/startGame";
@@ -160,6 +161,9 @@ export const gamesRoutes = new Hono<ApiEnv>()
       }
       if (error instanceof StartGameTeamNotFoundError) {
         throw new HTTPException(404, { message: error.message });
+      }
+      if (error instanceof StartGameRosterTooSmallError) {
+        throw new HTTPException(400, { message: error.message });
       }
       throw error;
     }

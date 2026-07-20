@@ -66,6 +66,15 @@ export default defineConfig({
         storageState: authFile,
       },
     },
+    {
+      name: "match-lifecycle-ux",
+      testMatch: /match-lifecycle-ux\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: authFile,
+      },
+    },
   ],
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined

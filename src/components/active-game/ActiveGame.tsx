@@ -22,6 +22,7 @@ import type { EventGroup, PlayerEvent } from "@/datamodel";
 import { eventMachine } from "@/event_form_fsm";
 import { usePlayerLabelMap } from "@/hooks/usePlayerLabelMap";
 import type { MatchStatus } from "@/inGameControlsAtoms";
+import { countGoals } from "@/lib/display/countGoals";
 import {
   beginMatchSaving,
   markMatchFailed,
@@ -51,6 +52,7 @@ function ActiveGame() {
     secondHalfStartingPlayerNumbers,
     selectedTeamPlayers,
     startingPlayerNumbers,
+    teamName,
     teamPlayers,
     teamQuickSubPairs,
   } = useActiveGameData(matchStatus);
@@ -59,10 +61,13 @@ function ActiveGame() {
     useActiveGameControls({
       activeGameData,
       activeGameRecord,
+      eventCount: activeGameEvents.length,
       firstHalfStartingPlayerNumbers,
+      goals: countGoals(activeGameEvents),
       secondHalfStartingPlayerNumbers,
       matchStatus,
       setMatchStatus,
+      teamName,
     });
 
   const { getPlayerLabel } = usePlayerLabelMap(

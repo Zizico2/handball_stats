@@ -1,4 +1,7 @@
+"use client";
+
 import { Typography } from "@heroui/react";
+import { useAtomValue } from "jotai";
 import { AppNextLink } from "@/components/AppNextLink";
 import { EventGroupButtons } from "@/components/active-game/EventGroupButtons";
 import { MatchClock } from "@/components/active-game/MatchClock";
@@ -9,6 +12,12 @@ import {
 import { EventLog } from "@/components/event-log/EventLog";
 import { MatchSyncFailureCallout } from "@/components/MatchSyncFailureCallout";
 import type { EventGroup, PlayerEvent, TeamPlayer } from "@/datamodel";
+import {
+  type ActiveGameControlsState,
+  inGameControlsAtom,
+  type PrimaryClockAction,
+} from "@/inGameControlsAtoms";
+import { matchSyncAtom } from "@/matchSyncAtom";
 
 interface ActiveGameViewProps {
   activeGameEvents: PlayerEvent[];
@@ -26,6 +35,26 @@ interface ActiveGameViewProps {
   undoEventLabel: string | null;
 }
 
+function runPrimaryClockAction(
+  action: PrimaryClockAction,
+  controls: ActiveGameControlsState,
+) {
+  switch (action) {
+    case "start-first-half":
+      controls.onStartFirstHalf();
+      break;
+    case "start-halftime":
+      controls.onStartHalftime();
+      break;
+    case "start-second-half":
+      controls.onStartSecondHalf();
+      break;
+    case "toggle-pause":
+      controls.onTogglePause();
+      break;
+  }
+}
+
 export function ActiveGameView({
   activeGameEvents,
   activePlayerNumbers,
@@ -41,10 +70,36 @@ export function ActiveGameView({
   undoDisabled,
   undoEventLabel,
 }: ActiveGameViewProps) {
+  const inGameControls = useAtomValue(inGameControlsAtom);
+  const matchSync = useAtomValue(matchSyncAtom);
+  const hasUnresolvedMutation =
+    matchSync.status === "saving" || matchSync.status === "failed";
+
   return (
-    <div className="h-full w-full">
-      <div className="mx-auto flex w-fit flex-col gap-4">
-        <MatchClock minutes={matchClock.minutes} seconds={matchClock.seconds} />
+    <div className="h-full w-full px-4 py-4 sm:px-6">
+      <div className="mx-auto flex w-full max-w-[600px] flex-col gap-4">
+        <MatchClock
+          hasActiveGame={hasActiveGame}
+          isRunning={inGameControls.isRunning}
+          matchStatus={inGameControls.matchStatus}
+          minutes={matchClock.minutes}
+          seconds={matchClock.seconds}
+          primaryActionDisabled={
+            inGameControls.primaryClockActionDisabled || hasUnresolvedMutation
+          }
+          primaryActionLabel={inGameControls.primaryClockActionLabel}
+          showHalftimeAction={inGameControls.matchStatus === "firstHalf"}
+          halftimeDisabled={
+            inGameControls.isClockMutationPending || hasUnresolvedMutation
+          }
+          onPrimaryAction={() => {
+            runPrimaryClockAction(
+              inGameControls.primaryClockAction,
+              inGameControls,
+            );
+          }}
+          onStartHalftime={inGameControls.onStartHalftime}
+        />
         <MatchSyncFailureCallout />
         {!hasActiveGame ? (
           <div className="flex flex-col gap-2">
@@ -67,14 +122,14 @@ export function ActiveGameView({
           disabled={eventButtonsDisabled}
           onRecordEvent={onRecordEvent}
         />
+        <EventLog
+          events={activeGameEvents}
+          getPlayerLabel={getPlayerLabel}
+          undoDisabled={undoDisabled}
+          undoEventLabel={undoEventLabel}
+          onUndoLastEvent={onUndoLastEvent}
+        />
       </div>
-      <EventLog
-        events={activeGameEvents}
-        getPlayerLabel={getPlayerLabel}
-        undoDisabled={undoDisabled}
-        undoEventLabel={undoEventLabel}
-        onUndoLastEvent={onUndoLastEvent}
-      />
     </div>
   );
 }

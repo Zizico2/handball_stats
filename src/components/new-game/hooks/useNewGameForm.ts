@@ -13,11 +13,13 @@ import { startGameMutation } from "@/server/api/client";
 
 interface UseNewGameFormParams {
   onStarted: () => void;
+  rosterReady: boolean;
   selectedTeamId: number | null;
 }
 
 export function useNewGameForm({
   onStarted,
+  rosterReady,
   selectedTeamId,
 }: UseNewGameFormParams) {
   const lastGame = useLiveSuspenseQuery((q) =>
@@ -36,7 +38,7 @@ export function useNewGameForm({
   }, []);
 
   const handleStartNewGame = useCallback(async () => {
-    if (selectedTeamId === null || isStarting) {
+    if (selectedTeamId === null || !rosterReady || isStarting) {
       return;
     }
 
@@ -86,7 +88,7 @@ export function useNewGameForm({
     } finally {
       setIsStarting(false);
     }
-  }, [isStarting, nextGameId, onStarted, selectedTeamId]);
+  }, [isStarting, nextGameId, onStarted, rosterReady, selectedTeamId]);
 
   return {
     clearStartError,

@@ -33,7 +33,7 @@ export function EventLog({
   }, [getPlayerLabel, playerLabels]);
 
   return (
-    <div className="mx-auto mt-8 w-full max-w-[600px]">
+    <div className="mt-4 w-full">
       {onUndoLastEvent ? (
         <UndoLastEventControl
           disabled={undoDisabled}
