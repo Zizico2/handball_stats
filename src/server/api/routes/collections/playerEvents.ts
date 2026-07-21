@@ -90,7 +90,7 @@ export const playerEventsRoutes = new Hono<ApiEnv>()
     // Get both elapsed seconds and active half for each game
     const elapsedAndHalfByGameId = new Map<
       number,
-      { elapsed: number; half: string | null }
+      { elapsed: number; half: MatchHalf | null }
     >();
     await Promise.all(
       uniqueGameIds.map(async (gameId) => {
@@ -139,7 +139,7 @@ export const playerEventsRoutes = new Hono<ApiEnv>()
         {
           ...item,
           ellapsed_seconds: elapsed,
-          half: half as import("@/datamodel").MatchHalf,
+          half,
         },
         userId,
       );
