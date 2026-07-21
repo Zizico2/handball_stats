@@ -1,157 +1,139 @@
-## Handball Stats
+# Arcazzi
 
-A handball match tracking app built with Next.js App Router, deployed to Cloudflare Workers.
+Arcazzi is a handball match tracking app built with the Next.js App Router and deployed to Cloudflare Workers. It supports roster setup, starting a game, a synchronized match clock, in-game event capture, and match history.
 
-The app covers three core flows:
-
-1. **Create teams and players** — build rosters before a match.
-2. **Start a new game** — select the home team and kick off.
-3. **Record in-game events** — log attack, defense, and sanction events against a running match clock.
-
-## Tech Stack
+## Tech stack
 
 | Layer | Technology |
 |---|---|
-| Framework | [Next.js 16](https://nextjs.org/) (App Router) |
-| Language | TypeScript (strict mode) |
-| Runtime / Deployment | [Cloudflare Workers](https://workers.cloudflare.com/) via [OpenNext](https://opennext.js.org/) |
-| Database | [Cloudflare D1](https://developers.cloudflare.com/d1/) (SQLite) |
-| ORM | [Drizzle ORM](https://orm.drizzle.team/) |
-| Package Manager | [Bun](https://bun.sh/) |
-| Linting & Formatting | [Biome](https://biomejs.dev/) |
-| Auth | [Clerk](https://clerk.com/) |
-| Component Library | [MUI](https://mui.com/) |
-| CI/CD | GitHub Actions |
+| Application | [Next.js 16](https://nextjs.org/) App Router, React 19, TypeScript |
+| UI | [HeroUI v3](https://www.heroui.com/) and Tailwind CSS v4 |
+| API | [Hono](https://hono.dev/) routes mounted under `/api` |
+| Client data | [TanStack DB](https://tanstack.com/db) query collections backed by the Hono API |
+| Database | [Cloudflare D1](https://developers.cloudflare.com/d1/) (SQLite) with [Drizzle ORM](https://orm.drizzle.team/) |
+| Authentication | [Clerk](https://clerk.com/) |
+| Runtime | Cloudflare Workers via [OpenNext](https://opennext.js.org/) |
+| Tooling | Bun, Biome, Vitest, and Playwright |
 
----
-
-## Local Development
+## Local setup
 
 ### Prerequisites
 
-| Tool | Install |
-|---|---|
-| **Bun** | https://bun.sh/docs/installation |
-| **Wrangler** (Cloudflare CLI) | Installed as a dev dependency — no global install needed |
+- [Bun](https://bun.sh/docs/installation) 1.3.14 (the version pinned in `package.json`)
+- A Clerk test instance if you need to sign in or run browser tests
 
-### 1. Install dependencies
+Wrangler is installed as a project dependency; a global installation is not required. Local D1 development and tests do not need Cloudflare credentials.
+
+### Install and configure
 
 ```bash
-bun install
+bun install --frozen-lockfile
+cp .env.example .env
 ```
 
-### 2. Run database migrations (local D1)
+Replace the Clerk placeholders in `.env` with test-instance values. `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` is used by the application, while Clerk's Playwright helpers also expect `CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`. Never commit `.env` or real credentials.
 
-Drizzle generates migrations into `drizzle/`, but Wrangler expects flat SQL files.
-The `db:migrate:local` script handles both flattening and applying:
+Prepare the local D1 database, then start the app:
 
 ```bash
 bun run db:migrate:local
-```
-
-> This runs `flatten.ts` to copy migration files into `drizzle_flat/`, then applies them to the local D1 database with Wrangler.
-
-### 3. Start the dev server
-
-```bash
 bun run dev
 ```
 
-The app will be available at `http://localhost:3000`.
+The app is available at `http://localhost:3000`. The migration command flattens the checked-in Drizzle migrations into the ignored `drizzle_flat/` directory and applies them to Wrangler's local `arcazzi` D1 database.
 
----
+## Database workflow
 
-## Database Workflow (Drizzle + D1)
+The schema lives in `src/db/schema.ts`. After changing it, generate and apply a migration:
 
-The schema lives in `src/db/schema.ts`. When you change it:
+```bash
+bun run db:generate
+bun run db:migrate:local
+```
 
-1. **Generate a new migration:**
+Generated migrations are checked in under `drizzle/`. The beta deployment workflow is responsible for applying them to the remote beta D1 database. PR previews use a separate D1 database per pull request and delete it when the PR closes.
 
-   ```bash
-   bun run db:generate
-   ```
+## Verification
 
-   This creates a new migration folder under `drizzle/`.
+Run the same non-browser gates used by CI:
 
-2. **Apply locally:**
+```bash
+bun run check
+bun run test
+```
 
-   ```bash
-   bun run db:migrate:local
-   ```
+Useful focused commands:
 
-Production migrations are intentionally applied only by the beta deployment workflow in CI.
-
----
-
-## Testing
-
-Non-E2E tests are split into two tiers:
-
-| Command | What it runs |
+| Command | Coverage |
 |---|---|
-| `bun run test` | Full non-E2E gate: unit tests, then D1 route tests |
-| `bun run test:unit` | Fast pure Bun suites (phase logic, match clock, mappers) under `src/` |
-| `bun run test:d1` | Database route tests in local workerd with an isolated D1 binding |
+| `bun run check` | Biome lint/format checks and TypeScript |
+| `bun run test:unit` | Pure Bun unit tests under `src/` |
+| `bun run test:d1` | Vitest route tests using an isolated local workerd D1 binding |
+| `bun run test` | Unit tests followed by D1 tests |
+| `bun run preview` | OpenNext build and local Cloudflare Worker preview |
 
-`bun run test:d1` regenerates `drizzle_flat/` from checked-in `drizzle/` migrations and applies those files to Vitest’s isolated local D1 storage. It does **not** use the remote D1 database and needs no Cloudflare credentials.
+`bun run test:d1` regenerates `drizzle_flat/` and applies migrations to isolated test storage. It never connects to the remote D1 database.
 
-Only database-backed route tests use D1. Pure logic suites stay on Bun.
+## Authenticated end-to-end tests
 
----
-
-## Code Quality
-
-[Biome](https://biomejs.dev/) handles both linting and formatting.
+Install Chromium once:
 
 ```bash
-# Lint the project
-bun run lint
-
-# Check formatting (CI-safe, no writes)
-bun run format-check
-
-# Auto-format
-bun run format
+bunx playwright install chromium
 ```
 
----
+Authenticated Playwright needs valid test-instance values for `CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, and `CLERK_SECRET_KEY`, plus an `E2E_CLERK_EMAIL` that identifies an existing Clerk test user. Mutating suites also require the same non-secret local `E2E_RESET_TOKEN` in the application and Playwright environment.
 
-## Cloudflare / OpenNext Preview
-
-Build and preview the app locally in the Workers runtime:
+By default, Playwright starts the Next.js dev server on `PLAYWRIGHT_PORT` and runs the suite against it:
 
 ```bash
-bun run preview
+bun run test:e2e
 ```
 
-The preview command performs its required OpenNext build. Cloudflare builds, remote migrations,
-version uploads, and deployments are intentionally available only through GitHub Actions.
+Set `PLAYWRIGHT_BASE_URL` to target an already-running server instead. `E2E_CLOUDFLARE_LOCAL=1` selects the prebuilt local OpenNext Worker path used by CI; that path additionally needs ephemeral D1 state and an environment file prepared by the workflow, so it is not part of ordinary developer setup.
 
-Pull requests use Cloudflare Worker version preview aliases, Cloudflare's native branch-preview
-primitive. D1 does not provide database branches, so CI creates one isolated D1 database per PR
-and generates an ephemeral Wrangler config that binds that database to the preview version. The
-config exists only on the runner and is removed after upload.
+## Continuous integration and deployment
 
----
+The active GitHub Actions workflows are:
 
-## Project Structure
+- `Quality`: runs `bun run check` on pushes to `main`.
+- `Pull request`: runs quality and non-E2E tests, builds OpenNext, runs authenticated E2E against a local Worker, deploys an isolated Worker/D1 preview, smoke-tests it, and cleans up the preview D1 database when the PR closes.
+- `Deploy beta`: on pushes to `main`, runs checks and tests, builds OpenNext, migrates beta D1, deploys the exact Worker version, and smoke-tests it.
 
-```
+Cloudflare builds, remote migrations, version uploads, and deployments are owned by CI. Local development should use `db:migrate:local` and `preview` instead.
+
+## Troubleshooting
+
+### Local D1 errors
+
+Run `bun run db:migrate:local` before loading database-backed pages. If schema errors persist after migration changes, remove Wrangler's ignored local state in `.wrangler/` and rerun the migration; this discards local-only data.
+
+### Clerk sign-in fails
+
+Confirm that the two publishable-key variables contain the same Clerk test-instance key and that `CLERK_SECRET_KEY` belongs to that instance. Restart the dev server after changing `.env`. Placeholder values intentionally do not authenticate.
+
+### Authenticated Playwright skips or cannot sign in
+
+Check all three Clerk variables and verify `E2E_CLERK_EMAIL` exists in the same Clerk test instance. For mutating suites, ensure `E2E_RESET_TOKEN` is non-empty and identical in the app and test process. Delete `playwright/.auth/` to force a fresh session after changing users or keys.
+
+### Playwright cannot reach the app
+
+When `PLAYWRIGHT_BASE_URL` is set, Playwright assumes that server is already running. Start `bun run dev`, correct the URL/port, or unset the base URL so Playwright launches the dev server.
+
+## Project structure
+
+```text
 src/
-  app/          # Next.js App Router pages and API routes
-  components/   # React components
-  db/           # Drizzle schema and DB client
-  server/       # Hono API (routes under server/api/routes/)
-  datamodel.ts  # Zod schemas — single source of truth for domain types
-  collections.ts# TanStack DB collections (local storage, migrating to server-backed)
-drizzle/        # Generated migrations (nested folders)
-drizzle_flat/   # Flattened migrations consumed by Wrangler D1
+  app/           Next.js App Router pages and API entry point
+  components/    React and HeroUI components
+  db/            Drizzle schema and database helpers
+  server/        Hono API routes and server-side domain logic
+  collections.ts API-backed TanStack DB query collections
+  datamodel.ts   Zod schemas and inferred domain types
+drizzle/         Generated migrations (checked in)
+drizzle_flat/    Flattened migrations for Wrangler D1 (ignored)
+e2e/             Authenticated Playwright suites
+test/d1/         Isolated D1 route tests
 ```
 
-## Data Model
-
-The app uses Zod (`src/datamodel.ts`) for runtime validation and TypeScript type inference from a single source of truth.
-
-- `playerEventSchema` — discriminated union by `eventType` (attack, defense, sanction).
-- `shotSchema` — validates shot payloads; enforces that `OffTarget` shots cannot be goals.
-- `teamSchema`, `teamPlayerSchema`, `gameSchema`, `activeGameSchema` — remaining domain entities.
+Zod schemas in `src/datamodel.ts` provide runtime validation and inferred TypeScript domain types across the API and client collections.
