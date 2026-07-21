@@ -55,27 +55,34 @@ Generated migrations are checked in under `drizzle/`. The beta deployment workfl
 
 ## Verification
 
-Run the complete non-deployment quality gate used before a pull request is
-merged:
+For a fast local sanity check before opening a pull request:
 
 ```bash
 bun run verify
 ```
 
-This runs formatting and lint checks, TypeScript, unit and isolated D1 tests,
-and an OpenNext Cloudflare Worker build. It does not run credentialed browser
-tests or deploy anything.
+This is a **best-effort shortcut** that sequentially runs `check`, `test`, and
+`cf:build` — the same package scripts CI invokes. It is not the CI gate: CI
+runs those scripts as separate parallel jobs, then continues into credentialed
+browser tests and deploys. Keep `verify` in sync when those atomic scripts
+change; the workflows remain the source of truth.
+
+`verify` does not run credentialed browser tests or deploy anything. To
+exercise the real GitHub Actions pipeline locally, use
+[nektos/act](https://github.com/nektos/act). Credentialed jobs still need the
+Clerk and Cloudflare secrets/vars that only CI has.
 
 Useful focused commands:
 
 | Command | Coverage |
 |---|---|
-| `bun run verify` | `check`, all non-browser tests, and an OpenNext Worker build |
+| `bun run verify` | Best-effort local composition of `check`, `test`, and `cf:build` |
 | `bun run check` | Biome lint/format checks and TypeScript |
 | `bun run test:unit` | Pure Bun unit tests under `src/` |
 | `bun run test:d1` | Vitest route tests using an isolated local workerd D1 binding |
 | `bun run test` | Unit tests followed by D1 tests |
-| `bun run preview` | OpenNext build and local Cloudflare Worker preview |
+| `bun run cf:build` | OpenNext Cloudflare Worker build |
+| `bun run preview` | `cf:build` and local Cloudflare Worker preview |
 
 `bun run test:d1` regenerates `drizzle_flat/` and applies migrations to isolated test storage. It never connects to the remote D1 database.
 
@@ -102,8 +109,8 @@ Set `PLAYWRIGHT_BASE_URL` to target an already-running server instead. `E2E_CLOU
 The active GitHub Actions workflows are:
 
 - `Quality`: runs `bun run check` on pushes to `main`.
-- `Pull request`: runs quality and non-E2E tests, builds OpenNext, runs authenticated E2E against a local Worker, deploys an isolated Worker/D1 preview, smoke-tests it, and cleans up the preview D1 database when the PR closes.
-- `Deploy beta`: on pushes to `main`, runs checks and tests, builds OpenNext, migrates beta D1, deploys the exact Worker version, and smoke-tests it.
+- `Pull request`: runs `check` and `test` in parallel, then `cf:build`, authenticated E2E against a local Worker, an isolated Worker/D1 preview, smoke tests, and preview D1 cleanup when the PR closes.
+- `Deploy beta`: on pushes to `main`, runs `check`, `test`, and `cf:build`, migrates beta D1, deploys the exact Worker version, and smoke-tests it.
 
 The `main` quality gate uses these exact required check contexts:
 
