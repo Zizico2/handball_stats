@@ -86,8 +86,49 @@ async function substituteAlexForCasey(page: Page) {
   ).toHaveCount(0);
 }
 
+async function openStartingLineupDialog(page: Page) {
+  await page.getByRole("button", { name: "Set Starting Lineup" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Define Starting Lineup" }),
+  ).toBeVisible();
+}
+
+function lineupCheckbox(page: Page, label: string) {
+  return page.getByRole("checkbox", { name: label });
+}
+
 test.describe("second-half starting lineup preselect", () => {
   test.skip(!hasAuth, "Requires CLERK_SECRET_KEY for Clerk testing helpers.");
+
+  test("toggles selection from the full row and via keyboard", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+
+    await startGameWithLineupAndFirstHalf(page);
+    await page.getByRole("button", { name: "Match controls" }).click();
+    await page.getByRole("menuitem", { name: "Start Halftime" }).click();
+    await openStartingLineupDialog(page);
+
+    const alex = lineupCheckbox(page, "#7 Alex");
+    await expect(alex).toHaveAttribute("aria-checked", "true");
+
+    // Click near the trailing edge of the row (outside the control box).
+    const alexBox = await alex.boundingBox();
+    expect(alexBox).not.toBeNull();
+    if (alexBox == null) {
+      throw new Error("Expected Alex checkbox bounding box");
+    }
+    await page.mouse.click(
+      alexBox.x + alexBox.width - 8,
+      alexBox.y + alexBox.height / 2,
+    );
+    await expect(alex).toHaveAttribute("aria-checked", "false");
+
+    await alex.focus();
+    await page.keyboard.press("Space");
+    await expect(alex).toHaveAttribute("aria-checked", "true");
+  });
 
   test("preselects end-of-first-half on-court players after a substitution", async ({
     page,
