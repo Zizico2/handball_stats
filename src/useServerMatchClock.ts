@@ -23,6 +23,7 @@ import {
   setGamePauseStateMutation,
   transitionGamePhaseMutation,
 } from "@/server/api/client";
+import { calculateElapsedMs } from "@/server/matchClockLogic";
 import { useNow } from "@/useNow";
 
 function matchStatusFromGame(game: Game): MatchStatus | null {
@@ -77,30 +78,6 @@ interface UseServerMatchClockResult {
 
 function msToS(elapsedMs: number): number {
   return Math.floor(elapsedMs / 1000);
-}
-
-function calculateElapsedMs(
-  startedAtMs: number | null,
-  sortedToggleTimes: number[],
-  nowMs: number,
-): number {
-  if (startedAtMs === null) {
-    return 0;
-  }
-
-  let completedPausedMs = 0;
-
-  for (let index = 0; index + 1 < sortedToggleTimes.length; index += 2) {
-    completedPausedMs +=
-      sortedToggleTimes[index + 1] - sortedToggleTimes[index];
-  }
-
-  const effectiveNowMs =
-    sortedToggleTimes.length % 2 === 1
-      ? sortedToggleTimes[sortedToggleTimes.length - 1]
-      : nowMs;
-
-  return Math.max(0, effectiveNowMs - startedAtMs - completedPausedMs);
 }
 
 function inferActiveHalf(
@@ -206,14 +183,13 @@ export function useServerMatchClock({
   ]);
 
   const firstHalfStartedAtMs = activeGameRecord?.firstHalfStartedAtMs ?? null;
+  const halftimeStartedAtMs = activeGameRecord?.halftimeStartedAtMs ?? null;
   const secondHalfStartedAtMs = activeGameRecord?.secondHalfStartedAtMs ?? null;
 
   const activeHalf = inferActiveHalf(
     firstHalfStartedAtMs,
     secondHalfStartedAtMs,
   );
-
-  const nowMs = useNow(Boolean(activeGameData), 1000, serverOffsetMs);
 
   const activeGamePauseToggles = useMemo(() => {
     if (!activeGameData) {
@@ -234,6 +210,13 @@ export function useServerMatchClock({
     [activeGamePauseToggles, activeHalf],
   );
 
+  const paused = activeHalfToggleTimes.length % 2 === 1;
+  const isHalftime =
+    halftimeStartedAtMs !== null && secondHalfStartedAtMs === null;
+  const isRunning = activeHalf !== null && !isHalftime && !paused;
+
+  const nowMs = useNow(isRunning, 1000, serverOffsetMs);
+
   const activeElapsedMs = calculateElapsedMs(
     activeHalf === "firstHalf"
       ? firstHalfStartedAtMs
@@ -243,8 +226,6 @@ export function useServerMatchClock({
     activeHalfToggleTimes,
     nowMs,
   );
-  const paused = activeHalfToggleTimes.length % 2 === 1;
-  const isRunning = activeHalf !== null && !paused;
 
   const totalSeconds = msToS(activeElapsedMs);
   const minutes = Math.floor(totalSeconds / 60);
