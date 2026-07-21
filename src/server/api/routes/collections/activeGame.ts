@@ -59,14 +59,40 @@ export const activeGameRoutes = new Hono<ApiEnv>()
       return c.body(null, 204);
     }
 
-    await db
-      .delete(schema.activeGame)
+    const targetedActiveGames = await db
+      .select({ gameLocalId: schema.activeGame.gameLocalId })
+      .from(schema.activeGame)
       .where(
         and(
           eq(schema.activeGame.userId, userId),
           inArray(schema.activeGame.localId, ids),
         ),
       );
+
+    if (targetedActiveGames.length === 0) {
+      return c.body(null, 204);
+    }
+
+    const gameIds = targetedActiveGames.map(({ gameLocalId }) => gameLocalId);
+
+    await db.batch([
+      db
+        .delete(schema.pauseToggles)
+        .where(
+          and(
+            eq(schema.pauseToggles.userId, userId),
+            inArray(schema.pauseToggles.gameLocalId, gameIds),
+          ),
+        ),
+      db
+        .delete(schema.activeGame)
+        .where(
+          and(
+            eq(schema.activeGame.userId, userId),
+            inArray(schema.activeGame.localId, ids),
+          ),
+        ),
+    ]);
 
     return c.body(null, 204);
   });
