@@ -183,14 +183,13 @@ export function useServerMatchClock({
   ]);
 
   const firstHalfStartedAtMs = activeGameRecord?.firstHalfStartedAtMs ?? null;
+  const halftimeStartedAtMs = activeGameRecord?.halftimeStartedAtMs ?? null;
   const secondHalfStartedAtMs = activeGameRecord?.secondHalfStartedAtMs ?? null;
 
   const activeHalf = inferActiveHalf(
     firstHalfStartedAtMs,
     secondHalfStartedAtMs,
   );
-
-  const nowMs = useNow(Boolean(activeGameData), 1000, serverOffsetMs);
 
   const activeGamePauseToggles = useMemo(() => {
     if (!activeGameData) {
@@ -211,6 +210,13 @@ export function useServerMatchClock({
     [activeGamePauseToggles, activeHalf],
   );
 
+  const paused = activeHalfToggleTimes.length % 2 === 1;
+  const isHalftime =
+    halftimeStartedAtMs !== null && secondHalfStartedAtMs === null;
+  const isRunning = activeHalf !== null && !isHalftime && !paused;
+
+  const nowMs = useNow(isRunning, 1000, serverOffsetMs);
+
   const activeElapsedMs = calculateElapsedMs(
     activeHalf === "firstHalf"
       ? firstHalfStartedAtMs
@@ -220,8 +226,6 @@ export function useServerMatchClock({
     activeHalfToggleTimes,
     nowMs,
   );
-  const paused = activeHalfToggleTimes.length % 2 === 1;
-  const isRunning = activeHalf !== null && !paused;
 
   const totalSeconds = msToS(activeElapsedMs);
   const minutes = Math.floor(totalSeconds / 60);
