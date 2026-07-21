@@ -25,11 +25,15 @@ export interface BuildMatchClockSnapshotInput {
   pauseToggles: MatchClockPauseToggle[];
 }
 
-function calculateElapsedMs(
-  startAtMs: number,
+export function calculateElapsedMs(
+  startAtMs: number | null,
   toggleTimes: number[],
   nowMs: number,
 ): number {
+  if (startAtMs === null) {
+    return 0;
+  }
+
   let completedPausedMs = 0;
 
   for (let index = 0; index + 1 < toggleTimes.length; index += 2) {
@@ -47,10 +51,6 @@ function calculateHalfElapsedSeconds(
   toggleTimes: number[],
   nowMs: number,
 ): number {
-  if (startAtMs === null) {
-    return 0;
-  }
-
   return Math.floor(calculateElapsedMs(startAtMs, toggleTimes, nowMs) / 1000);
 }
 
