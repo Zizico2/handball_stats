@@ -76,6 +76,33 @@ interface UseServerMatchClockResult {
   clearClockState: () => void;
 }
 
+interface DisplayedMatchClockState {
+  clockKey: string;
+  elapsedSeconds: number;
+}
+
+export function reconcileDisplayedMatchClock(
+  previous: DisplayedMatchClockState,
+  clockKey: string,
+  authoritativeSeconds: number,
+): DisplayedMatchClockState {
+  if (previous.clockKey !== clockKey) {
+    return { clockKey, elapsedSeconds: authoritativeSeconds };
+  }
+
+  if (authoritativeSeconds >= previous.elapsedSeconds) {
+    return authoritativeSeconds === previous.elapsedSeconds
+      ? previous
+      : { clockKey, elapsedSeconds: authoritativeSeconds };
+  }
+
+  if (previous.elapsedSeconds - authoritativeSeconds === 1) {
+    return previous;
+  }
+
+  return { clockKey, elapsedSeconds: authoritativeSeconds };
+}
+
 function msToS(elapsedMs: number): number {
   return Math.floor(elapsedMs / 1000);
 }
@@ -227,7 +254,26 @@ export function useServerMatchClock({
     nowMs,
   );
 
-  const totalSeconds = msToS(activeElapsedMs);
+  const clockKey = `${activeGameData?.gameId ?? "none"}:${activeHalf ?? "none"}`;
+  const authoritativeSeconds = msToS(activeElapsedMs);
+  const [displayedClock, setDisplayedClock] =
+    useState<DisplayedMatchClockState>(() => ({
+      clockKey,
+      elapsedSeconds: authoritativeSeconds,
+    }));
+  const nextDisplayedClock = reconcileDisplayedMatchClock(
+    displayedClock,
+    clockKey,
+    authoritativeSeconds,
+  );
+
+  useEffect(() => {
+    if (nextDisplayedClock !== displayedClock) {
+      setDisplayedClock(nextDisplayedClock);
+    }
+  }, [displayedClock, nextDisplayedClock]);
+
+  const totalSeconds = nextDisplayedClock.elapsedSeconds;
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
 

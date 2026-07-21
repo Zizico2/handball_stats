@@ -42,7 +42,9 @@ mock.module("@/useNow", () => ({
   },
 }));
 
-const { useServerMatchClock } = await import("@/useServerMatchClock");
+const { reconcileDisplayedMatchClock, useServerMatchClock } = await import(
+  "@/useServerMatchClock"
+);
 
 const activeGame: ActiveGame = {
   id: 1,
@@ -80,6 +82,65 @@ function gameWithClock(
     ...timestamps,
   };
 }
+
+describe("reconcileDisplayedMatchClock", () => {
+  test("holds a one-second regression for the same game and half", () => {
+    const displayed = {
+      clockKey: "42:firstHalf",
+      elapsedSeconds: 60,
+    };
+
+    expect(reconcileDisplayedMatchClock(displayed, "42:firstHalf", 59)).toBe(
+      displayed,
+    );
+  });
+
+  test("catches up and advances normally after a held regression", () => {
+    const displayed = {
+      clockKey: "42:firstHalf",
+      elapsedSeconds: 60,
+    };
+
+    const caughtUp = reconcileDisplayedMatchClock(
+      displayed,
+      "42:firstHalf",
+      60,
+    );
+    const advanced = reconcileDisplayedMatchClock(caughtUp, "42:firstHalf", 61);
+
+    expect(caughtUp).toBe(displayed);
+    expect(advanced).toEqual({
+      clockKey: "42:firstHalf",
+      elapsedSeconds: 61,
+    });
+  });
+
+  test("resets when the active game or half changes", () => {
+    const displayed = {
+      clockKey: "42:firstHalf",
+      elapsedSeconds: 1_800,
+    };
+
+    expect(reconcileDisplayedMatchClock(displayed, "42:secondHalf", 0)).toEqual(
+      { clockKey: "42:secondHalf", elapsedSeconds: 0 },
+    );
+    expect(reconcileDisplayedMatchClock(displayed, "43:firstHalf", 0)).toEqual({
+      clockKey: "43:firstHalf",
+      elapsedSeconds: 0,
+    });
+  });
+
+  test("re-anchors regressions of two seconds or more", () => {
+    const displayed = {
+      clockKey: "42:firstHalf",
+      elapsedSeconds: 60,
+    };
+
+    expect(reconcileDisplayedMatchClock(displayed, "42:firstHalf", 58)).toEqual(
+      { clockKey: "42:firstHalf", elapsedSeconds: 58 },
+    );
+  });
+});
 
 describe("useServerMatchClock timer activation", () => {
   beforeEach(() => {
