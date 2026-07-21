@@ -111,23 +111,26 @@ test.describe("second-half starting lineup preselect", () => {
     await openStartingLineupDialog(page);
 
     const alex = lineupCheckbox(page, "#7 Alex");
-    await expect(alex).toHaveAttribute("aria-checked", "true");
+    await expect(alex).toBeChecked();
 
-    // Click near the trailing edge of the row (outside the control box).
-    const alexBox = await alex.boundingBox();
+    // HeroUI exposes role=checkbox on the small control; the full-width hit
+    // target is the label (Checkbox.Content). Click its trailing edge.
+    const alexRow = page.locator("label").filter({ hasText: "#7 Alex" });
+    const alexBox = await alexRow.boundingBox();
     expect(alexBox).not.toBeNull();
     if (alexBox == null) {
-      throw new Error("Expected Alex checkbox bounding box");
+      throw new Error("Expected Alex row label bounding box");
     }
+    expect(alexBox.width).toBeGreaterThan(100);
     await page.mouse.click(
       alexBox.x + alexBox.width - 8,
       alexBox.y + alexBox.height / 2,
     );
-    await expect(alex).toHaveAttribute("aria-checked", "false");
+    await expect(alex).not.toBeChecked();
 
     await alex.focus();
     await page.keyboard.press("Space");
-    await expect(alex).toHaveAttribute("aria-checked", "true");
+    await expect(alex).toBeChecked();
   });
 
   test("preselects end-of-first-half on-court players after a substitution", async ({
