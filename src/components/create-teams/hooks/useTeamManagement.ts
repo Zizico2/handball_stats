@@ -1,7 +1,7 @@
 "use client";
 
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   quickSubPairsCollection,
   teamPlayersCollection,
@@ -9,6 +9,14 @@ import {
 } from "@/collections";
 import type { QuickSubPair, Team, TeamPlayer } from "@/datamodel";
 import { useNextLocalId } from "@/hooks/useNextLocalId";
+import { TeamHasGamesError } from "@/server/api/teamDeletionErrors";
+
+export type TeamDeletionStatus = "confirm" | "pending" | "blocked" | "error";
+
+export interface TeamDeletionState {
+  status: TeamDeletionStatus;
+  team: Team;
+}
 
 export function useTeamManagement() {
   const teams = useLiveSuspenseQuery((q) => q.from({ team: teamsCollection }));
@@ -51,6 +59,10 @@ export function useTeamManagement() {
   const [addQuickSubTeamId, setAddQuickSubTeamId] = useState<number | null>(
     null,
   );
+  const [teamDeletion, setTeamDeletion] = useState<TeamDeletionState | null>(
+    null,
+  );
+  const teamDeletionPendingRef = useRef(false);
 
   const normalizedTeamNames = useMemo(
     () => new Set(teams.data.map((team) => team.name.trim().toLowerCase())),
@@ -94,14 +106,73 @@ export function useTeamManagement() {
     setAddPlayerTeamId(null);
   };
 
-  const handleDeleteTeam = (team: Team) => {
-    for (const player of teamPlayers.data.filter((p) => p.teamId === team.id)) {
-      teamPlayersCollection.delete(player.id);
+  const requestDeleteTeam = (team: Team) => {
+    if (teamDeletionPendingRef.current) return;
+    setTeamDeletion({ status: "confirm", team });
+  };
+
+  const closeDeleteTeam = () => {
+    if (teamDeletionPendingRef.current) return;
+    setTeamDeletion(null);
+  };
+
+  const updateTeamDeletionStatus = (
+    teamId: number,
+    status: TeamDeletionStatus,
+  ) => {
+    setTeamDeletion((current) =>
+      current?.team.id === teamId ? { ...current, status } : current,
+    );
+  };
+
+  const handleDeleteTeam = async () => {
+    if (!teamDeletion || teamDeletionPendingRef.current) return;
+
+    const { team } = teamDeletion;
+    teamDeletionPendingRef.current = true;
+    updateTeamDeletionStatus(team.id, "pending");
+
+    let persistenceError: unknown = null;
+    try {
+      const transaction = teamsCollection.delete(team.id);
+      await transaction.isPersisted.promise;
+    } catch (error) {
+      persistenceError = error;
     }
-    for (const pair of quickSubPairs.data.filter((p) => p.teamId === team.id)) {
-      quickSubPairsCollection.delete(pair.id);
+
+    try {
+      await teamsCollection.utils.refetch();
+    } catch (error) {
+      console.error("Failed to reconcile team deletion", error);
+      updateTeamDeletionStatus(
+        team.id,
+        persistenceError instanceof TeamHasGamesError ? "blocked" : "error",
+      );
+      teamDeletionPendingRef.current = false;
+      return;
     }
-    teamsCollection.delete(team.id);
+
+    if (teamsCollection.get(team.id) !== undefined) {
+      updateTeamDeletionStatus(
+        team.id,
+        persistenceError instanceof TeamHasGamesError ? "blocked" : "error",
+      );
+      teamDeletionPendingRef.current = false;
+      return;
+    }
+
+    setTeamDeletion(null);
+
+    try {
+      await Promise.all([
+        teamPlayersCollection.utils.refetch(),
+        quickSubPairsCollection.utils.refetch(),
+      ]);
+    } catch (error) {
+      console.error("Failed to refresh child data after team deletion", error);
+    } finally {
+      teamDeletionPendingRef.current = false;
+    }
   };
 
   const handleDeletePlayer = (player: TeamPlayer) => {
@@ -126,6 +197,7 @@ export function useTeamManagement() {
   return {
     addPlayerTeamId,
     addQuickSubTeamId,
+    closeDeleteTeam,
     createTeamOpen,
     existingPlayerNumbersForSelectedTeam,
     handleAddPlayer,
@@ -136,10 +208,12 @@ export function useTeamManagement() {
     handleDeleteTeam,
     normalizedTeamNames,
     quickSubPairs,
+    requestDeleteTeam,
     setAddPlayerTeamId,
     setAddQuickSubTeamId,
     setCreateTeamOpen,
     teamPlayers,
+    teamDeletion,
     teams,
   };
 }
