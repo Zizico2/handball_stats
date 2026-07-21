@@ -171,7 +171,7 @@ test.describe("full match lifecycle", () => {
     const csv = await readFile(downloadPath as string, "utf8");
     const shotRow = csv
       .split(/\r?\n/)
-      .find((row) => row.toLowerCase().includes("shot"));
+      .find((row) => row.split(",").includes("shot"));
     expect(shotRow).toBeDefined();
     expect(shotRow).toContain("OnTarget");
     expect(shotRow?.toLowerCase()).toContain("true");
