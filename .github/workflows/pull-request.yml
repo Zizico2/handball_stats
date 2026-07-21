@@ -88,6 +88,18 @@ jobs:
       PLAYWRIGHT_PORT: 8789
       E2E_CLOUDFLARE_LOCAL: 1
     steps:
+      - name: Preflight Local Worker E2E credentials
+        run: |
+          missing=""
+          if [ -z "${CLERK_PUBLISHABLE_KEY:-}" ] || [ -z "${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}" ]; then
+            missing="$missing vars.CLERK_PREVIEW_PUBLISHABLE_KEY"
+          fi
+          [ -n "${CLERK_SECRET_KEY:-}" ] || missing="$missing secrets.CLERK_SECRET_KEY"
+          [ -n "${E2E_CLERK_EMAIL:-}" ] || missing="$missing secrets.E2E_CLERK_EMAIL"
+          if [ -n "$missing" ]; then
+            echo "::error::Local Worker E2E is missing required credentials:$missing"
+            exit 1
+          fi
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
@@ -199,13 +211,42 @@ jobs:
 
   preview-smoke:
     name: Human preview smoke
+    if: >-
+      always() &&
+      github.event_name == 'pull_request' &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     needs: deploy-preview
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
       name: preview
       deployment: false
+    env:
+      PLAYWRIGHT_BASE_URL: ${{ needs.deploy-preview.outputs.url }}
+      CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PREVIEW_PUBLISHABLE_KEY }}
+      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+      E2E_CLERK_EMAIL: ${{ secrets.E2E_CLERK_EMAIL }}
     steps:
+      - name: Require successful preview deployment
+        env:
+          DEPLOY_PREVIEW_RESULT: ${{ needs.deploy-preview.result }}
+        run: |
+          if [ "$DEPLOY_PREVIEW_RESULT" != "success" ]; then
+            echo "::error::Deploy human preview finished with '$DEPLOY_PREVIEW_RESULT'; Human preview smoke requires success"
+            exit 1
+          fi
+      - name: Preflight Human preview smoke inputs
+        run: |
+          missing=""
+          [ -n "${PLAYWRIGHT_BASE_URL:-}" ] || missing="$missing PLAYWRIGHT_BASE_URL"
+          [ -n "${CLERK_PUBLISHABLE_KEY:-}" ] || missing="$missing vars.CLERK_PREVIEW_PUBLISHABLE_KEY"
+          [ -n "${CLERK_SECRET_KEY:-}" ] || missing="$missing secrets.CLERK_SECRET_KEY"
+          [ -n "${E2E_CLERK_EMAIL:-}" ] || missing="$missing secrets.E2E_CLERK_EMAIL"
+          if [ -n "$missing" ]; then
+            echo "::error::Human preview smoke is missing required inputs:$missing"
+            exit 1
+          fi
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
@@ -214,11 +255,6 @@ jobs:
       - name: Install Playwright browser
         run: bunx playwright install --with-deps chromium
       - name: Run read-only preview smoke suite
-        env:
-          PLAYWRIGHT_BASE_URL: ${{ needs.deploy-preview.outputs.url }}
-          CLERK_PUBLISHABLE_KEY: ${{ vars.CLERK_PREVIEW_PUBLISHABLE_KEY }}
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-          E2E_CLERK_EMAIL: ${{ secrets.E2E_CLERK_EMAIL }}
         run: bun run test:e2e:smoke
       - name: Upload preview-smoke diagnostics
         if: failure()

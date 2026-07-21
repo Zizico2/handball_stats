@@ -55,17 +55,22 @@ Generated migrations are checked in under `drizzle/`. The beta deployment workfl
 
 ## Verification
 
-Run the same non-browser gates used by CI:
+Run the complete non-deployment quality gate used before a pull request is
+merged:
 
 ```bash
-bun run check
-bun run test
+bun run verify
 ```
+
+This runs formatting and lint checks, TypeScript, unit and isolated D1 tests,
+and an OpenNext Cloudflare Worker build. It does not run credentialed browser
+tests or deploy anything.
 
 Useful focused commands:
 
 | Command | Coverage |
 |---|---|
+| `bun run verify` | `check`, all non-browser tests, and an OpenNext Worker build |
 | `bun run check` | Biome lint/format checks and TypeScript |
 | `bun run test:unit` | Pure Bun unit tests under `src/` |
 | `bun run test:d1` | Vitest route tests using an isolated local workerd D1 binding |
@@ -99,6 +104,31 @@ The active GitHub Actions workflows are:
 - `Quality`: runs `bun run check` on pushes to `main`.
 - `Pull request`: runs quality and non-E2E tests, builds OpenNext, runs authenticated E2E against a local Worker, deploys an isolated Worker/D1 preview, smoke-tests it, and cleans up the preview D1 database when the PR closes.
 - `Deploy beta`: on pushes to `main`, runs checks and tests, builds OpenNext, migrates beta D1, deploys the exact Worker version, and smoke-tests it.
+
+The `main` quality gate uses these exact required check contexts:
+
+1. `Quality`
+2. `Unit and D1 tests`
+3. `Cloudflare build`
+4. `Local Worker E2E`
+5. `Human preview smoke`
+
+The two browser checks require Clerk credentials, and the preview path also
+requires Cloudflare credentials. They therefore run only for active pull
+requests whose branch belongs to this repository. They do not run for closed
+pull requests, merge-group events, or untrusted forks. A fork contribution
+must be moved to a trusted same-repository branch by a maintainer before it can
+satisfy the full required-check set. Missing Clerk values fail in the affected
+browser job with the missing variable names; the preview smoke check also
+fails when its preview deployment did not succeed or did not publish a URL.
+
+All routine changes, including administrator-authored changes, must use a pull
+request and pass all five checks; direct pushes and routine admin bypasses are
+not part of the workflow. Emergency admin bypass is break-glass only for a
+time-critical service incident or security response. The administrator must
+record the reason and incident reference, keep the change minimal, and follow
+up immediately with a pull request that runs the full gate and documents any
+restoration work.
 
 Cloudflare builds, remote migrations, version uploads, and deployments are owned by CI. Local development should use `db:migrate:local` and `preview` instead.
 

@@ -12,6 +12,7 @@
     "format-check": "biome format",
     "typecheck": "tsc --noEmit",
     "check": "biome check . && bun run typecheck",
+    "verify": "bun run check && bun run test && bunx opennextjs-cloudflare build",
     "test:instant": "playwright test --project=instant-nav",
     "test:e2e": "playwright test",
     "test:e2e:smoke": "playwright test --config=playwright.smoke.config.ts",
