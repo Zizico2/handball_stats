@@ -1,9 +1,27 @@
 import { describe, expect, test } from "bun:test";
-import { buildMatchClockSnapshot } from "./matchClockLogic";
+import { buildMatchClockSnapshot, calculateElapsedMs } from "./matchClockLogic";
 
 const FIRST_HALF_START_MS = 1_000_000;
 const HALFTIME_MS = FIRST_HALF_START_MS + 30 * 60 * 1000;
 const SECOND_HALF_START_MS = HALFTIME_MS + 10 * 60 * 1000;
+
+describe("calculateElapsedMs", () => {
+  test("returns zero when the half has not started", () => {
+    expect(calculateElapsedMs(null, [], 8_000)).toBe(0);
+  });
+
+  test("subtracts completed pauses from elapsed time", () => {
+    expect(calculateElapsedMs(1_000, [3_000, 5_000], 8_000)).toBe(5_000);
+  });
+
+  test("freezes elapsed time at the start of an open pause", () => {
+    expect(calculateElapsedMs(1_000, [3_000], 8_000)).toBe(2_000);
+  });
+
+  test("clamps elapsed time to zero", () => {
+    expect(calculateElapsedMs(1_000, [], 500)).toBe(0);
+  });
+});
 
 describe("buildMatchClockSnapshot", () => {
   test("pre-match: no active half and zero elapsed", () => {
