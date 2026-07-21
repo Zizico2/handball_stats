@@ -9,6 +9,7 @@ import {
 } from "@/collections";
 import type { QuickSubPair, Team, TeamPlayer } from "@/datamodel";
 import { useNextLocalId } from "@/hooks/useNextLocalId";
+import { quickSubPairReferencesPlayer } from "@/lib/quickSubPairs";
 
 export function useTeamManagement() {
   const teams = useLiveSuspenseQuery((q) => q.from({ team: teamsCollection }));
@@ -105,6 +106,11 @@ export function useTeamManagement() {
   };
 
   const handleDeletePlayer = (player: TeamPlayer) => {
+    for (const pair of quickSubPairs.data.filter((candidate) =>
+      quickSubPairReferencesPlayer(candidate, player),
+    )) {
+      quickSubPairsCollection.delete(pair.id);
+    }
     teamPlayersCollection.delete(player.id);
   };
 

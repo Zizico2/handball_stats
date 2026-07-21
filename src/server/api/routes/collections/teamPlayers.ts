@@ -1,5 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { Hono } from "hono";
 import { dbRowToTeamPlayer, teamPlayerToDbRow } from "@/db";
 import * as schema from "@/db/schema";
@@ -38,14 +38,48 @@ export const teamPlayersRoutes = new Hono<ApiEnv>()
       return c.body(null, 204);
     }
 
-    await db
-      .delete(schema.teamPlayers)
+    const targetedPlayers = await db
+      .select({
+        teamLocalId: schema.teamPlayers.teamLocalId,
+        number: schema.teamPlayers.number,
+      })
+      .from(schema.teamPlayers)
       .where(
         and(
           eq(schema.teamPlayers.userId, userId),
           inArray(schema.teamPlayers.localId, ids),
         ),
       );
+
+    if (targetedPlayers.length === 0) {
+      return c.body(null, 204);
+    }
+
+    const pairReferences = targetedPlayers.map((player) =>
+      and(
+        eq(schema.quickSubPairs.teamLocalId, player.teamLocalId),
+        or(
+          eq(schema.quickSubPairs.playerNumberA, player.number),
+          eq(schema.quickSubPairs.playerNumberB, player.number),
+        ),
+      ),
+    );
+
+    await db.batch([
+      db
+        .delete(schema.quickSubPairs)
+        .where(
+          and(eq(schema.quickSubPairs.userId, userId), or(...pairReferences)),
+        ),
+      db
+        .delete(schema.teamPlayers)
+        .where(
+          and(
+            eq(schema.teamPlayers.userId, userId),
+            inArray(schema.teamPlayers.localId, ids),
+          ),
+        ),
+    ]);
 
     return c.body(null, 204);
   });
