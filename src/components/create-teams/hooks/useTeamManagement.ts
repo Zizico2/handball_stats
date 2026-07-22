@@ -162,8 +162,6 @@ export function useTeamManagement() {
       return;
     }
 
-    setTeamDeletion(null);
-
     try {
       await Promise.all([
         teamPlayersCollection.utils.refetch(),
@@ -171,9 +169,13 @@ export function useTeamManagement() {
       ]);
     } catch (error) {
       console.error("Failed to refresh child data after team deletion", error);
-    } finally {
+      updateTeamDeletionStatus(team.id, "error");
       teamDeletionPendingRef.current = false;
+      return;
     }
+
+    setTeamDeletion(null);
+    teamDeletionPendingRef.current = false;
   };
 
   const handleDeletePlayer = (player: TeamPlayer) => {
