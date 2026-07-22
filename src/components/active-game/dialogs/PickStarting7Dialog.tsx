@@ -70,22 +70,19 @@ export function PickStarting7Dialog({
               {players.map((player) => {
                 const isChecked = selected.includes(player.number);
                 return (
-                  <div
+                  <Checkbox
                     key={player.number}
-                    className="px-3 py-2 hover:bg-surface-secondary"
+                    className="w-full"
+                    isSelected={isChecked}
+                    onChange={() => handleToggle(player.number)}
                   >
-                    <Checkbox
-                      isSelected={isChecked}
-                      onChange={() => handleToggle(player.number)}
-                    >
-                      <Checkbox.Content>
-                        <Checkbox.Control>
-                          <Checkbox.Indicator />
-                        </Checkbox.Control>
-                        {formatPlayerLabel(player.number, [player])}
-                      </Checkbox.Content>
-                    </Checkbox>
-                  </div>
+                    <Checkbox.Content className="w-full px-3 py-2 hover:bg-surface-secondary">
+                      <Checkbox.Control>
+                        <Checkbox.Indicator />
+                      </Checkbox.Control>
+                      {formatPlayerLabel(player.number, [player])}
+                    </Checkbox.Content>
+                  </Checkbox>
                 );
               })}
             </div>

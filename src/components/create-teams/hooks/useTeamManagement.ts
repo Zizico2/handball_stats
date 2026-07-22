@@ -9,6 +9,7 @@ import {
 } from "@/collections";
 import type { QuickSubPair, Team, TeamPlayer } from "@/datamodel";
 import { useNextLocalId } from "@/hooks/useNextLocalId";
+import { quickSubPairReferencesPlayer } from "@/lib/quickSubPairs";
 import { TeamHasGamesError } from "@/server/api/teamDeletionErrors";
 
 export type TeamDeletionStatus = "confirm" | "pending" | "blocked" | "error";
@@ -176,6 +177,11 @@ export function useTeamManagement() {
   };
 
   const handleDeletePlayer = (player: TeamPlayer) => {
+    for (const pair of quickSubPairs.data.filter((candidate) =>
+      quickSubPairReferencesPlayer(candidate, player),
+    )) {
+      quickSubPairsCollection.delete(pair.id);
+    }
     teamPlayersCollection.delete(player.id);
   };
 
