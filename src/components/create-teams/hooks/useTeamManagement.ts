@@ -142,7 +142,7 @@ export function useTeamManagement() {
     }
 
     try {
-      await teamsCollection.utils.refetch();
+      await teamsCollection.utils.refetch({ throwOnError: true });
     } catch (error) {
       console.error("Failed to reconcile team deletion", error);
       updateTeamDeletionStatus(
@@ -164,8 +164,8 @@ export function useTeamManagement() {
 
     try {
       await Promise.all([
-        teamPlayersCollection.utils.refetch(),
-        quickSubPairsCollection.utils.refetch(),
+        teamPlayersCollection.utils.refetch({ throwOnError: true }),
+        quickSubPairsCollection.utils.refetch({ throwOnError: true }),
       ]);
     } catch (error) {
       console.error("Failed to refresh child data after team deletion", error);
