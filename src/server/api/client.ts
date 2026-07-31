@@ -11,7 +11,7 @@ import type {
 } from "@/datamodel";
 import type { ApiApp } from "@/server/api/app";
 import {
-  classifyTeamHasGamesConflict,
+  isTeamHasGamesConflict,
   TeamHasGamesError,
 } from "@/server/api/teamDeletionErrors";
 
@@ -57,9 +57,8 @@ export async function deleteTeamsMutation(ids: number[]) {
   try {
     await parseResponse(apiClient.api.collections.teams.$delete({ json: ids }));
   } catch (error) {
-    const conflict = classifyTeamHasGamesConflict(error);
-    if (conflict) {
-      throw new TeamHasGamesError(conflict.teamIds, error);
+    if (isTeamHasGamesConflict(error)) {
+      throw new TeamHasGamesError(error);
     }
     throw error;
   }

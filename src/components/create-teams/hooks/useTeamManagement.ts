@@ -12,16 +12,28 @@ import { useNextLocalId } from "@/hooks/useNextLocalId";
 import { quickSubPairReferencesPlayer } from "@/lib/quickSubPairs";
 import { TeamHasGamesError } from "@/server/api/teamDeletionErrors";
 
-export type TeamDeletionStatus =
-  | "confirm"
-  | "pending"
-  | "blocked"
-  | "error"
-  | "reconcile-error";
+export type TeamDeletionStatus = "confirm" | "pending" | "blocked" | "error";
 
 export interface TeamDeletionState {
   status: TeamDeletionStatus;
   team: Team;
+}
+
+function evictDeletedTeamSetup(teamId: number) {
+  // The API deletes these rows atomically; writeDelete also updates cached queries.
+  const playerIds = teamPlayersCollection.toArray
+    .filter((player) => player.teamId === teamId && player.$synced)
+    .map((player) => player.id);
+  const pairIds = quickSubPairsCollection.toArray
+    .filter((pair) => pair.teamId === teamId && pair.$synced)
+    .map((pair) => pair.id);
+
+  if (playerIds.length > 0) {
+    teamPlayersCollection.utils.writeDelete(playerIds);
+  }
+  if (pairIds.length > 0) {
+    quickSubPairsCollection.utils.writeDelete(pairIds);
+  }
 }
 
 export function useTeamManagement() {
@@ -118,12 +130,7 @@ export function useTeamManagement() {
   };
 
   const closeDeleteTeam = () => {
-    if (
-      teamDeletionPendingRef.current ||
-      teamDeletion?.status === "reconcile-error"
-    ) {
-      return;
-    }
+    if (teamDeletionPendingRef.current) return;
     setTeamDeletion(null);
   };
 
@@ -143,46 +150,35 @@ export function useTeamManagement() {
     teamDeletionPendingRef.current = true;
     updateTeamDeletionStatus(team.id, "pending");
 
-    let persistenceError: unknown = null;
     try {
       const transaction = teamsCollection.delete(team.id);
       await transaction.isPersisted.promise;
+      evictDeletedTeamSetup(team.id);
+      setTeamDeletion(null);
     } catch (error) {
-      persistenceError = error;
-    }
+      try {
+        await teamsCollection.utils.refetch({ throwOnError: true });
+      } catch (reconciliationError) {
+        console.error("Failed to reconcile team deletion", reconciliationError);
+        updateTeamDeletionStatus(
+          team.id,
+          error instanceof TeamHasGamesError ? "blocked" : "error",
+        );
+        return;
+      }
 
-    try {
-      await teamsCollection.utils.refetch({ throwOnError: true });
-    } catch (error) {
-      console.error("Failed to reconcile team deletion", error);
-      updateTeamDeletionStatus(team.id, "reconcile-error");
+      if (teamsCollection.get(team.id) === undefined) {
+        evictDeletedTeamSetup(team.id);
+        setTeamDeletion(null);
+      } else {
+        updateTeamDeletionStatus(
+          team.id,
+          error instanceof TeamHasGamesError ? "blocked" : "error",
+        );
+      }
+    } finally {
       teamDeletionPendingRef.current = false;
-      return;
     }
-
-    if (teamsCollection.get(team.id) !== undefined) {
-      updateTeamDeletionStatus(
-        team.id,
-        persistenceError instanceof TeamHasGamesError ? "blocked" : "error",
-      );
-      teamDeletionPendingRef.current = false;
-      return;
-    }
-
-    try {
-      await Promise.all([
-        teamPlayersCollection.utils.refetch({ throwOnError: true }),
-        quickSubPairsCollection.utils.refetch({ throwOnError: true }),
-      ]);
-    } catch (error) {
-      console.error("Failed to refresh child data after team deletion", error);
-      updateTeamDeletionStatus(team.id, "reconcile-error");
-      teamDeletionPendingRef.current = false;
-      return;
-    }
-
-    setTeamDeletion(null);
-    teamDeletionPendingRef.current = false;
   };
 
   const handleDeletePlayer = (player: TeamPlayer) => {
