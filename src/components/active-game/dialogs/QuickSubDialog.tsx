@@ -5,6 +5,7 @@ import { ArrowLeftRight } from "lucide-react";
 import { FullscreenModal } from "@/components/ui/FullscreenModal";
 import type { QuickSubPair, TeamPlayer } from "@/datamodel";
 import { formatPlayerLabel } from "@/lib/display/formatPlayerLabel";
+import { filterQuickSubPairsForRoster } from "@/lib/quickSubPairs";
 
 interface QuickSubDialogProps {
   open: boolean;
@@ -28,16 +29,17 @@ export function QuickSubDialog({
   onClose,
 }: QuickSubDialogProps) {
   const getPlayerLabel = (num: number) => formatPlayerLabel(num, players);
+  const rosteredPairs = filterQuickSubPairsForRoster(pairs, players);
 
   return (
     <FullscreenModal isOpen={open} onClose={onClose} title="Substitution">
-      {pairs.length > 0 && (
+      {rosteredPairs.length > 0 && (
         <>
           <Typography.Paragraph color="muted" className="font-bold">
             Quick Substitutions
           </Typography.Paragraph>
           <div className="flex flex-col gap-3">
-            {pairs.map((pair) => {
+            {rosteredPairs.map((pair) => {
               const aOnCourt = activePlayerNumbers.has(pair.playerNumberA);
               const bOnCourt = activePlayerNumbers.has(pair.playerNumberB);
 

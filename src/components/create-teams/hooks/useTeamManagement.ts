@@ -1,7 +1,7 @@
 "use client";
 
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   quickSubPairsCollection,
   teamPlayersCollection,
@@ -9,6 +9,32 @@ import {
 } from "@/collections";
 import type { QuickSubPair, Team, TeamPlayer } from "@/datamodel";
 import { useNextLocalId } from "@/hooks/useNextLocalId";
+import { quickSubPairReferencesPlayer } from "@/lib/quickSubPairs";
+import { TeamHasGamesError } from "@/server/api/teamDeletionErrors";
+
+export type TeamDeletionStatus = "confirm" | "pending" | "blocked" | "error";
+
+export interface TeamDeletionState {
+  status: TeamDeletionStatus;
+  team: Team;
+}
+
+function evictDeletedTeamSetup(teamId: number) {
+  // The API deletes these rows atomically; writeDelete also updates cached queries.
+  const playerIds = teamPlayersCollection.toArray
+    .filter((player) => player.teamId === teamId && player.$synced)
+    .map((player) => player.id);
+  const pairIds = quickSubPairsCollection.toArray
+    .filter((pair) => pair.teamId === teamId && pair.$synced)
+    .map((pair) => pair.id);
+
+  if (playerIds.length > 0) {
+    teamPlayersCollection.utils.writeDelete(playerIds);
+  }
+  if (pairIds.length > 0) {
+    quickSubPairsCollection.utils.writeDelete(pairIds);
+  }
+}
 
 export function useTeamManagement() {
   const teams = useLiveSuspenseQuery((q) => q.from({ team: teamsCollection }));
@@ -51,6 +77,10 @@ export function useTeamManagement() {
   const [addQuickSubTeamId, setAddQuickSubTeamId] = useState<number | null>(
     null,
   );
+  const [teamDeletion, setTeamDeletion] = useState<TeamDeletionState | null>(
+    null,
+  );
+  const teamDeletionPendingRef = useRef(false);
 
   const normalizedTeamNames = useMemo(
     () => new Set(teams.data.map((team) => team.name.trim().toLowerCase())),
@@ -94,17 +124,69 @@ export function useTeamManagement() {
     setAddPlayerTeamId(null);
   };
 
-  const handleDeleteTeam = (team: Team) => {
-    for (const player of teamPlayers.data.filter((p) => p.teamId === team.id)) {
-      teamPlayersCollection.delete(player.id);
+  const requestDeleteTeam = (team: Team) => {
+    if (teamDeletionPendingRef.current) return;
+    setTeamDeletion({ status: "confirm", team });
+  };
+
+  const closeDeleteTeam = () => {
+    if (teamDeletionPendingRef.current) return;
+    setTeamDeletion(null);
+  };
+
+  const updateTeamDeletionStatus = (
+    teamId: number,
+    status: TeamDeletionStatus,
+  ) => {
+    setTeamDeletion((current) =>
+      current?.team.id === teamId ? { ...current, status } : current,
+    );
+  };
+
+  const handleDeleteTeam = async () => {
+    if (!teamDeletion || teamDeletionPendingRef.current) return;
+
+    const { team } = teamDeletion;
+    teamDeletionPendingRef.current = true;
+    updateTeamDeletionStatus(team.id, "pending");
+
+    try {
+      const transaction = teamsCollection.delete(team.id);
+      await transaction.isPersisted.promise;
+      evictDeletedTeamSetup(team.id);
+      setTeamDeletion(null);
+    } catch (error) {
+      try {
+        await teamsCollection.utils.refetch({ throwOnError: true });
+      } catch (reconciliationError) {
+        console.error("Failed to reconcile team deletion", reconciliationError);
+        updateTeamDeletionStatus(
+          team.id,
+          error instanceof TeamHasGamesError ? "blocked" : "error",
+        );
+        return;
+      }
+
+      if (teamsCollection.get(team.id) === undefined) {
+        evictDeletedTeamSetup(team.id);
+        setTeamDeletion(null);
+      } else {
+        updateTeamDeletionStatus(
+          team.id,
+          error instanceof TeamHasGamesError ? "blocked" : "error",
+        );
+      }
+    } finally {
+      teamDeletionPendingRef.current = false;
     }
-    for (const pair of quickSubPairs.data.filter((p) => p.teamId === team.id)) {
-      quickSubPairsCollection.delete(pair.id);
-    }
-    teamsCollection.delete(team.id);
   };
 
   const handleDeletePlayer = (player: TeamPlayer) => {
+    for (const pair of quickSubPairs.data.filter((candidate) =>
+      quickSubPairReferencesPlayer(candidate, player),
+    )) {
+      quickSubPairsCollection.delete(pair.id);
+    }
     teamPlayersCollection.delete(player.id);
   };
 
@@ -126,6 +208,7 @@ export function useTeamManagement() {
   return {
     addPlayerTeamId,
     addQuickSubTeamId,
+    closeDeleteTeam,
     createTeamOpen,
     existingPlayerNumbersForSelectedTeam,
     handleAddPlayer,
@@ -136,10 +219,12 @@ export function useTeamManagement() {
     handleDeleteTeam,
     normalizedTeamNames,
     quickSubPairs,
+    requestDeleteTeam,
     setAddPlayerTeamId,
     setAddQuickSubTeamId,
     setCreateTeamOpen,
     teamPlayers,
+    teamDeletion,
     teams,
   };
 }
