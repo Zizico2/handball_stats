@@ -28,6 +28,7 @@ export function DeleteTeamDialog({
   const isPending = status === "pending";
   const isBlocked = status === "blocked";
   const isError = status === "error";
+  const isReconciliationError = status === "reconcile-error";
 
   return (
     <AlertDialog.Backdrop
@@ -38,15 +39,21 @@ export function DeleteTeamDialog({
     >
       <AlertDialog.Container>
         <AlertDialog.Dialog className="sm:max-w-[420px]">
-          {!isPending ? <AlertDialog.CloseTrigger /> : null}
+          {!isPending && !isReconciliationError ? (
+            <AlertDialog.CloseTrigger />
+          ) : null}
           <AlertDialog.Header>
-            <AlertDialog.Icon status={isError ? "warning" : "danger"} />
+            <AlertDialog.Icon
+              status={isError || isReconciliationError ? "warning" : "danger"}
+            />
             <AlertDialog.Heading>
               {isBlocked
                 ? "Team can’t be deleted"
-                : isError
-                  ? "Team deletion failed"
-                  : "Delete this team?"}
+                : isReconciliationError
+                  ? "Finishing team deletion"
+                  : isError
+                    ? "Team deletion failed"
+                    : "Delete this team?"}
             </AlertDialog.Heading>
           </AlertDialog.Header>
           <AlertDialog.Body>
@@ -54,6 +61,12 @@ export function DeleteTeamDialog({
               <p>
                 <strong>{team?.name ?? "This team"}</strong> has match history,
                 so it must remain available for past-game statistics.
+              </p>
+            ) : isReconciliationError ? (
+              <p>
+                The deletion could not finish syncing the roster and quick-sub
+                setup for <strong>{team?.name ?? "this team"}</strong>. Retry to
+                finish syncing before continuing.
               </p>
             ) : isError ? (
               <p>
@@ -87,6 +100,10 @@ export function DeleteTeamDialog({
             {isBlocked ? (
               <Button autoFocus variant="primary" onPress={onClose}>
                 Close
+              </Button>
+            ) : isReconciliationError ? (
+              <Button variant="danger" onPress={onConfirm}>
+                Retry sync
               </Button>
             ) : isError ? (
               <>

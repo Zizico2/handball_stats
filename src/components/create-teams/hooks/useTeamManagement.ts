@@ -12,7 +12,12 @@ import { useNextLocalId } from "@/hooks/useNextLocalId";
 import { quickSubPairReferencesPlayer } from "@/lib/quickSubPairs";
 import { TeamHasGamesError } from "@/server/api/teamDeletionErrors";
 
-export type TeamDeletionStatus = "confirm" | "pending" | "blocked" | "error";
+export type TeamDeletionStatus =
+  | "confirm"
+  | "pending"
+  | "blocked"
+  | "error"
+  | "reconcile-error";
 
 export interface TeamDeletionState {
   status: TeamDeletionStatus;
@@ -113,7 +118,12 @@ export function useTeamManagement() {
   };
 
   const closeDeleteTeam = () => {
-    if (teamDeletionPendingRef.current) return;
+    if (
+      teamDeletionPendingRef.current ||
+      teamDeletion?.status === "reconcile-error"
+    ) {
+      return;
+    }
     setTeamDeletion(null);
   };
 
@@ -145,10 +155,7 @@ export function useTeamManagement() {
       await teamsCollection.utils.refetch({ throwOnError: true });
     } catch (error) {
       console.error("Failed to reconcile team deletion", error);
-      updateTeamDeletionStatus(
-        team.id,
-        persistenceError instanceof TeamHasGamesError ? "blocked" : "error",
-      );
+      updateTeamDeletionStatus(team.id, "reconcile-error");
       teamDeletionPendingRef.current = false;
       return;
     }
@@ -169,7 +176,7 @@ export function useTeamManagement() {
       ]);
     } catch (error) {
       console.error("Failed to refresh child data after team deletion", error);
-      updateTeamDeletionStatus(team.id, "error");
+      updateTeamDeletionStatus(team.id, "reconcile-error");
       teamDeletionPendingRef.current = false;
       return;
     }
