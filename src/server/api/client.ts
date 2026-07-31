@@ -10,6 +10,10 @@ import type {
   TeamPlayer,
 } from "@/datamodel";
 import type { ApiApp } from "@/server/api/app";
+import {
+  isTeamHasGamesConflict,
+  TeamHasGamesError,
+} from "@/server/api/teamDeletionErrors";
 
 const apiClient = hc<ApiApp>("/");
 
@@ -50,7 +54,14 @@ export async function createTeamsMutation(items: Team[]) {
 }
 
 export async function deleteTeamsMutation(ids: number[]) {
-  await parseResponse(apiClient.api.collections.teams.$delete({ json: ids }));
+  try {
+    await parseResponse(apiClient.api.collections.teams.$delete({ json: ids }));
+  } catch (error) {
+    if (isTeamHasGamesConflict(error)) {
+      throw new TeamHasGamesError(error);
+    }
+    throw error;
+  }
 }
 
 export async function createTeamPlayersMutation(items: TeamPlayer[]) {

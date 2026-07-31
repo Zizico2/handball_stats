@@ -4,6 +4,7 @@ import { Button } from "@heroui/react";
 import { AddPlayerDialog } from "@/components/create-teams/dialogs/AddPlayerDialog";
 import { AddQuickSubPairDialog } from "@/components/create-teams/dialogs/AddQuickSubPairDialog";
 import { CreateTeamDialog } from "@/components/create-teams/dialogs/CreateTeamDialog";
+import { DeleteTeamDialog } from "@/components/create-teams/dialogs/DeleteTeamDialog";
 import { useTeamManagement } from "@/components/create-teams/hooks/useTeamManagement";
 import { TeamCard } from "@/components/create-teams/TeamCard";
 
@@ -11,6 +12,7 @@ function CreateTeams() {
   const {
     addPlayerTeamId,
     addQuickSubTeamId,
+    closeDeleteTeam,
     createTeamOpen,
     existingPlayerNumbersForSelectedTeam,
     handleAddPlayer,
@@ -21,10 +23,12 @@ function CreateTeams() {
     handleDeleteTeam,
     normalizedTeamNames,
     quickSubPairs,
+    requestDeleteTeam,
     setAddPlayerTeamId,
     setAddQuickSubTeamId,
     setCreateTeamOpen,
     teamPlayers,
+    teamDeletion,
     teams,
   } = useTeamManagement();
 
@@ -49,7 +53,7 @@ function CreateTeams() {
               onAddQuickSubPair={() => setAddQuickSubTeamId(team.id)}
               onDeletePlayer={handleDeletePlayer}
               onDeleteQuickSubPair={handleDeleteQuickSubPair}
-              onDeleteTeam={() => handleDeleteTeam(team)}
+              onDeleteTeam={() => requestDeleteTeam(team)}
             />
           ))}
         </div>
@@ -79,6 +83,28 @@ function CreateTeams() {
           onCancel={() => setAddQuickSubTeamId(null)}
         />
       ) : null}
+      <DeleteTeamDialog
+        pairCount={
+          teamDeletion
+            ? quickSubPairs.data.filter(
+                (pair) => pair.teamId === teamDeletion.team.id,
+              ).length
+            : 0
+        }
+        playerCount={
+          teamDeletion
+            ? teamPlayers.data.filter(
+                (player) => player.teamId === teamDeletion.team.id,
+              ).length
+            : 0
+        }
+        status={teamDeletion?.status ?? "confirm"}
+        team={teamDeletion?.team ?? null}
+        onClose={closeDeleteTeam}
+        onConfirm={() => {
+          void handleDeleteTeam();
+        }}
+      />
     </>
   );
 }
