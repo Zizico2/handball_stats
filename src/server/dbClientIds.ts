@@ -1,8 +1,8 @@
 import { and, eq, inArray } from "drizzle-orm";
 import type { ClientId } from "@/datamodel";
-import { clientIdSchema } from "@/datamodel";
 import type { AppDb, DbGame, DbTeam } from "@/db";
 import * as schema from "@/db/schema";
+import { parseClientId } from "@/lib/clientId";
 
 export async function getTeamsByClientId(
   db: AppDb,
@@ -22,7 +22,7 @@ export async function getTeamsByClientId(
       ),
     );
 
-  return new Map(rows.map((row) => [clientIdSchema.parse(row.clientId), row]));
+  return new Map(rows.map((row) => [parseClientId(row.clientId), row]));
 }
 
 export async function getGamesByClientId(
@@ -43,5 +43,5 @@ export async function getGamesByClientId(
       ),
     );
 
-  return new Map(rows.map((row) => [clientIdSchema.parse(row.clientId), row]));
+  return new Map(rows.map((row) => [parseClientId(row.clientId), row]));
 }

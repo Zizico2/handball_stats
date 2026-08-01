@@ -11,7 +11,7 @@ import {
 } from "@/datamodel";
 import { dbRowToGame, gameToDbRow } from "@/db";
 import * as schema from "@/db/schema";
-import { createClientId } from "@/lib/clientId";
+import { createClientId, parseClientId } from "@/lib/clientId";
 import type { ApiEnv } from "@/server/api/types";
 import { getDb } from "@/server/db";
 import { getTeamsByClientId } from "@/server/dbClientIds";
@@ -179,7 +179,7 @@ export const gamesRoutes = new Hono<ApiEnv>()
 
     return c.json(
       inserted.map((row) => {
-        const item = itemsByClientId.get(clientIdSchema.parse(row.clientId));
+        const item = itemsByClientId.get(parseClientId(row.clientId));
         if (!item) throw new Error("Inserted game was not in the request");
         return dbRowToGame(row, item.homeTeamId);
       }),
@@ -348,7 +348,7 @@ export const gamesRoutes = new Hono<ApiEnv>()
     const itemsByClientId = new Map(items.map((item) => [item.id, item]));
     return c.json(
       inserted.map((row) => {
-        const item = itemsByClientId.get(clientIdSchema.parse(row.clientId));
+        const item = itemsByClientId.get(parseClientId(row.clientId));
         if (!item) throw new Error("Upserted game was not in the request");
         return dbRowToGame(row, item.homeTeamId);
       }),

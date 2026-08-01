@@ -2,9 +2,10 @@ import { zValidator } from "@hono/zod-validator";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { type ClientId, clientIdSchema, type MatchHalf } from "@/datamodel";
+import type { ClientId, MatchHalf } from "@/datamodel";
 import { dbRowToPlayerEvent, playerEventToDbRow } from "@/db";
 import * as schema from "@/db/schema";
+import { parseClientId } from "@/lib/clientId";
 import type { ApiEnv } from "@/server/api/types";
 import { getDb } from "@/server/db";
 import { getGamesByClientId } from "@/server/dbClientIds";
@@ -135,7 +136,7 @@ export const playerEventsRoutes = new Hono<ApiEnv>()
     const itemsByClientId = new Map(items.map((item) => [item.id, item]));
     return c.json(
       inserted.map((row) => {
-        const item = itemsByClientId.get(clientIdSchema.parse(row.clientId));
+        const item = itemsByClientId.get(parseClientId(row.clientId));
         if (!item) throw new Error("Inserted event was not in the request");
         return dbRowToPlayerEvent(row, item.game_id);
       }),

@@ -1,9 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
 import { and, asc, desc, eq } from "drizzle-orm";
-import { type ClientId, clientIdSchema } from "@/datamodel";
+import type { ClientId } from "@/datamodel";
 import { dbRowToPlayerEvent } from "@/db";
 import { PLAYER_EVENTS_CSV_COLUMN_KEYS } from "@/db/playerEventCsv";
 import * as schema from "@/db/schema";
+import { parseClientId } from "@/lib/clientId";
 import { getDb } from "@/server/db";
 
 export { PLAYER_EVENTS_CSV_COLUMN_KEYS };
@@ -77,7 +78,7 @@ export async function listPastGames(): Promise<PastGameSummary[]> {
     .map(({ game, homeTeamName }) => {
       const stats = statsByGameId.get(game.id) ?? { score: 0, eventCount: 0 };
       return {
-        id: clientIdSchema.parse(game.clientId),
+        id: parseClientId(game.clientId),
         createdAt: game.createdAt,
         homeTeamName,
         score: stats.score,
@@ -141,7 +142,7 @@ export async function getPastGameLog(
 
   return {
     game: {
-      id: clientIdSchema.parse(game.clientId),
+      id: parseClientId(game.clientId),
       createdAt: game.createdAt,
       homeTeamName,
     },

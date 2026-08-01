@@ -11,6 +11,7 @@ import type {
   TeamPlayer,
 } from "@/datamodel";
 import { clientIdSchema, playerEventSchema } from "@/datamodel";
+import { parseClientId } from "@/lib/clientId";
 import * as schema from "./schema";
 
 export type DbPlayerEvent = typeof schema.playerEvents.$inferSelect;
@@ -88,7 +89,7 @@ export type AppDb = ReturnType<typeof createDb>;
 
 export function dbRowToTeam(row: DbTeam): Team {
   return {
-    id: clientIdSchema.parse(row.clientId),
+    id: parseClientId(row.clientId),
     name: row.name,
   };
 }
@@ -159,8 +160,8 @@ export function dbRowToTeamPlayer(
   teamClientId: string,
 ): TeamPlayer {
   return {
-    id: clientIdSchema.parse(row.clientId),
-    teamId: clientIdSchema.parse(teamClientId),
+    id: parseClientId(row.clientId),
+    teamId: parseClientId(teamClientId),
     name: row.name,
     number: row.number,
   };
@@ -185,8 +186,8 @@ export function dbRowToQuickSubPair(
   teamClientId: string,
 ): QuickSubPair {
   return {
-    id: clientIdSchema.parse(row.clientId),
-    teamId: clientIdSchema.parse(teamClientId),
+    id: parseClientId(row.clientId),
+    teamId: parseClientId(teamClientId),
     playerNumberA: row.playerNumberA,
     playerNumberB: row.playerNumberB,
   };
@@ -208,8 +209,8 @@ export function quickSubPairToDbRow(
 
 export function dbRowToGame(row: DbGame, homeTeamClientId: string): Game {
   return {
-    id: clientIdSchema.parse(row.clientId),
-    homeTeamId: clientIdSchema.parse(homeTeamClientId),
+    id: parseClientId(row.clientId),
+    homeTeamId: parseClientId(homeTeamClientId),
     createdAt: row.createdAt,
     firstHalfStartedAtMs: row.firstHalfStartedAtMs,
     halftimeStartedAtMs: row.halftimeStartedAtMs,
@@ -238,8 +239,8 @@ export function dbRowToPauseToggle(
   gameClientId: string,
 ): PauseToggle {
   return {
-    id: clientIdSchema.parse(row.clientId),
-    gameId: clientIdSchema.parse(gameClientId),
+    id: parseClientId(row.clientId),
+    gameId: parseClientId(gameClientId),
     half: row.half as MatchHalf,
     toggledAtMs: row.toggledAtMs,
   };
@@ -266,8 +267,8 @@ export function dbRowToActiveGame(
 ): ActiveGame {
   return {
     id: 1,
-    gameId: clientIdSchema.parse(gameClientId),
-    homeTeamId: clientIdSchema.parse(homeTeamClientId),
+    gameId: parseClientId(gameClientId),
+    homeTeamId: parseClientId(homeTeamClientId),
   };
 }
 
