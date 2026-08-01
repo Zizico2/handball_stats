@@ -1,4 +1,5 @@
 import type { APIRequestContext, Page } from "@playwright/test";
+import { teamPlayerSchema } from "../src/datamodel";
 import { testClientId } from "../src/testing/clientId";
 import { expect, test } from "./fixtures";
 import { E2E_TEAM_ID } from "./seedE2eData";
@@ -15,7 +16,7 @@ const BENCH_PLAYER = {
 async function ensureBenchPlayer(request: APIRequestContext) {
   const response = await request.get("/api/collections/team-players");
   expect(response.ok()).toBeTruthy();
-  const players = (await response.json()) as Array<{ id: string }>;
+  const players = teamPlayerSchema.array().parse(await response.json());
   if (players.some((player) => player.id === BENCH_PLAYER.id)) {
     return;
   }

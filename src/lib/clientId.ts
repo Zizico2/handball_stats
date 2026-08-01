@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
-import type { ClientId } from "@/datamodel";
+import { type ClientId, clientIdSchema } from "@/datamodel";
 
 export function createClientId(): ClientId {
-  return uuidv4();
+  return clientIdSchema.parse(uuidv4());
 }

@@ -19,6 +19,7 @@ import {
 import { AppNextLink } from "@/components/AppNextLink";
 import { useNewGameForm } from "@/components/new-game/hooks/useNewGameForm";
 import { AlertCallout, AlertCalloutButton } from "@/components/ui/AlertCallout";
+import { type ClientId, clientIdSchema } from "@/datamodel";
 import { MIN_ROSTER_SIZE } from "@/lib/roster/minRosterSize";
 
 function NewGame() {
@@ -31,10 +32,10 @@ function NewGame() {
     q.from({ activeGame: activeGameCollection }).findOne(),
   );
 
-  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<ClientId | null>(null);
 
   const rosterCountByTeamId = useMemo(() => {
-    const counts = new Map<string, number>();
+    const counts = new Map<ClientId, number>();
     for (const player of teamPlayers.data) {
       counts.set(player.teamId, (counts.get(player.teamId) ?? 0) + 1);
     }
@@ -133,10 +134,11 @@ function NewGame() {
           fullWidth
           isDisabled={!hasTeams || isStarting}
           placeholder="Select a team"
-          value={selectedTeamId?.toString() ?? null}
+          value={selectedTeamId ?? null}
           onChange={(value) => {
             clearStartError();
-            setSelectedTeamId(typeof value === "string" ? value : null);
+            const parsed = clientIdSchema.safeParse(value);
+            setSelectedTeamId(parsed.success ? parsed.data : null);
           }}
         >
           <Label>Home Team</Label>

@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import type { ClientId, GamePauseStateResult } from "@/datamodel";
+import type { ClientId, GamePauseStateResult, MatchHalf } from "@/datamodel";
 import { createDb } from "@/db";
 import * as schema from "@/db/schema";
 import { testClientId } from "@/testing/clientId";
@@ -44,7 +44,7 @@ async function seedTeamAndStartedGame() {
 
 function pauseStateRequest(
   gameId: ClientId,
-  body: { half: string; paused: boolean; clientId?: string },
+  body: { half: MatchHalf; paused: boolean; clientId?: ClientId },
 ) {
   return gamesRoutes.request(
     `/${gameId}/pause-state`,

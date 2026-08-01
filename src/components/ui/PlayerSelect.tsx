@@ -1,8 +1,9 @@
 import { Label, ListBox, Select } from "@heroui/react";
+import type { ClientId } from "@/datamodel";
 import { formatPlayerLabel } from "@/lib/display/formatPlayerLabel";
 
 interface PlayerOption {
-  id: string;
+  id: ClientId;
   number: number;
   name: string;
 }

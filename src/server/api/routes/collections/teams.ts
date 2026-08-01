@@ -1,7 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { and, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";
-import type { ClientId } from "@/datamodel";
+import { type ClientId, clientIdSchema } from "@/datamodel";
 import { type AppDb, dbRowToTeam, teamToDbRow } from "@/db";
 import * as schema from "@/db/schema";
 import type { ApiEnv } from "@/server/api/types";
@@ -38,7 +38,7 @@ function clientIdsForInternalIds(
 ): ClientId[] {
   return teams
     .filter((team) => internalIds.includes(team.id))
-    .map((team) => team.clientId as ClientId);
+    .map((team) => clientIdSchema.parse(team.clientId));
 }
 
 export const teamsRoutes = new Hono<ApiEnv>()

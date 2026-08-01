@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import type { ClientId } from "../src/datamodel";
 import { testClientId } from "../src/testing/clientId";
 import { expect, test } from "./fixtures";
 import { E2E_TEAM_ID, resetE2eData, seedE2eTeam } from "./seedE2eData";
@@ -13,7 +14,7 @@ const VIEWPORTS = [
 
 async function startActiveGame(
   request: import("@playwright/test").APIRequestContext,
-  gameId: string,
+  gameId: ClientId,
 ) {
   const start = await request.post("/api/collections/games/start", {
     data: {

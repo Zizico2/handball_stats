@@ -7,7 +7,7 @@ import {
   teamPlayersCollection,
   teamsCollection,
 } from "@/collections";
-import type { QuickSubPair, Team, TeamPlayer } from "@/datamodel";
+import type { ClientId, QuickSubPair, Team, TeamPlayer } from "@/datamodel";
 import { createClientId } from "@/lib/clientId";
 import { quickSubPairReferencesPlayer } from "@/lib/quickSubPairs";
 import { TeamHasGamesError } from "@/server/api/teamDeletionErrors";
@@ -19,7 +19,7 @@ export interface TeamDeletionState {
   team: Team;
 }
 
-function evictDeletedTeamSetup(teamId: string) {
+function evictDeletedTeamSetup(teamId: ClientId) {
   // The API deletes these rows atomically; writeDelete also updates cached queries.
   const playerIds = teamPlayersCollection.toArray
     .filter((player) => player.teamId === teamId && player.$synced)
@@ -48,8 +48,8 @@ export function useTeamManagement() {
   );
 
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
-  const [addPlayerTeamId, setAddPlayerTeamId] = useState<string | null>(null);
-  const [addQuickSubTeamId, setAddQuickSubTeamId] = useState<string | null>(
+  const [addPlayerTeamId, setAddPlayerTeamId] = useState<ClientId | null>(null);
+  const [addQuickSubTeamId, setAddQuickSubTeamId] = useState<ClientId | null>(
     null,
   );
   const [teamDeletion, setTeamDeletion] = useState<TeamDeletionState | null>(
@@ -110,7 +110,7 @@ export function useTeamManagement() {
   };
 
   const updateTeamDeletionStatus = (
-    teamId: string,
+    teamId: ClientId,
     status: TeamDeletionStatus,
   ) => {
     setTeamDeletion((current) =>

@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { asc, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import type { PlayerEvent } from "@/datamodel";
+import { type ClientId, playerEventSchema } from "@/datamodel";
 import { createDb } from "@/db";
 import * as schema from "@/db/schema";
 import { testClientId } from "@/testing/clientId";
@@ -138,7 +138,7 @@ describe("client UUID concurrency (D1)", () => {
       })
       .returning();
 
-    const eventBody = (id: string, player: number) => [
+    const eventBody = (id: ClientId, player: number) => [
       {
         id,
         sequence: null,
@@ -157,14 +157,21 @@ describe("client UUID concurrency (D1)", () => {
     ]);
     expect(responses.map((response) => response.status)).toEqual([200, 200]);
     const responseEvents = await Promise.all(
-      responses.map(
-        async (response) => ((await response.json()) as PlayerEvent[])[0],
+      responses.map(async (response) =>
+        playerEventSchema
+          .array()
+          .parse(await response.json())
+          .at(0),
       ),
     );
-    expect(new Set(responseEvents.map((event) => event.id))).toEqual(
+    expect(responseEvents.every((event) => event !== undefined)).toBe(true);
+    const parsedResponseEvents = responseEvents.filter(
+      (event) => event !== undefined,
+    );
+    expect(new Set(parsedResponseEvents.map((event) => event.id))).toEqual(
       new Set(firstIds),
     );
-    const sequences = responseEvents.map((event) => event.sequence);
+    const sequences = parsedResponseEvents.map((event) => event.sequence);
     expect(sequences.every((sequence) => sequence !== null)).toBe(true);
     expect(sequences.toSorted((a, b) => (a ?? 0) - (b ?? 0))).toEqual([1, 2]);
 

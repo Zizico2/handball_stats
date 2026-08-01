@@ -13,6 +13,7 @@ import {
 } from "@/collections";
 import { AppNextLink } from "@/components/AppNextLink";
 import { resolveHomeHubState } from "@/components/home/resolveHomeHubState";
+import type { ClientId } from "@/datamodel";
 import type { MatchStatus } from "@/inGameControlsAtoms";
 import {
   formatClockRunningState,
@@ -127,7 +128,7 @@ function HomeHub() {
     if (teams.data.length === 0) {
       return 0;
     }
-    const counts = new Map<string, number>();
+    const counts = new Map<ClientId, number>();
     for (const player of teamPlayers.data) {
       counts.set(player.teamId, (counts.get(player.teamId) ?? 0) + 1);
     }

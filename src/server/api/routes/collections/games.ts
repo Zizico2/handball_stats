@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 import {
+  type ClientId,
   clientIdSchema,
   gamePauseStateBodySchema,
   startGameBodySchema,
@@ -53,7 +54,7 @@ function gameDbRowWithoutPhaseTimestamps(
 
 async function loadGameOrThrow(
   userId: string,
-  gameId: string,
+  gameId: ClientId,
 ): Promise<typeof schema.games.$inferSelect> {
   const db = await getDb();
   const row = await db
@@ -73,7 +74,7 @@ async function loadGameOrThrow(
 
 async function applyAtomicPhaseUpdate(
   userId: string,
-  gameId: string,
+  gameId: ClientId,
   to: GamePhaseTransition,
   nowMs: number,
 ): Promise<typeof schema.games.$inferSelect | null> {
@@ -177,7 +178,7 @@ export const gamesRoutes = new Hono<ApiEnv>()
 
     return c.json(
       inserted.map((row) => {
-        const item = itemsByClientId.get(row.clientId);
+        const item = itemsByClientId.get(clientIdSchema.parse(row.clientId));
         if (!item) throw new Error("Inserted game was not in the request");
         return dbRowToGame(row, item.homeTeamId);
       }),
@@ -282,7 +283,8 @@ export const gamesRoutes = new Hono<ApiEnv>()
       const { half, paused, clientId } = c.req.valid("json");
       const { userId } = c.env;
       const nowMs = Date.now();
-      const resolvedClientId = clientId ?? crypto.randomUUID();
+      const resolvedClientId =
+        clientId ?? clientIdSchema.parse(crypto.randomUUID());
 
       try {
         const result = await setGamePauseState(
@@ -346,7 +348,7 @@ export const gamesRoutes = new Hono<ApiEnv>()
     const itemsByClientId = new Map(items.map((item) => [item.id, item]));
     return c.json(
       inserted.map((row) => {
-        const item = itemsByClientId.get(row.clientId);
+        const item = itemsByClientId.get(clientIdSchema.parse(row.clientId));
         if (!item) throw new Error("Upserted game was not in the request");
         return dbRowToGame(row, item.homeTeamId);
       }),

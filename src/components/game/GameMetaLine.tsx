@@ -1,8 +1,9 @@
 import { Typography } from "@heroui/react";
+import type { ClientId } from "@/datamodel";
 import { formatGameDate } from "@/lib/display/formatGameDate";
 
 interface GameMetaLineProps {
-  gameId: string;
+  gameId: ClientId;
   createdAt: string;
   dateStyle?: "medium" | "full";
   className?: string;

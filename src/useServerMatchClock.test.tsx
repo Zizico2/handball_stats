@@ -170,7 +170,7 @@ describe("useServerMatchClock timer activation", () => {
       }),
       [
         {
-          id: "11111111-1111-4111-8111-111111111111",
+          id: testClientId(111),
           gameId: activeGame.gameId,
           half: "firstHalf",
           toggledAtMs: 5_000,

@@ -88,7 +88,7 @@ export type AppDb = ReturnType<typeof createDb>;
 
 export function dbRowToTeam(row: DbTeam): Team {
   return {
-    id: row.clientId,
+    id: clientIdSchema.parse(row.clientId),
     name: row.name,
   };
 }
@@ -159,8 +159,8 @@ export function dbRowToTeamPlayer(
   teamClientId: string,
 ): TeamPlayer {
   return {
-    id: row.clientId,
-    teamId: teamClientId,
+    id: clientIdSchema.parse(row.clientId),
+    teamId: clientIdSchema.parse(teamClientId),
     name: row.name,
     number: row.number,
   };
@@ -185,8 +185,8 @@ export function dbRowToQuickSubPair(
   teamClientId: string,
 ): QuickSubPair {
   return {
-    id: row.clientId,
-    teamId: teamClientId,
+    id: clientIdSchema.parse(row.clientId),
+    teamId: clientIdSchema.parse(teamClientId),
     playerNumberA: row.playerNumberA,
     playerNumberB: row.playerNumberB,
   };
@@ -208,8 +208,8 @@ export function quickSubPairToDbRow(
 
 export function dbRowToGame(row: DbGame, homeTeamClientId: string): Game {
   return {
-    id: row.clientId,
-    homeTeamId: homeTeamClientId,
+    id: clientIdSchema.parse(row.clientId),
+    homeTeamId: clientIdSchema.parse(homeTeamClientId),
     createdAt: row.createdAt,
     firstHalfStartedAtMs: row.firstHalfStartedAtMs,
     halftimeStartedAtMs: row.halftimeStartedAtMs,
@@ -238,8 +238,8 @@ export function dbRowToPauseToggle(
   gameClientId: string,
 ): PauseToggle {
   return {
-    id: row.clientId,
-    gameId: gameClientId,
+    id: clientIdSchema.parse(row.clientId),
+    gameId: clientIdSchema.parse(gameClientId),
     half: row.half as MatchHalf,
     toggledAtMs: row.toggledAtMs,
   };
@@ -266,8 +266,8 @@ export function dbRowToActiveGame(
 ): ActiveGame {
   return {
     id: 1,
-    gameId: gameClientId,
-    homeTeamId: homeTeamClientId,
+    gameId: clientIdSchema.parse(gameClientId),
+    homeTeamId: clientIdSchema.parse(homeTeamClientId),
   };
 }
 
