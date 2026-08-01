@@ -11,6 +11,7 @@ import {
 } from "@/datamodel";
 import { dbRowToGame, gameToDbRow } from "@/db";
 import * as schema from "@/db/schema";
+import { createClientId } from "@/lib/clientId";
 import type { ApiEnv } from "@/server/api/types";
 import { getDb } from "@/server/db";
 import { getTeamsByClientId } from "@/server/dbClientIds";
@@ -283,8 +284,7 @@ export const gamesRoutes = new Hono<ApiEnv>()
       const { half, paused, clientId } = c.req.valid("json");
       const { userId } = c.env;
       const nowMs = Date.now();
-      const resolvedClientId =
-        clientId ?? clientIdSchema.parse(crypto.randomUUID());
+      const resolvedClientId = clientId ?? createClientId();
 
       try {
         const result = await setGamePauseState(
