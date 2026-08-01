@@ -9,10 +9,10 @@ import {
 interface PlayerLike {
   number: number;
   name: string;
-  teamId?: number;
+  teamId?: string;
 }
 
-export function usePlayerLabelMap(players: PlayerLike[], teamId?: number) {
+export function usePlayerLabelMap(players: PlayerLike[], teamId?: string) {
   const filteredPlayers = useMemo(
     () =>
       teamId === undefined

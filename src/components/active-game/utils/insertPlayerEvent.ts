@@ -1,6 +1,10 @@
 import z from "zod";
 import { playerEventsCollection } from "@/collections";
-import { type PlayerEvent, playerEventSchema } from "@/datamodel";
+import {
+  type ClientId,
+  type PlayerEvent,
+  playerEventSchema,
+} from "@/datamodel";
 
 export type PersistableWrite = {
   event: PlayerEvent;
@@ -49,7 +53,7 @@ export async function awaitPlayerEventPersistence(
 
 export async function awaitPlayerEventDeletionPersistence(
   tx: { isPersisted: { promise: Promise<unknown> } },
-  eventId: number,
+  eventId: ClientId,
 ): Promise<void> {
   try {
     await tx.isPersisted.promise;

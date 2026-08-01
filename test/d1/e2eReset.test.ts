@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createDb } from "@/db";
 import * as schema from "@/db/schema";
+import { testClientId } from "@/testing/clientId";
 import { getTestDb, resetAppTables } from "./db";
 
 vi.mock("server-only", () => ({}));
@@ -22,36 +23,42 @@ async function seedUser(userId: string, offset: number) {
   const teamId = offset + 1;
   const gameId = offset + 2;
 
-  await db.insert(schema.teams).values({
-    userId,
-    localId: teamId,
-    name: `${userId} team`,
-  });
+  const [team] = await db
+    .insert(schema.teams)
+    .values({
+      userId,
+      clientId: testClientId(teamId),
+      name: `${userId} team`,
+    })
+    .returning();
   await db.insert(schema.teamPlayers).values({
     userId,
-    localId: offset + 3,
-    teamLocalId: teamId,
+    clientId: testClientId(offset + 3),
+    teamId: team.id,
     name: `${userId} player`,
     number: 7,
   });
   await db.insert(schema.quickSubPairs).values({
     userId,
-    localId: offset + 4,
-    teamLocalId: teamId,
+    clientId: testClientId(offset + 4),
+    teamId: team.id,
     playerNumberA: 7,
     playerNumberB: 8,
   });
-  await db.insert(schema.games).values({
-    userId,
-    localId: gameId,
-    homeTeamLocalId: teamId,
-    createdAt: "2026-01-02T00:00:00.000Z",
-  });
+  const [game] = await db
+    .insert(schema.games)
+    .values({
+      userId,
+      clientId: testClientId(gameId),
+      homeTeamId: team.id,
+      createdAt: "2026-01-02T00:00:00.000Z",
+    })
+    .returning();
   await db.insert(schema.playerEvents).values({
     userId,
-    localId: offset + 5,
+    clientId: testClientId(offset + 5),
     player: 7,
-    gameLocalId: gameId,
+    gameId: game.id,
     ellapsedSeconds: 0,
     eventType: "starting-player",
     eventGroup: "starting-lineup",
@@ -59,16 +66,15 @@ async function seedUser(userId: string, offset: number) {
   });
   await db.insert(schema.pauseToggles).values({
     userId,
-    clientId: `${userId}-pause`,
-    gameLocalId: gameId,
+    clientId: `pause-${userId}`,
+    gameId: game.id,
     half: "firstHalf",
     toggledAtMs: 1,
   });
   await db.insert(schema.activeGame).values({
     userId,
-    localId: offset + 6,
-    gameLocalId: gameId,
-    homeTeamLocalId: teamId,
+    gameId: game.id,
+    homeTeamId: team.id,
   });
 }
 

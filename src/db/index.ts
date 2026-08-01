@@ -10,7 +10,7 @@ import type {
   Team,
   TeamPlayer,
 } from "@/datamodel";
-import { playerEventSchema } from "@/datamodel";
+import { clientIdSchema, playerEventSchema } from "@/datamodel";
 import * as schema from "./schema";
 
 export type DbPlayerEvent = typeof schema.playerEvents.$inferSelect;
@@ -33,11 +33,13 @@ export const dbPlayerEventSchema = createSelectSchema(schema.playerEvents);
 // TODO: handle the possibility of the DB having corrupted/outdated data that doesn't parse correctly.
 // TODO: This is fine for now since, in alpha, I'm wiping the DB on every change
 const dbPlayerEventToDomainSchema = dbPlayerEventSchema
-  .transform((row) => {
+  .extend({ gameClientId: clientIdSchema })
+  .transform((row): unknown => {
     const base = {
-      id: row.localId,
+      id: row.clientId,
+      sequence: row.id,
       player: row.player,
-      game_id: row.gameLocalId,
+      game_id: row.gameClientId,
       ellapsed_seconds: row.ellapsedSeconds,
       half: row.half,
     };
@@ -86,7 +88,7 @@ export type AppDb = ReturnType<typeof createDb>;
 
 export function dbRowToTeam(row: DbTeam): Team {
   return {
-    id: row.localId,
+    id: row.clientId,
     name: row.name,
   };
 }
@@ -94,26 +96,33 @@ export function dbRowToTeam(row: DbTeam): Team {
 export function teamToDbRow(team: Team, userId: string): DbTeamInsert {
   return {
     userId,
-    localId: team.id,
+    clientId: team.id,
     name: team.name,
   };
 }
 
 // TODO: handle the possibility of the DB having corrupted/outdated data that doesn't parse correctly.
 // TODO: This is fine for now since, in alpha, I'm wiping the DB on every change
-export function dbRowToPlayerEvent(row: DbPlayerEvent): PlayerEvent {
-  return dbPlayerEventToDomainSchema.parse(row);
+export function dbRowToPlayerEvent(
+  row: DbPlayerEvent,
+  gameClientId: string,
+): PlayerEvent {
+  return dbPlayerEventToDomainSchema.parse({
+    ...row,
+    gameClientId,
+  });
 }
 
 export function playerEventToDbRow(
   event: PlayerEvent,
   userId: string,
+  gameId: number,
 ): DbPlayerEventInsert {
   const base = {
     userId,
-    localId: event.id,
+    clientId: event.id,
     player: event.player,
-    gameLocalId: event.game_id,
+    gameId,
     ellapsedSeconds: event.ellapsed_seconds,
     eventType: event.eventType,
     eventGroup: event.eventGroup,
@@ -145,10 +154,13 @@ export function playerEventToDbRow(
   return base;
 }
 
-export function dbRowToTeamPlayer(row: DbTeamPlayer): TeamPlayer {
+export function dbRowToTeamPlayer(
+  row: DbTeamPlayer,
+  teamClientId: string,
+): TeamPlayer {
   return {
-    id: row.localId,
-    teamId: row.teamLocalId,
+    id: row.clientId,
+    teamId: teamClientId,
     name: row.name,
     number: row.number,
   };
@@ -157,20 +169,24 @@ export function dbRowToTeamPlayer(row: DbTeamPlayer): TeamPlayer {
 export function teamPlayerToDbRow(
   player: TeamPlayer,
   userId: string,
+  teamId: number,
 ): DbTeamPlayerInsert {
   return {
     userId,
-    localId: player.id,
-    teamLocalId: player.teamId,
+    clientId: player.id,
+    teamId,
     name: player.name,
     number: player.number,
   };
 }
 
-export function dbRowToQuickSubPair(row: DbQuickSubPair): QuickSubPair {
+export function dbRowToQuickSubPair(
+  row: DbQuickSubPair,
+  teamClientId: string,
+): QuickSubPair {
   return {
-    id: row.localId,
-    teamId: row.teamLocalId,
+    id: row.clientId,
+    teamId: teamClientId,
     playerNumberA: row.playerNumberA,
     playerNumberB: row.playerNumberB,
   };
@@ -179,20 +195,21 @@ export function dbRowToQuickSubPair(row: DbQuickSubPair): QuickSubPair {
 export function quickSubPairToDbRow(
   pair: QuickSubPair,
   userId: string,
+  teamId: number,
 ): DbQuickSubPairInsert {
   return {
     userId,
-    localId: pair.id,
-    teamLocalId: pair.teamId,
+    clientId: pair.id,
+    teamId,
     playerNumberA: pair.playerNumberA,
     playerNumberB: pair.playerNumberB,
   };
 }
 
-export function dbRowToGame(row: DbGame): Game {
+export function dbRowToGame(row: DbGame, homeTeamClientId: string): Game {
   return {
-    id: row.localId,
-    homeTeamId: row.homeTeamLocalId,
+    id: row.clientId,
+    homeTeamId: homeTeamClientId,
     createdAt: row.createdAt,
     firstHalfStartedAtMs: row.firstHalfStartedAtMs,
     halftimeStartedAtMs: row.halftimeStartedAtMs,
@@ -200,11 +217,15 @@ export function dbRowToGame(row: DbGame): Game {
   };
 }
 
-export function gameToDbRow(game: Game, userId: string): DbGameInsert {
+export function gameToDbRow(
+  game: Game,
+  userId: string,
+  homeTeamId: number,
+): DbGameInsert {
   return {
     userId,
-    localId: game.id,
-    homeTeamLocalId: game.homeTeamId,
+    clientId: game.id,
+    homeTeamId,
     createdAt: game.createdAt,
     firstHalfStartedAtMs: game.firstHalfStartedAtMs ?? null,
     halftimeStartedAtMs: game.halftimeStartedAtMs ?? null,
@@ -212,10 +233,13 @@ export function gameToDbRow(game: Game, userId: string): DbGameInsert {
   };
 }
 
-export function dbRowToPauseToggle(row: DbPauseToggle): PauseToggle {
+export function dbRowToPauseToggle(
+  row: DbPauseToggle,
+  gameClientId: string,
+): PauseToggle {
   return {
     id: row.clientId,
-    gameId: row.gameLocalId,
+    gameId: gameClientId,
     half: row.half as MatchHalf,
     toggledAtMs: row.toggledAtMs,
   };
@@ -224,32 +248,38 @@ export function dbRowToPauseToggle(row: DbPauseToggle): PauseToggle {
 export function pauseToggleToDbRow(
   pauseToggle: PauseToggle,
   userId: string,
+  gameId: number,
 ): DbPauseToggleInsert {
   return {
     userId,
     clientId: pauseToggle.id,
-    gameLocalId: pauseToggle.gameId,
+    gameId,
     half: pauseToggle.half,
     toggledAtMs: pauseToggle.toggledAtMs,
   };
 }
 
-export function dbRowToActiveGame(row: DbActiveGame): ActiveGame {
+export function dbRowToActiveGame(
+  _row: DbActiveGame,
+  gameClientId: string,
+  homeTeamClientId: string,
+): ActiveGame {
   return {
-    id: row.localId as 1,
-    gameId: row.gameLocalId,
-    homeTeamId: row.homeTeamLocalId,
+    id: 1,
+    gameId: gameClientId,
+    homeTeamId: homeTeamClientId,
   };
 }
 
 export function activeGameToDbRow(
-  activeGame: ActiveGame,
+  _activeGame: ActiveGame,
   userId: string,
+  gameId: number,
+  homeTeamId: number,
 ): DbActiveGameInsert {
   return {
     userId,
-    localId: activeGame.id,
-    gameLocalId: activeGame.gameId,
-    homeTeamLocalId: activeGame.homeTeamId,
+    gameId,
+    homeTeamId,
   };
 }

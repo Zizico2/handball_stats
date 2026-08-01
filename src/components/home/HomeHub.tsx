@@ -127,7 +127,7 @@ function HomeHub() {
     if (teams.data.length === 0) {
       return 0;
     }
-    const counts = new Map<number, number>();
+    const counts = new Map<string, number>();
     for (const player of teamPlayers.data) {
       counts.set(player.teamId, (counts.get(player.teamId) ?? 0) + 1);
     }
@@ -145,7 +145,7 @@ function HomeHub() {
     }
     const homeTeamName =
       teams.data.find((team) => team.id === latest.homeTeamId)?.name ??
-      `Team #${latest.homeTeamId}`;
+      `Team #${latest.homeTeamId.slice(-8)}`;
     return { id: latest.id, homeTeamName };
   }, [activeGameData?.gameId, games.data, teams.data]);
 

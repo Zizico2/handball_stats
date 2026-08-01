@@ -2,6 +2,7 @@
 
 import { assign, fromPromise, setup } from "xstate";
 import type {
+  ClientId,
   EventGroup,
   EventType,
   MatchHalf,
@@ -23,8 +24,8 @@ export type Event =
       // eventType: EventType;
       eventGroup: EventGroup;
       ellapsed_seconds: number;
-      game_id: number;
-      id: number;
+      game_id: ClientId;
+      id: ClientId;
       half: MatchHalf;
     }
   //

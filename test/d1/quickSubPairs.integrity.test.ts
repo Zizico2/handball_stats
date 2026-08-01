@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createDb } from "@/db";
 import * as schema from "@/db/schema";
+import { testClientId } from "@/testing/clientId";
 import { getTestDb, resetAppTables } from "./db";
 
 vi.mock("server-only", () => ({}));
@@ -20,13 +21,16 @@ const { teamPlayersRoutes } = await import(
 
 const USER_ID = "quick-sub-user";
 const OTHER_USER_ID = "other-quick-sub-user";
+const teamInternalIds = new Map<string, number>();
+
+const teamKey = (userId: string, teamId: number) => `${userId}:${teamId}`;
 
 async function seedTeam(userId: string, teamId: number, name: string) {
-  await getTestDb().insert(schema.teams).values({
-    userId,
-    localId: teamId,
-    name,
-  });
+  const [team] = await getTestDb()
+    .insert(schema.teams)
+    .values({ userId, clientId: testClientId(teamId), name })
+    .returning();
+  teamInternalIds.set(teamKey(userId, teamId), team.id);
 }
 
 async function seedPlayer({
@@ -40,12 +44,15 @@ async function seedPlayer({
   teamId: number;
   number: number;
 }) {
+  const internalTeamId = teamInternalIds.get(teamKey(userId, teamId));
+  if (internalTeamId === undefined)
+    throw new Error("Team must be seeded first");
   await getTestDb()
     .insert(schema.teamPlayers)
     .values({
       userId,
-      localId: id,
-      teamLocalId: teamId,
+      clientId: testClientId(id),
+      teamId: internalTeamId,
       name: `Player ${number}`,
       number,
     });
@@ -64,13 +71,18 @@ async function seedPair({
   numberA: number;
   numberB: number;
 }) {
-  await getTestDb().insert(schema.quickSubPairs).values({
-    userId,
-    localId: id,
-    teamLocalId: teamId,
-    playerNumberA: numberA,
-    playerNumberB: numberB,
-  });
+  const internalTeamId = teamInternalIds.get(teamKey(userId, teamId));
+  if (internalTeamId === undefined)
+    throw new Error("Team must be seeded first");
+  await getTestDb()
+    .insert(schema.quickSubPairs)
+    .values({
+      userId,
+      clientId: testClientId(id),
+      teamId: internalTeamId,
+      playerNumberA: numberA,
+      playerNumberB: numberB,
+    });
 }
 
 function createPairsRequest(
@@ -86,7 +98,13 @@ function createPairsRequest(
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(items),
+      body: JSON.stringify(
+        items.map((item) => ({
+          ...item,
+          id: testClientId(item.id),
+          teamId: testClientId(item.teamId),
+        })),
+      ),
     },
     { userId: USER_ID },
   );
@@ -98,7 +116,7 @@ function deletePlayersRequest(ids: number[]) {
     {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(ids),
+      body: JSON.stringify(ids.map(testClientId)),
     },
     { userId: USER_ID },
   );
@@ -114,6 +132,7 @@ async function pairsForUser(userId: string) {
 describe("quick-sub pair integrity API (D1)", () => {
   beforeEach(async () => {
     await resetAppTables();
+    teamInternalIds.clear();
     await seedTeam(USER_ID, 10, "Home");
     await seedTeam(USER_ID, 20, "Reserves");
     await seedTeam(OTHER_USER_ID, 10, "Other home");
@@ -185,13 +204,13 @@ describe("quick-sub pair integrity API (D1)", () => {
         .where(
           and(
             eq(schema.teamPlayers.userId, USER_ID),
-            eq(schema.teamPlayers.localId, 1),
+            eq(schema.teamPlayers.clientId, testClientId(1)),
           ),
         ),
     ).toHaveLength(0);
     expect(
-      (await pairsForUser(USER_ID)).map((pair) => pair.localId).sort(),
-    ).toEqual([2, 3]);
+      (await pairsForUser(USER_ID)).map((pair) => pair.clientId).sort(),
+    ).toEqual([testClientId(2), testClientId(3)]);
     expect(await pairsForUser(OTHER_USER_ID)).toHaveLength(1);
     expect(
       await getTestDb()
@@ -200,7 +219,7 @@ describe("quick-sub pair integrity API (D1)", () => {
         .where(
           and(
             eq(schema.teamPlayers.userId, OTHER_USER_ID),
-            eq(schema.teamPlayers.localId, 1),
+            eq(schema.teamPlayers.clientId, testClientId(1)),
           ),
         ),
     ).toHaveLength(1);

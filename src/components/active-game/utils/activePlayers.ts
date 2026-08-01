@@ -1,8 +1,9 @@
 import type { PlayerEvent } from "@/datamodel";
+import { comparePlayerEventOrder } from "./playerEventOrder";
 
 export function getActivePlayers(events: PlayerEvent[]): Set<number> {
   const active = new Set<number>();
-  const sorted = [...events].sort((a, b) => a.id - b.id);
+  const sorted = [...events].sort(comparePlayerEventOrder);
   let clearedForSecondHalf = false;
 
   for (const event of sorted) {

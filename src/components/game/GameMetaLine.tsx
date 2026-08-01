@@ -2,7 +2,7 @@ import { Typography } from "@heroui/react";
 import { formatGameDate } from "@/lib/display/formatGameDate";
 
 interface GameMetaLineProps {
-  gameId: number;
+  gameId: string;
   createdAt: string;
   dateStyle?: "medium" | "full";
   className?: string;
@@ -16,7 +16,7 @@ export function GameMetaLine({
 }: GameMetaLineProps) {
   return (
     <Typography.Paragraph color="muted" className={className}>
-      Game #{gameId} · {formatGameDate(createdAt, dateStyle)}
+      Game #{gameId.slice(-8)} · {formatGameDate(createdAt, dateStyle)}
     </Typography.Paragraph>
   );
 }

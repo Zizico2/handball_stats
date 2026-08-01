@@ -1,9 +1,10 @@
 import { env } from "cloudflare:workers";
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import type { GamePauseStateResult } from "@/datamodel";
+import type { ClientId, GamePauseStateResult } from "@/datamodel";
 import { createDb } from "@/db";
 import * as schema from "@/db/schema";
+import { testClientId } from "@/testing/clientId";
 import { getTestDb, resetAppTables } from "./db";
 
 vi.mock("server-only", () => ({}));
@@ -15,29 +16,34 @@ vi.mock("@/server/db", () => ({
 const { gamesRoutes } = await import("@/server/api/routes/collections/games");
 
 const USER_ID = "user-pause-state";
-const TEAM_ID = 1;
-const GAME_ID = 10;
+const TEAM_ID = testClientId(1);
+const GAME_ID = testClientId(10);
+const MISSING_GAME_ID = testClientId(999);
+let internalGameId = 0;
 
 async function seedTeamAndStartedGame() {
   const db = getTestDb();
-  await db.insert(schema.teams).values({
-    userId: USER_ID,
-    localId: TEAM_ID,
-    name: "Home",
-  });
-  await db.insert(schema.games).values({
-    userId: USER_ID,
-    localId: GAME_ID,
-    homeTeamLocalId: TEAM_ID,
-    createdAt: "2026-01-01T00:00:00.000Z",
-    firstHalfStartedAtMs: 1_000,
-    halftimeStartedAtMs: null,
-    secondHalfStartedAtMs: null,
-  });
+  const [team] = await db
+    .insert(schema.teams)
+    .values({ userId: USER_ID, clientId: TEAM_ID, name: "Home" })
+    .returning();
+  const [game] = await db
+    .insert(schema.games)
+    .values({
+      userId: USER_ID,
+      clientId: GAME_ID,
+      homeTeamId: team.id,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      firstHalfStartedAtMs: 1_000,
+      halftimeStartedAtMs: null,
+      secondHalfStartedAtMs: null,
+    })
+    .returning();
+  internalGameId = game.id;
 }
 
 function pauseStateRequest(
-  gameId: number,
+  gameId: ClientId,
   body: { half: string; paused: boolean; clientId?: string },
 ) {
   return gamesRoutes.request(
@@ -58,7 +64,7 @@ async function countToggles(half: "firstHalf" | "secondHalf") {
     .where(
       and(
         eq(schema.pauseToggles.userId, USER_ID),
-        eq(schema.pauseToggles.gameLocalId, GAME_ID),
+        eq(schema.pauseToggles.gameId, internalGameId),
         eq(schema.pauseToggles.half, half),
       ),
     );
@@ -144,7 +150,7 @@ describe("games pause-state API (D1)", () => {
   });
 
   test("404 when game is missing", async () => {
-    const res = await pauseStateRequest(999, {
+    const res = await pauseStateRequest(MISSING_GAME_ID, {
       half: "firstHalf",
       paused: true,
     });
@@ -159,7 +165,7 @@ describe("games pause-state API (D1)", () => {
       .where(
         and(
           eq(schema.games.userId, USER_ID),
-          eq(schema.games.localId, GAME_ID),
+          eq(schema.games.clientId, GAME_ID),
         ),
       );
 
@@ -180,7 +186,7 @@ describe("games pause-state API (D1)", () => {
       .where(
         and(
           eq(schema.games.userId, USER_ID),
-          eq(schema.games.localId, GAME_ID),
+          eq(schema.games.clientId, GAME_ID),
         ),
       );
 
@@ -215,7 +221,7 @@ describe("games pause-state API (D1)", () => {
       .where(
         and(
           eq(schema.games.userId, USER_ID),
-          eq(schema.games.localId, GAME_ID),
+          eq(schema.games.clientId, GAME_ID),
         ),
       );
 

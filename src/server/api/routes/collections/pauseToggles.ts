@@ -3,27 +3,41 @@ import { and, asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
+import { clientIdSchema } from "@/datamodel";
 import { dbRowToPauseToggle, pauseToggleToDbRow } from "@/db";
 import * as schema from "@/db/schema";
 import type { ApiEnv } from "@/server/api/types";
 import { getDb } from "@/server/db";
+import { getGamesByClientId } from "@/server/dbClientIds";
 import { upsertPauseToggleBodySchema } from "./shared";
 
-const pauseToggleResourceIdSchema = z.object({
-  pauseToggleId: z.uuid(),
-});
+const pauseToggleResourceIdSchema = z.object({ pauseToggleId: clientIdSchema });
 
 export const pauseTogglesRoutes = new Hono<ApiEnv>()
   .get("/", async (c) => {
     const { userId } = c.env;
     const db = await getDb();
     const rows = await db
-      .select()
+      .select({
+        toggle: schema.pauseToggles,
+        gameClientId: schema.games.clientId,
+      })
       .from(schema.pauseToggles)
+      .innerJoin(
+        schema.games,
+        and(
+          eq(schema.games.userId, schema.pauseToggles.userId),
+          eq(schema.games.id, schema.pauseToggles.gameId),
+        ),
+      )
       .where(eq(schema.pauseToggles.userId, userId))
       .orderBy(asc(schema.pauseToggles.toggledAtMs));
 
-    return c.json(rows.map(dbRowToPauseToggle));
+    return c.json(
+      rows.map(({ toggle, gameClientId }) =>
+        dbRowToPauseToggle(toggle, gameClientId),
+      ),
+    );
   })
   .put(
     "/:pauseToggleId",
@@ -34,14 +48,18 @@ export const pauseTogglesRoutes = new Hono<ApiEnv>()
       const { gameId, half } = c.req.valid("json");
       const { userId } = c.env;
       const db = await getDb();
-      const toggledAtMs = Date.now();
+      const game = (await getGamesByClientId(db, userId, [gameId])).get(gameId);
+      if (!game) {
+        throw new HTTPException(404, { message: `Game ${gameId} not found` });
+      }
 
       const inserted = await db
         .insert(schema.pauseToggles)
         .values(
           pauseToggleToDbRow(
-            { id: pauseToggleId, gameId, half, toggledAtMs },
+            { id: pauseToggleId, gameId, half, toggledAtMs: Date.now() },
             userId,
+            game.id,
           ),
         )
         .onConflictDoNothing({
@@ -50,7 +68,7 @@ export const pauseTogglesRoutes = new Hono<ApiEnv>()
         .returning();
 
       if (inserted.length > 0) {
-        return c.json(dbRowToPauseToggle(inserted[0]));
+        return c.json(dbRowToPauseToggle(inserted[0], gameId));
       }
 
       const existing = await db
@@ -63,14 +81,12 @@ export const pauseTogglesRoutes = new Hono<ApiEnv>()
           ),
         )
         .get();
-
-      if (existing) {
-        return c.json(dbRowToPauseToggle(existing));
+      if (existing && existing.gameId === game.id && existing.half === half) {
+        return c.json(dbRowToPauseToggle(existing, gameId));
       }
 
       throw new HTTPException(409, {
-        message:
-          "Pause toggle could not be created because the clientId conflicts with an existing record.",
+        message: "Pause toggle clientId conflicts with an existing record",
       });
     },
   )
@@ -81,7 +97,6 @@ export const pauseTogglesRoutes = new Hono<ApiEnv>()
       const { pauseToggleId } = c.req.valid("param");
       const { userId } = c.env;
       const db = await getDb();
-
       await db
         .delete(schema.pauseToggles)
         .where(
@@ -90,7 +105,6 @@ export const pauseTogglesRoutes = new Hono<ApiEnv>()
             eq(schema.pauseToggles.clientId, pauseToggleId),
           ),
         );
-
       return c.body(null, 204);
     },
   );

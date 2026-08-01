@@ -1,13 +1,13 @@
 interface PlayerLike {
   number: number;
   name: string;
-  teamId?: number;
+  teamId?: string;
 }
 
 export function formatPlayerLabel(
   number: number,
   players?: PlayerLike[],
-  teamId?: number,
+  teamId?: string,
 ): string {
   if (!players) {
     return `#${number}`;

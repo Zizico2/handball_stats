@@ -14,7 +14,7 @@ export interface HomeHubState {
   ctaLabel: string;
   ctaHref: string;
   teamName?: string | null;
-  recentGame?: { id: number; homeTeamName: string } | null;
+  recentGame?: { id: string; homeTeamName: string } | null;
 }
 
 interface ResolveHomeHubStateInput {
@@ -23,7 +23,7 @@ interface ResolveHomeHubStateInput {
   readyTeamPlayerCount: number;
   hasActiveGame: boolean;
   activeTeamName: string | null;
-  recentGame: { id: number; homeTeamName: string } | null;
+  recentGame: { id: string; homeTeamName: string } | null;
 }
 
 export function resolveHomeHubState(

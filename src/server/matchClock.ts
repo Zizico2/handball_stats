@@ -1,4 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
+import type { ClientId } from "@/datamodel";
 import * as schema from "@/db/schema";
 import { getDb } from "@/server/db";
 import {
@@ -12,14 +13,14 @@ export { buildMatchClockSnapshot } from "@/server/matchClockLogic";
 
 export async function getMatchClockSnapshot(
   userId: string,
-  gameLocalId: number,
+  gameClientId: ClientId,
   nowMs: number,
 ): Promise<MatchClockSnapshot> {
   const db = await getDb();
 
   const gameRow = await db
     .select({
-      localId: schema.games.localId,
+      id: schema.games.id,
       firstHalfStartedAtMs: schema.games.firstHalfStartedAtMs,
       halftimeStartedAtMs: schema.games.halftimeStartedAtMs,
       secondHalfStartedAtMs: schema.games.secondHalfStartedAtMs,
@@ -28,14 +29,14 @@ export async function getMatchClockSnapshot(
     .where(
       and(
         eq(schema.games.userId, userId),
-        eq(schema.games.localId, gameLocalId),
+        eq(schema.games.clientId, gameClientId),
       ),
     )
     .get();
 
   if (!gameRow) {
     return buildMatchClockSnapshot({
-      gameId: gameLocalId,
+      gameId: gameClientId,
       nowMs,
       firstHalfStartedAtMs: null,
       halftimeStartedAtMs: null,
@@ -53,13 +54,13 @@ export async function getMatchClockSnapshot(
     .where(
       and(
         eq(schema.pauseToggles.userId, userId),
-        eq(schema.pauseToggles.gameLocalId, gameLocalId),
+        eq(schema.pauseToggles.gameId, gameRow.id),
       ),
     )
     .orderBy(asc(schema.pauseToggles.toggledAtMs))) as MatchClockPauseToggle[];
 
   return buildMatchClockSnapshot({
-    gameId: gameLocalId,
+    gameId: gameClientId,
     nowMs,
     firstHalfStartedAtMs: gameRow.firstHalfStartedAtMs,
     halftimeStartedAtMs: gameRow.halftimeStartedAtMs,

@@ -9,10 +9,16 @@ import {
   useRef,
   useState,
 } from "react";
-import { v4 as uuidv4 } from "uuid";
 import { gamesCollection, pauseTogglesCollection } from "@/collections";
-import type { ActiveGame, Game, MatchHalf, PauseToggle } from "@/datamodel";
+import type {
+  ActiveGame,
+  ClientId,
+  Game,
+  MatchHalf,
+  PauseToggle,
+} from "@/datamodel";
 import type { MatchStatus } from "@/inGameControlsAtoms";
+import { createClientId } from "@/lib/clientId";
 import {
   beginMatchSaving,
   markMatchFailed,
@@ -302,7 +308,7 @@ export function useServerMatchClock({
       const result = await setGamePauseStateMutation(activeGameData.gameId, {
         half,
         paused,
-        clientId: uuidv4(),
+        clientId: createClientId(),
       });
 
       await pauseTogglesCollection.utils.refetch();
@@ -343,7 +349,7 @@ export function useServerMatchClock({
   );
 
   const reconcilePhaseConflict = useCallback(
-    async (gameId: number) => {
+    async (gameId: ClientId) => {
       await gamesCollection.utils.refetch();
       const refreshed = gamesCollection.get(gameId);
       if (refreshed) {

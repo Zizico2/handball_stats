@@ -31,10 +31,10 @@ function NewGame() {
     q.from({ activeGame: activeGameCollection }).findOne(),
   );
 
-  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
 
   const rosterCountByTeamId = useMemo(() => {
-    const counts = new Map<number, number>();
+    const counts = new Map<string, number>();
     for (const player of teamPlayers.data) {
       counts.set(player.teamId, (counts.get(player.teamId) ?? 0) + 1);
     }
@@ -106,7 +106,7 @@ function NewGame() {
               </AppNextLink>
             }
           >
-            Active game #{activeGame.data.gameId}
+            Active game #{activeGame.data.gameId.slice(-8)}
             {activeTeamName ? ` (${activeTeamName})` : ""} is currently in
             progress. You must end it before you can start a new game.
           </AlertCallout>
@@ -136,7 +136,7 @@ function NewGame() {
           value={selectedTeamId?.toString() ?? null}
           onChange={(value) => {
             clearStartError();
-            setSelectedTeamId(value ? Number(value) : null);
+            setSelectedTeamId(typeof value === "string" ? value : null);
           }}
         >
           <Label>Home Team</Label>

@@ -6,6 +6,7 @@ import { GameMetaLine } from "@/components/game/GameMetaLine";
 import { GameStatChips } from "@/components/game/GameStatChips";
 import { PastGameCsvDownloadButton } from "@/components/PastGameCsvDownloadButton";
 import { PastGameEventLog } from "@/components/PastGameEventLog";
+import { clientIdSchema } from "@/datamodel";
 import { countGoals } from "@/lib/display/countGoals";
 import {
   getPastGameLog,
@@ -18,11 +19,12 @@ export async function PastGameDetailContent({
   params: Promise<{ gameId: string }>;
 }) {
   const resolvedParams = await params;
-  const gameId = Number(resolvedParams.gameId);
+  const parsedGameId = clientIdSchema.safeParse(resolvedParams.gameId);
 
-  if (!Number.isInteger(gameId)) {
+  if (!parsedGameId.success) {
     notFound();
   }
+  const gameId = parsedGameId.data;
 
   const [gameLog, csvPayload] = await Promise.all([
     getPastGameLog(gameId),

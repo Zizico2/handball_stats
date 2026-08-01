@@ -1,11 +1,13 @@
 import { zValidator } from "@hono/zod-validator";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";
-import type { MatchHalf } from "@/datamodel";
+import { HTTPException } from "hono/http-exception";
+import type { ClientId, MatchHalf } from "@/datamodel";
 import { dbRowToPlayerEvent, playerEventToDbRow } from "@/db";
 import * as schema from "@/db/schema";
 import type { ApiEnv } from "@/server/api/types";
 import { getDb } from "@/server/db";
+import { getGamesByClientId } from "@/server/dbClientIds";
 import { getMatchClockSnapshot } from "@/server/matchClock";
 import { idsSchema, playerEventsArraySchema } from "./shared";
 
@@ -18,25 +20,20 @@ interface GameStartingPhase {
 function resolveStartingPlayerHalf(phase: GameStartingPhase): MatchHalf {
   const { firstHalfStartedAtMs, halftimeStartedAtMs, secondHalfStartedAtMs } =
     phase;
-
-  const isPreMatch =
+  if (
     firstHalfStartedAtMs === null &&
     halftimeStartedAtMs === null &&
-    secondHalfStartedAtMs === null;
-
-  if (isPreMatch) {
+    secondHalfStartedAtMs === null
+  ) {
     return "firstHalf";
   }
-
-  const isHalftimeBeforeSecondStart =
+  if (
     firstHalfStartedAtMs !== null &&
     halftimeStartedAtMs !== null &&
-    secondHalfStartedAtMs === null;
-
-  if (isHalftimeBeforeSecondStart) {
+    secondHalfStartedAtMs === null
+  ) {
     return "secondHalf";
   }
-
   throw new Error(
     "Cannot create startingPlayer event: invalid game phase timestamps",
   );
@@ -47,53 +44,46 @@ export const playerEventsRoutes = new Hono<ApiEnv>()
     const { userId } = c.env;
     const db = await getDb();
     const rows = await db
-      .select()
+      .select({
+        event: schema.playerEvents,
+        gameClientId: schema.games.clientId,
+      })
       .from(schema.playerEvents)
-      .where(eq(schema.playerEvents.userId, userId));
+      .innerJoin(
+        schema.games,
+        and(
+          eq(schema.games.userId, schema.playerEvents.userId),
+          eq(schema.games.id, schema.playerEvents.gameId),
+        ),
+      )
+      .where(eq(schema.playerEvents.userId, userId))
+      .orderBy(asc(schema.playerEvents.id));
 
-    return c.json(rows.map(dbRowToPlayerEvent));
+    return c.json(
+      rows.map(({ event, gameClientId }) =>
+        dbRowToPlayerEvent(event, gameClientId),
+      ),
+    );
   })
   .post("/", zValidator("json", playerEventsArraySchema), async (c) => {
     const items = c.req.valid("json");
     const { userId } = c.env;
     const db = await getDb();
+    const gameClientIds = [...new Set(items.map((item) => item.game_id))];
+    const gamesByClientId = await getGamesByClientId(db, userId, gameClientIds);
+    if (gameClientIds.some((id) => !gamesByClientId.has(id))) {
+      throw new HTTPException(400, {
+        message: "Player events must reference an existing game",
+      });
+    }
 
     const nowMs = Date.now();
-    const uniqueGameIds = [...new Set(items.map((item) => item.game_id))];
-
-    const gameStartPhaseRows = await db
-      .select({
-        localId: schema.games.localId,
-        firstHalfStartedAtMs: schema.games.firstHalfStartedAtMs,
-        halftimeStartedAtMs: schema.games.halftimeStartedAtMs,
-        secondHalfStartedAtMs: schema.games.secondHalfStartedAtMs,
-      })
-      .from(schema.games)
-      .where(
-        and(
-          eq(schema.games.userId, userId),
-          inArray(schema.games.localId, uniqueGameIds),
-        ),
-      );
-
-    const gameStartPhaseByGameId = new Map<number, GameStartingPhase>(
-      gameStartPhaseRows.map((row) => [
-        row.localId,
-        {
-          firstHalfStartedAtMs: row.firstHalfStartedAtMs,
-          halftimeStartedAtMs: row.halftimeStartedAtMs,
-          secondHalfStartedAtMs: row.secondHalfStartedAtMs,
-        },
-      ]),
-    );
-
-    // Get both elapsed seconds and active half for each game
     const elapsedAndHalfByGameId = new Map<
-      number,
+      ClientId,
       { elapsed: number; half: MatchHalf | null }
     >();
     await Promise.all(
-      uniqueGameIds.map(async (gameId) => {
+      gameClientIds.map(async (gameId) => {
         const { activeElapsedSeconds, activeHalf } =
           await getMatchClockSnapshot(userId, gameId, nowMs);
         elapsedAndHalfByGameId.set(gameId, {
@@ -103,26 +93,22 @@ export const playerEventsRoutes = new Hono<ApiEnv>()
       }),
     );
 
-    const rowsWithServerElapsed = items.map((item) => {
+    const rows = items.map((item) => {
+      const game = gamesByClientId.get(item.game_id);
+      if (!game) {
+        throw new HTTPException(400, {
+          message: "Player events must reference an existing game",
+        });
+      }
       if (item.eventType === "startingPlayer") {
-        const phase = gameStartPhaseByGameId.get(item.game_id);
-
-        if (!phase) {
-          throw new Error(
-            "Cannot create startingPlayer event: game does not exist",
-          );
-        }
-
-        const resolvedHalf = resolveStartingPlayerHalf(phase);
-
         return playerEventToDbRow(
           {
             ...item,
-            // Starting lineup is allowed before a half is active.
             ellapsed_seconds: 0,
-            half: resolvedHalf,
+            half: resolveStartingPlayerHalf(game),
           },
           userId,
+          game.id,
         );
       }
 
@@ -130,45 +116,44 @@ export const playerEventsRoutes = new Hono<ApiEnv>()
         elapsed: 0,
         half: null,
       };
-
       if (!half) {
-        throw new Error("Cannot create player event: match half is not active");
+        throw new HTTPException(400, {
+          message: "Cannot create player event: match half is not active",
+        });
       }
-
       return playerEventToDbRow(
-        {
-          ...item,
-          ellapsed_seconds: elapsed,
-          half,
-        },
+        { ...item, ellapsed_seconds: elapsed, half },
         userId,
+        game.id,
       );
     });
 
     const inserted = await db
       .insert(schema.playerEvents)
-      .values(rowsWithServerElapsed)
+      .values(rows)
       .returning();
-
-    return c.json(inserted.map(dbRowToPlayerEvent));
+    const itemsByClientId = new Map(items.map((item) => [item.id, item]));
+    return c.json(
+      inserted.map((row) => {
+        const item = itemsByClientId.get(row.clientId);
+        if (!item) throw new Error("Inserted event was not in the request");
+        return dbRowToPlayerEvent(row, item.game_id);
+      }),
+    );
   })
   .delete("/", zValidator("json", idsSchema), async (c) => {
     const ids = c.req.valid("json");
     const { userId } = c.env;
     const db = await getDb();
-
-    if (ids.length === 0) {
-      return c.body(null, 204);
-    }
+    if (ids.length === 0) return c.body(null, 204);
 
     await db
       .delete(schema.playerEvents)
       .where(
         and(
           eq(schema.playerEvents.userId, userId),
-          inArray(schema.playerEvents.localId, ids),
+          inArray(schema.playerEvents.clientId, ids),
         ),
       );
-
     return c.body(null, 204);
   });

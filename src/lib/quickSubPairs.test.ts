@@ -4,17 +4,21 @@ import {
   filterQuickSubPairsForRoster,
   quickSubPairReferencesPlayer,
 } from "@/lib/quickSubPairs";
+import { testClientId } from "@/testing/clientId";
+
+const TEAM_A = testClientId(10);
+const TEAM_B = testClientId(20);
 
 const players: TeamPlayer[] = [
-  { id: 1, teamId: 10, name: "Alex", number: 7 },
-  { id: 2, teamId: 10, name: "Blair", number: 9 },
-  { id: 3, teamId: 20, name: "Casey", number: 7 },
+  { id: testClientId(1), teamId: TEAM_A, name: "Alex", number: 7 },
+  { id: testClientId(2), teamId: TEAM_A, name: "Blair", number: 9 },
+  { id: testClientId(3), teamId: TEAM_B, name: "Casey", number: 7 },
 ];
 
 const pairs: QuickSubPair[] = [
-  { id: 1, teamId: 10, playerNumberA: 7, playerNumberB: 9 },
-  { id: 2, teamId: 10, playerNumberA: 9, playerNumberB: 11 },
-  { id: 3, teamId: 20, playerNumberA: 7, playerNumberB: 9 },
+  { id: testClientId(4), teamId: TEAM_A, playerNumberA: 7, playerNumberB: 9 },
+  { id: testClientId(5), teamId: TEAM_A, playerNumberA: 9, playerNumberB: 11 },
+  { id: testClientId(6), teamId: TEAM_B, playerNumberA: 7, playerNumberB: 9 },
 ];
 
 describe("quickSubPairReferencesPlayer", () => {
@@ -36,8 +40,18 @@ describe("filterQuickSubPairsForRoster", () => {
   test("does not borrow a matching jersey number from another team", () => {
     expect(
       filterQuickSubPairsForRoster(
-        [{ id: 4, teamId: 10, playerNumberA: 7, playerNumberB: 12 }],
-        [players[0], { id: 4, teamId: 20, name: "Drew", number: 12 }],
+        [
+          {
+            id: testClientId(7),
+            teamId: TEAM_A,
+            playerNumberA: 7,
+            playerNumberB: 12,
+          },
+        ],
+        [
+          players[0],
+          { id: testClientId(8), teamId: TEAM_B, name: "Drew", number: 12 },
+        ],
       ),
     ).toEqual([]);
   });

@@ -1,4 +1,5 @@
 import type { PlayerEvent } from "@/datamodel";
+import { comparePlayerEventOrder } from "./playerEventOrder";
 
 export function getLastUndoableEvent(
   events: PlayerEvent[],
@@ -9,7 +10,7 @@ export function getLastUndoableEvent(
     if (event.eventType === "startingPlayer") {
       continue;
     }
-    if (last === null || event.id > last.id) {
+    if (last === null || comparePlayerEventOrder(event, last) > 0) {
       last = event;
     }
   }

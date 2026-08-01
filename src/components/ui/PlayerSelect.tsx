@@ -2,7 +2,7 @@ import { Label, ListBox, Select } from "@heroui/react";
 import { formatPlayerLabel } from "@/lib/display/formatPlayerLabel";
 
 interface PlayerOption {
-  id: number;
+  id: string;
   number: number;
   name: string;
 }

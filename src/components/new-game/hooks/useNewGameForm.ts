@@ -1,9 +1,9 @@
 "use client";
 
-import { useLiveSuspenseQuery } from "@tanstack/react-db";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { activeGameCollection, gamesCollection } from "@/collections";
-import { useNextLocalId } from "@/hooks/useNextLocalId";
+import type { ClientId } from "@/datamodel";
+import { createClientId } from "@/lib/clientId";
 import {
   beginMatchSaving,
   markMatchFailed,
@@ -14,7 +14,7 @@ import { startGameMutation } from "@/server/api/client";
 interface UseNewGameFormParams {
   onStarted: () => void;
   rosterReady: boolean;
-  selectedTeamId: number | null;
+  selectedTeamId: ClientId | null;
 }
 
 export function useNewGameForm({
@@ -22,19 +22,13 @@ export function useNewGameForm({
   rosterReady,
   selectedTeamId,
 }: UseNewGameFormParams) {
-  const lastGame = useLiveSuspenseQuery((q) =>
-    q
-      .from({ game: gamesCollection })
-      .orderBy(({ game }) => game.id, "desc")
-      .findOne(),
-  );
-
-  const nextGameId = useNextLocalId(lastGame);
   const [isStarting, setIsStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  const pendingGameIdRef = useRef<ClientId | null>(null);
 
   const clearStartError = useCallback(() => {
     setStartError(null);
+    pendingGameIdRef.current = null;
   }, []);
 
   const handleStartNewGame = useCallback(async () => {
@@ -45,10 +39,12 @@ export function useNewGameForm({
     setIsStarting(true);
     setStartError(null);
     beginMatchSaving();
+    const gameId = pendingGameIdRef.current ?? createClientId();
+    pendingGameIdRef.current = gameId;
 
     try {
       await startGameMutation({
-        id: nextGameId,
+        id: gameId,
         homeTeamId: selectedTeamId,
         createdAt: new Date().toISOString(),
       });
@@ -59,6 +55,7 @@ export function useNewGameForm({
       ]);
 
       markMatchSaved();
+      pendingGameIdRef.current = null;
       onStarted();
     } catch (error) {
       try {
@@ -68,10 +65,11 @@ export function useNewGameForm({
         ]);
         const reconciledActiveGame = activeGameCollection.get(1);
         if (
-          reconciledActiveGame?.gameId === nextGameId &&
+          reconciledActiveGame?.gameId === gameId &&
           reconciledActiveGame.homeTeamId === selectedTeamId
         ) {
           markMatchSaved();
+          pendingGameIdRef.current = null;
           onStarted();
           return;
         }
@@ -88,13 +86,12 @@ export function useNewGameForm({
     } finally {
       setIsStarting(false);
     }
-  }, [isStarting, nextGameId, onStarted, rosterReady, selectedTeamId]);
+  }, [isStarting, onStarted, rosterReady, selectedTeamId]);
 
   return {
     clearStartError,
     handleStartNewGame,
     isStarting,
-    nextGameId,
     startError,
   };
 }

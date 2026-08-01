@@ -1,6 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { and, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";
+import type { ClientId } from "@/datamodel";
 import { type AppDb, dbRowToTeam, teamToDbRow } from "@/db";
 import * as schema from "@/db/schema";
 import type { ApiEnv } from "@/server/api/types";
@@ -14,23 +15,30 @@ async function findHistoricalTeamIds(
   userId: string,
   teamIds: number[],
 ): Promise<number[]> {
-  if (teamIds.length === 0) {
-    return [];
-  }
+  if (teamIds.length === 0) return [];
 
   const rows = await db
-    .select({ teamId: schema.games.homeTeamLocalId })
+    .select({ teamId: schema.games.homeTeamId })
     .from(schema.games)
     .where(
       and(
         eq(schema.games.userId, userId),
-        inArray(schema.games.homeTeamLocalId, teamIds),
+        inArray(schema.games.homeTeamId, teamIds),
       ),
     );
 
   return [...new Set(rows.map(({ teamId }) => teamId))].toSorted(
     (a, b) => a - b,
   );
+}
+
+function clientIdsForInternalIds(
+  teams: Array<{ id: number; clientId: string }>,
+  internalIds: number[],
+): ClientId[] {
+  return teams
+    .filter((team) => internalIds.includes(team.id))
+    .map((team) => team.clientId as ClientId);
 }
 
 export const teamsRoutes = new Hono<ApiEnv>()
@@ -56,22 +64,36 @@ export const teamsRoutes = new Hono<ApiEnv>()
     return c.json(inserted.map(dbRowToTeam));
   })
   .delete("/", zValidator("json", idsSchema), async (c) => {
-    const ids = c.req.valid("json");
+    const requestedClientIds = [...new Set(c.req.valid("json"))];
     const { userId } = c.env;
     const db = await getDb();
-    const requestedTeamIds = [...new Set(ids)].toSorted((a, b) => a - b);
 
-    if (requestedTeamIds.length === 0) {
-      return c.body(null, 204);
-    }
+    if (requestedClientIds.length === 0) return c.body(null, 204);
 
+    const requestedTeams = await db
+      .select({ id: schema.teams.id, clientId: schema.teams.clientId })
+      .from(schema.teams)
+      .where(
+        and(
+          eq(schema.teams.userId, userId),
+          inArray(schema.teams.clientId, requestedClientIds),
+        ),
+      );
+    const requestedTeamIds = requestedTeams.map(({ id }) => id);
     const historicalTeamIds = await findHistoricalTeamIds(
       db,
       userId,
       requestedTeamIds,
     );
+
     if (historicalTeamIds.length > 0) {
-      return c.json({ code: TEAM_HAS_GAMES, teamIds: historicalTeamIds }, 409);
+      return c.json(
+        {
+          code: TEAM_HAS_GAMES,
+          teamIds: clientIdsForInternalIds(requestedTeams, historicalTeamIds),
+        },
+        409,
+      );
     }
 
     try {
@@ -81,7 +103,7 @@ export const teamsRoutes = new Hono<ApiEnv>()
           .where(
             and(
               eq(schema.quickSubPairs.userId, userId),
-              inArray(schema.quickSubPairs.teamLocalId, requestedTeamIds),
+              inArray(schema.quickSubPairs.teamId, requestedTeamIds),
             ),
           ),
         db
@@ -89,7 +111,7 @@ export const teamsRoutes = new Hono<ApiEnv>()
           .where(
             and(
               eq(schema.teamPlayers.userId, userId),
-              inArray(schema.teamPlayers.teamLocalId, requestedTeamIds),
+              inArray(schema.teamPlayers.teamId, requestedTeamIds),
             ),
           ),
         db
@@ -97,23 +119,28 @@ export const teamsRoutes = new Hono<ApiEnv>()
           .where(
             and(
               eq(schema.teams.userId, userId),
-              inArray(schema.teams.localId, requestedTeamIds),
+              inArray(schema.teams.clientId, requestedClientIds),
             ),
           ),
       ]);
     } catch (error) {
-      const racedHistoricalTeamIds = await findHistoricalTeamIds(
+      const racedHistoricalIds = await findHistoricalTeamIds(
         db,
         userId,
         requestedTeamIds,
       );
-      if (racedHistoricalTeamIds.length > 0) {
+      if (racedHistoricalIds.length > 0) {
         return c.json(
-          { code: TEAM_HAS_GAMES, teamIds: racedHistoricalTeamIds },
+          {
+            code: TEAM_HAS_GAMES,
+            teamIds: clientIdsForInternalIds(
+              requestedTeams,
+              racedHistoricalIds,
+            ),
+          },
           409,
         );
       }
-
       throw error;
     }
 

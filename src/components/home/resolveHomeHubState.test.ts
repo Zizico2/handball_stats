@@ -5,6 +5,7 @@ import {
   formatClockRunningState,
   formatMatchPhase,
 } from "@/lib/display/formatMatchPhase";
+import { testClientId } from "@/testing/clientId";
 
 describe("resolveHomeHubState", () => {
   test("create-team when there are no teams", () => {
@@ -38,12 +39,12 @@ describe("resolveHomeHubState", () => {
         readyTeamPlayerCount: 2,
         hasActiveGame: false,
         activeTeamName: null,
-        recentGame: { id: 3, homeTeamName: "E2E Home" },
+        recentGame: { id: testClientId(3), homeTeamName: "E2E Home" },
       }),
     ).toMatchObject({
       kind: "start-game",
       ctaHref: "/new-game",
-      recentGame: { id: 3, homeTeamName: "E2E Home" },
+      recentGame: { id: testClientId(3), homeTeamName: "E2E Home" },
     });
   });
 

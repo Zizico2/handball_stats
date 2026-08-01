@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createDb } from "@/db";
 import * as schema from "@/db/schema";
+import { testClientId } from "@/testing/clientId";
 import { getTestDb, resetAppTables } from "./db";
 
 vi.mock("server-only", () => ({}));
@@ -15,46 +16,59 @@ const { teamsRoutes } = await import("@/server/api/routes/collections/teams");
 
 const USER_ID = "user-deleting-teams";
 const OTHER_USER_ID = "other-user";
+const teamInternalIds = new Map<string, number>();
+
+function teamKey(userId: string, teamId: number) {
+  return `${userId}:${teamId}`;
+}
 
 async function seedTeam(userId: string, teamId: number) {
   const db = getTestDb();
-  await db.insert(schema.teams).values({
-    userId,
-    localId: teamId,
-    name: `${userId} team ${teamId}`,
-  });
+  const [team] = await db
+    .insert(schema.teams)
+    .values({
+      userId,
+      clientId: testClientId(teamId),
+      name: `${userId} team ${teamId}`,
+    })
+    .returning();
+  teamInternalIds.set(teamKey(userId, teamId), team.id);
   await db.insert(schema.teamPlayers).values([
     {
       userId,
-      localId: teamId * 10 + 1,
-      teamLocalId: teamId,
+      clientId: testClientId(teamId * 10 + 1),
+      teamId: team.id,
       name: "Alex",
       number: 7,
     },
     {
       userId,
-      localId: teamId * 10 + 2,
-      teamLocalId: teamId,
+      clientId: testClientId(teamId * 10 + 2),
+      teamId: team.id,
       name: "Sam",
       number: 8,
     },
   ]);
   await db.insert(schema.quickSubPairs).values({
     userId,
-    localId: teamId * 10 + 1,
-    teamLocalId: teamId,
+    clientId: testClientId(teamId * 10 + 1),
+    teamId: team.id,
     playerNumberA: 7,
     playerNumberB: 8,
   });
 }
 
 async function seedGame(userId: string, teamId: number, gameId: number) {
-  await getTestDb().insert(schema.games).values({
-    userId,
-    localId: gameId,
-    homeTeamLocalId: teamId,
-    createdAt: "2026-07-21T00:00:00.000Z",
-  });
+  const homeTeamId = teamInternalIds.get(teamKey(userId, teamId));
+  if (homeTeamId === undefined) throw new Error("Team must be seeded first");
+  await getTestDb()
+    .insert(schema.games)
+    .values({
+      userId,
+      clientId: testClientId(gameId),
+      homeTeamId,
+      createdAt: "2026-07-21T00:00:00.000Z",
+    });
 }
 
 function deleteRequest(ids: number[], userId = USER_ID) {
@@ -63,7 +77,7 @@ function deleteRequest(ids: number[], userId = USER_ID) {
     {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(ids),
+      body: JSON.stringify(ids.map(testClientId)),
     },
     { userId },
   );
@@ -85,6 +99,7 @@ async function appTableSnapshot() {
 describe("teams DELETE API (D1)", () => {
   beforeEach(async () => {
     await resetAppTables();
+    teamInternalIds.clear();
   });
 
   test("atomically deletes a free team and its setup", async () => {
@@ -124,7 +139,7 @@ describe("teams DELETE API (D1)", () => {
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({
       code: "TEAM_HAS_GAMES",
-      teamIds: [1],
+      teamIds: [testClientId(1)],
     });
     expect(await appTableSnapshot()).toEqual(before);
   });
@@ -142,7 +157,7 @@ describe("teams DELETE API (D1)", () => {
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({
       code: "TEAM_HAS_GAMES",
-      teamIds: [1, 3],
+      teamIds: [testClientId(1), testClientId(3)],
     });
     expect(await appTableSnapshot()).toEqual(before);
   });

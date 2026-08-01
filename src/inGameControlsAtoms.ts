@@ -1,4 +1,5 @@
 import { atom } from "jotai";
+import type { ClientId } from "@/datamodel";
 
 export type MatchStatus = "firstHalf" | "halftime" | "secondHalf";
 
@@ -25,7 +26,7 @@ export interface ActiveGameControlsState extends ActiveGameControlActions {
   disableStartFirstHalf: boolean;
   disableStartSecondHalf: boolean;
   teamName: string | null;
-  gameId: number | null;
+  gameId: ClientId | null;
   clockMinutes: number;
   clockSeconds: number;
   goals: number;

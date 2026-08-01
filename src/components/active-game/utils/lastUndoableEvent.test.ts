@@ -6,6 +6,7 @@ import {
 } from "@/components/active-game/utils/lastUndoableEvent";
 import type { PlayerEvent } from "@/datamodel";
 import { countGoals } from "@/lib/display/countGoals";
+import { testClientId } from "@/testing/clientId";
 
 const getPlayerLabel = (number: number) => `#${number}`;
 
@@ -15,9 +16,10 @@ function startingPlayer(
   half: "firstHalf" | "secondHalf" = "firstHalf",
 ): PlayerEvent {
   return {
-    id,
+    id: testClientId(id),
+    sequence: id,
     player,
-    game_id: 1,
+    game_id: testClientId(100),
     ellapsed_seconds: 0,
     half,
     eventType: "startingPlayer",
@@ -32,9 +34,10 @@ function shot(
   ellapsed_seconds = 60,
 ): PlayerEvent {
   return {
-    id,
+    id: testClientId(id),
+    sequence: id,
     player,
-    game_id: 1,
+    game_id: testClientId(100),
     ellapsed_seconds,
     half: "firstHalf",
     eventType: "shot",
@@ -55,9 +58,10 @@ function substitution(
   ellapsed_seconds = 90,
 ): PlayerEvent {
   return {
-    id,
+    id: testClientId(id),
+    sequence: id,
     player: playerOut,
-    game_id: 1,
+    game_id: testClientId(100),
     ellapsed_seconds,
     half: "firstHalf",
     eventType: "substitution",
@@ -68,9 +72,10 @@ function substitution(
 
 function yellowCard(id: number, player: number): PlayerEvent {
   return {
-    id,
+    id: testClientId(id),
+    sequence: id,
     player,
-    game_id: 1,
+    game_id: testClientId(100),
     ellapsed_seconds: 120,
     half: "firstHalf",
     eventType: "yellowCard",
@@ -95,7 +100,7 @@ describe("getLastUndoableEvent", () => {
     ];
 
     const last = getLastUndoableEvent(events);
-    expect(last?.id).toBe(5);
+    expect(last?.sequence).toBe(5);
     expect(last?.eventType).toBe("substitution");
   });
 });
@@ -127,12 +132,12 @@ describe("undo derived state", () => {
     expect(countGoals(events)).toBe(1);
 
     const last = getLastUndoableEvent(events);
-    expect(last?.id).toBe(3);
+    expect(last?.sequence).toBe(3);
     const afterUndo = events.filter((event) => event.id !== last?.id);
     // Miss was last; goals unchanged until the goal is undone
     expect(countGoals(afterUndo)).toBe(1);
 
-    const afterGoalUndo = afterUndo.filter((event) => event.id !== 2);
+    const afterGoalUndo = afterUndo.filter((event) => event.sequence !== 2);
     expect(countGoals(afterGoalUndo)).toBe(0);
   });
 

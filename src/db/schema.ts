@@ -14,34 +14,35 @@ import {
 export const teams = sqliteTable(
   "teams",
   {
-    id: integer().primaryKey(),
+    id: integer().primaryKey({ autoIncrement: true }),
     userId: text("user_id").notNull(),
-    localId: integer("local_id").notNull(),
+    clientId: text("client_id").notNull(),
     name: text().notNull(),
   },
   (table) => [
-    uniqueIndex("teams_user_id_local_id_uq").on(table.userId, table.localId),
+    uniqueIndex("teams_user_id_client_id_uq").on(table.userId, table.clientId),
+    uniqueIndex("teams_user_id_id_uq").on(table.userId, table.id),
   ],
 );
 
 export const teamPlayers = sqliteTable(
   "team_players",
   {
-    id: integer().primaryKey(),
+    id: integer().primaryKey({ autoIncrement: true }),
     userId: text("user_id").notNull(),
-    localId: integer("local_id").notNull(),
-    teamLocalId: integer("team_local_id").notNull(),
+    clientId: text("client_id").notNull(),
+    teamId: integer("team_id").notNull(),
     name: text().notNull(),
     number: integer().notNull(),
   },
   (table) => [
-    uniqueIndex("team_players_user_id_local_id_uq").on(
+    uniqueIndex("team_players_user_id_client_id_uq").on(
       table.userId,
-      table.localId,
+      table.clientId,
     ),
     foreignKey({
-      columns: [table.userId, table.teamLocalId],
-      foreignColumns: [teams.userId, teams.localId],
+      columns: [table.userId, table.teamId],
+      foreignColumns: [teams.userId, teams.id],
     }),
   ],
 );
@@ -49,21 +50,21 @@ export const teamPlayers = sqliteTable(
 export const quickSubPairs = sqliteTable(
   "quick_sub_pairs",
   {
-    id: integer().primaryKey(),
+    id: integer().primaryKey({ autoIncrement: true }),
     userId: text("user_id").notNull(),
-    localId: integer("local_id").notNull(),
-    teamLocalId: integer("team_local_id").notNull(),
+    clientId: text("client_id").notNull(),
+    teamId: integer("team_id").notNull(),
     playerNumberA: integer("player_number_a").notNull(),
     playerNumberB: integer("player_number_b").notNull(),
   },
   (table) => [
-    uniqueIndex("quick_sub_pairs_user_id_local_id_uq").on(
+    uniqueIndex("quick_sub_pairs_user_id_client_id_uq").on(
       table.userId,
-      table.localId,
+      table.clientId,
     ),
     foreignKey({
-      columns: [table.userId, table.teamLocalId],
-      foreignColumns: [teams.userId, teams.localId],
+      columns: [table.userId, table.teamId],
+      foreignColumns: [teams.userId, teams.id],
     }),
   ],
 );
@@ -71,20 +72,21 @@ export const quickSubPairs = sqliteTable(
 export const games = sqliteTable(
   "games",
   {
-    id: integer().primaryKey(),
+    id: integer().primaryKey({ autoIncrement: true }),
     userId: text("user_id").notNull(),
-    localId: integer("local_id").notNull(),
-    homeTeamLocalId: integer("home_team_local_id").notNull(),
+    clientId: text("client_id").notNull(),
+    homeTeamId: integer("home_team_id").notNull(),
     createdAt: text("created_at").notNull(),
     firstHalfStartedAtMs: integer("first_half_started_at_ms"),
     halftimeStartedAtMs: integer("halftime_started_at_ms"),
     secondHalfStartedAtMs: integer("second_half_started_at_ms"),
   },
   (table) => [
-    uniqueIndex("games_user_id_local_id_uq").on(table.userId, table.localId),
+    uniqueIndex("games_user_id_client_id_uq").on(table.userId, table.clientId),
+    uniqueIndex("games_user_id_id_uq").on(table.userId, table.id),
     foreignKey({
-      columns: [table.userId, table.homeTeamLocalId],
-      foreignColumns: [teams.userId, teams.localId],
+      columns: [table.userId, table.homeTeamId],
+      foreignColumns: [teams.userId, teams.id],
     }),
   ],
 );
@@ -92,18 +94,18 @@ export const games = sqliteTable(
 export const pauseToggles = sqliteTable(
   "pause_toggles",
   {
-    id: integer().primaryKey(),
+    id: integer().primaryKey({ autoIncrement: true }),
     userId: text("user_id").notNull(),
     clientId: text("client_id").notNull(),
-    gameLocalId: integer("game_local_id").notNull(),
+    gameId: integer("game_id").notNull(),
     half: text("half").notNull(),
     toggledAtMs: integer("toggled_at_ms").notNull(),
   },
   (table) => [
     uniqueIndex("pause_toggles_client_id_uq").on(table.userId, table.clientId),
     foreignKey({
-      columns: [table.userId, table.gameLocalId],
-      foreignColumns: [games.userId, games.localId],
+      columns: [table.userId, table.gameId],
+      foreignColumns: [games.userId, games.id],
     }),
     check(
       "pause_toggles_half_check",
@@ -115,24 +117,20 @@ export const pauseToggles = sqliteTable(
 export const activeGame = sqliteTable(
   "active_game",
   {
-    id: integer().primaryKey(),
+    id: integer().primaryKey({ autoIncrement: true }),
     userId: text("user_id").notNull(),
-    localId: integer("local_id").notNull(),
-    gameLocalId: integer("game_local_id").notNull(),
-    homeTeamLocalId: integer("home_team_local_id").notNull(),
+    gameId: integer("game_id").notNull(),
+    homeTeamId: integer("home_team_id").notNull(),
   },
   (table) => [
-    uniqueIndex("active_game_user_id_local_id_uq").on(
-      table.userId,
-      table.localId,
-    ),
+    uniqueIndex("active_game_user_id_uq").on(table.userId),
     foreignKey({
-      columns: [table.userId, table.gameLocalId],
-      foreignColumns: [games.userId, games.localId],
+      columns: [table.userId, table.gameId],
+      foreignColumns: [games.userId, games.id],
     }),
     foreignKey({
-      columns: [table.userId, table.homeTeamLocalId],
-      foreignColumns: [teams.userId, teams.localId],
+      columns: [table.userId, table.homeTeamId],
+      foreignColumns: [teams.userId, teams.id],
     }),
   ],
 );
@@ -140,11 +138,11 @@ export const activeGame = sqliteTable(
 export const playerEvents = sqliteTable(
   "player_events",
   {
-    id: integer().primaryKey(),
+    id: integer().primaryKey({ autoIncrement: true }),
     userId: text("user_id").notNull(),
-    localId: integer("local_id").notNull(),
+    clientId: text("client_id").notNull(),
     player: integer().notNull(),
-    gameLocalId: integer("game_local_id").notNull(),
+    gameId: integer("game_id").notNull(),
     ellapsedSeconds: integer("ellapsed_seconds").notNull(),
     eventType: text("event_type").notNull(),
     eventGroup: text("event_group").notNull(),
@@ -156,13 +154,13 @@ export const playerEvents = sqliteTable(
     substitutionPlayerIn: integer("substitution_player_in"),
   },
   (table) => [
-    uniqueIndex("player_events_user_id_local_id_uq").on(
+    uniqueIndex("player_events_user_id_client_id_uq").on(
       table.userId,
-      table.localId,
+      table.clientId,
     ),
     foreignKey({
-      columns: [table.userId, table.gameLocalId],
-      foreignColumns: [games.userId, games.localId],
+      columns: [table.userId, table.gameId],
+      foreignColumns: [games.userId, games.id],
     }),
     check(
       "player_events_half_check",

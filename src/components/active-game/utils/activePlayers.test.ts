@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { PlayerEvent } from "@/datamodel";
+import { testClientId } from "@/testing/clientId";
 import { getActivePlayers } from "./activePlayers";
 
 function starter(
@@ -8,9 +9,10 @@ function starter(
   half: "firstHalf" | "secondHalf" = "firstHalf",
 ): PlayerEvent {
   return {
-    id,
+    id: testClientId(id),
+    sequence: id,
     player,
-    game_id: 1,
+    game_id: testClientId(100),
     ellapsed_seconds: 0,
     half,
     eventType: "startingPlayer",
@@ -25,9 +27,10 @@ function substitution(
   half: "firstHalf" | "secondHalf" = "firstHalf",
 ): PlayerEvent {
   return {
-    id,
+    id: testClientId(id),
+    sequence: id,
     player,
-    game_id: 1,
+    game_id: testClientId(100),
     ellapsed_seconds: 30,
     half,
     eventType: "substitution",
@@ -38,9 +41,10 @@ function substitution(
 
 function shot(id: number, player: number): PlayerEvent {
   return {
-    id,
+    id: testClientId(id),
+    sequence: id,
     player,
-    game_id: 1,
+    game_id: testClientId(100),
     ellapsed_seconds: 15,
     half: "firstHalf",
     eventType: "shot",
