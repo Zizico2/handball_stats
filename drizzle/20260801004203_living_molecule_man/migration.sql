@@ -107,7 +107,6 @@ SELECT
 		'4' || substr(hex(randomblob(2)), 2, 3) || '-' ||
 		substr('89ab', (random() & 3) + 1, 1) ||
 		substr(hex(randomblob(2)), 2, 3) || '-' ||
-		substr(hex(randomblob(16)), 1, 4) || '-' ||
 		substr(hex(randomblob(16)), 1, 12)
 	),
 	`name`
@@ -122,7 +121,6 @@ SELECT
 		'4' || substr(hex(randomblob(2)), 2, 3) || '-' ||
 		substr('89ab', (random() & 3) + 1, 1) ||
 		substr(hex(randomblob(2)), 2, 3) || '-' ||
-		substr(hex(randomblob(16)), 1, 4) || '-' ||
 		substr(hex(randomblob(16)), 1, 12)
 	),
 	`team`.`id`,
@@ -145,7 +143,6 @@ SELECT
 		'4' || substr(hex(randomblob(2)), 2, 3) || '-' ||
 		substr('89ab', (random() & 3) + 1, 1) ||
 		substr(hex(randomblob(2)), 2, 3) || '-' ||
-		substr(hex(randomblob(16)), 1, 4) || '-' ||
 		substr(hex(randomblob(16)), 1, 12)
 	),
 	`team`.`id`,
@@ -168,7 +165,6 @@ SELECT
 		'4' || substr(hex(randomblob(2)), 2, 3) || '-' ||
 		substr('89ab', (random() & 3) + 1, 1) ||
 		substr(hex(randomblob(2)), 2, 3) || '-' ||
-		substr(hex(randomblob(16)), 1, 4) || '-' ||
 		substr(hex(randomblob(16)), 1, 12)
 	),
 	`team`.`id`,
@@ -193,7 +189,6 @@ SELECT
 		'4' || substr(hex(randomblob(2)), 2, 3) || '-' ||
 		substr('89ab', (random() & 3) + 1, 1) ||
 		substr(hex(randomblob(2)), 2, 3) || '-' ||
-		substr(hex(randomblob(16)), 1, 4) || '-' ||
 		substr(hex(randomblob(16)), 1, 12)
 	),
 	`event`.`player`,
@@ -224,7 +219,6 @@ SELECT
 		'4' || substr(hex(randomblob(2)), 2, 3) || '-' ||
 		substr('89ab', (random() & 3) + 1, 1) ||
 		substr(hex(randomblob(2)), 2, 3) || '-' ||
-		substr(hex(randomblob(16)), 1, 4) || '-' ||
 		substr(hex(randomblob(16)), 1, 12)
 	),
 	`game`.`id`,
