@@ -78,6 +78,78 @@ export const playerEventsRoutes = new Hono<ApiEnv>()
       });
     }
 
+    const endItems = items.filter(
+      (item) => item.eventType === "twoMinuteSuspensionEnded",
+    );
+    const suspensionIds = [
+      ...new Set(endItems.map((item) => item.event.suspensionId)),
+    ];
+    if (suspensionIds.length > 0) {
+      const referencedRows = await db
+        .select({
+          clientId: schema.playerEvents.clientId,
+          player: schema.playerEvents.player,
+          gameId: schema.playerEvents.gameId,
+          eventType: schema.playerEvents.eventType,
+        })
+        .from(schema.playerEvents)
+        .where(
+          and(
+            eq(schema.playerEvents.userId, userId),
+            inArray(schema.playerEvents.clientId, suspensionIds),
+          ),
+        );
+      const referencedById = new Map(
+        referencedRows.map((row) => [row.clientId, row]),
+      );
+
+      for (const item of endItems) {
+        const referenced = referencedById.get(item.event.suspensionId);
+        const game = gamesByClientId.get(item.game_id);
+        if (
+          !referenced ||
+          !game ||
+          referenced.eventType !== "twoMinuteSuspension" ||
+          referenced.gameId !== game.id ||
+          referenced.player !== item.player
+        ) {
+          throw new HTTPException(400, {
+            message:
+              "A suspension-ended event must reference an active suspension in the same game and player",
+          });
+        }
+      }
+
+      const alreadyEndedRows = await db
+        .select({
+          suspensionId: schema.playerEvents.suspensionEndedSuspensionId,
+        })
+        .from(schema.playerEvents)
+        .where(
+          and(
+            eq(schema.playerEvents.userId, userId),
+            inArray(
+              schema.playerEvents.suspensionEndedSuspensionId,
+              suspensionIds,
+            ),
+          ),
+        );
+      const alreadyEnded = new Set(
+        alreadyEndedRows.flatMap((row) =>
+          row.suspensionId === null ? [] : [row.suspensionId],
+        ),
+      );
+      if (
+        endItems.some((item) => alreadyEnded.has(item.event.suspensionId)) ||
+        new Set(endItems.map((item) => item.event.suspensionId)).size !==
+          endItems.length
+      ) {
+        throw new HTTPException(409, {
+          message: "That suspension has already been ended",
+        });
+      }
+    }
+
     const nowMs = Date.now();
     const elapsedAndHalfByGameId = new Map<
       ClientId,
@@ -147,6 +219,31 @@ export const playerEventsRoutes = new Hono<ApiEnv>()
     const { userId } = c.env;
     const db = await getDb();
     if (ids.length === 0) return c.body(null, 204);
+
+    const suspensionRows = await db
+      .select({ clientId: schema.playerEvents.clientId })
+      .from(schema.playerEvents)
+      .where(
+        and(
+          eq(schema.playerEvents.userId, userId),
+          inArray(schema.playerEvents.clientId, ids),
+          eq(schema.playerEvents.eventType, "twoMinuteSuspension"),
+        ),
+      );
+    const suspensionIds = suspensionRows.map((row) => row.clientId);
+    if (suspensionIds.length > 0) {
+      await db
+        .delete(schema.playerEvents)
+        .where(
+          and(
+            eq(schema.playerEvents.userId, userId),
+            inArray(
+              schema.playerEvents.suspensionEndedSuspensionId,
+              suspensionIds,
+            ),
+          ),
+        );
+    }
 
     await db
       .delete(schema.playerEvents)

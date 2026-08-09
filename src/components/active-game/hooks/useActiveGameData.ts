@@ -11,6 +11,7 @@ import {
   teamsCollection,
 } from "@/collections";
 import { getActivePlayers } from "@/components/active-game/utils/activePlayers";
+import { getActiveSuspensions } from "@/components/active-game/utils/activeSuspensions";
 import type { MatchStatus } from "@/inGameControlsAtoms";
 
 export function useActiveGameData(matchStatus: MatchStatus | null) {
@@ -109,6 +110,11 @@ export function useActiveGameData(matchStatus: MatchStatus | null) {
     [activeGameEvents],
   );
 
+  const activeSuspensions = useMemo(
+    () => getActiveSuspensions(activeGameEvents),
+    [activeGameEvents],
+  );
+
   const teamQuickSubPairs = useMemo(
     () =>
       quickSubPairs.data.filter(
@@ -133,6 +139,7 @@ export function useActiveGameData(matchStatus: MatchStatus | null) {
     activeGameRecord,
     activeGameEvents,
     activePlayerNumbers,
+    activeSuspensions,
     currentHalfForStarting,
     firstHalfStartingPlayerNumbers,
     secondHalfStartingPlayerNumbers,

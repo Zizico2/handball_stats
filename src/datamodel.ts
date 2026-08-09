@@ -213,10 +213,26 @@ export const twoMinuteSuspensionEventSchema = withBase(
   z.object({
     eventType: z.literal("twoMinuteSuspension"),
     eventGroup: z.literal("sanction"),
+    event: z.object({
+      servedBy: playerSchema,
+    }),
   }),
 );
 export type TwoMinuteSuspensionEvent = z.infer<
   typeof twoMinuteSuspensionEventSchema
+>;
+
+export const twoMinuteSuspensionEndedEventSchema = withBase(
+  z.object({
+    eventType: z.literal("twoMinuteSuspensionEnded"),
+    eventGroup: z.literal("sanction"),
+    event: z.object({
+      suspensionId: clientIdSchema,
+    }),
+  }),
+);
+export type TwoMinuteSuspensionEndedEvent = z.infer<
+  typeof twoMinuteSuspensionEndedEventSchema
 >;
 
 export const shotEventSchema = withBase(
@@ -266,6 +282,7 @@ export const playerEventSchema = z.discriminatedUnion("eventType", [
   redCardEventSchema,
   yellowCardEventSchema,
   twoMinuteSuspensionEventSchema,
+  twoMinuteSuspensionEndedEventSchema,
   // substitution events
   substitutionEventSchema,
   startingPlayerEventSchema,

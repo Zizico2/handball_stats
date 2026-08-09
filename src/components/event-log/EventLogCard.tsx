@@ -54,6 +54,12 @@ export function EventLogCard({ event, getPlayerLabel }: EventLogCardProps) {
                 {event.eventType.replace(/([A-Z])/g, " $1")}
               </span>
             </Typography.Paragraph>
+            {event.eventType === "twoMinuteSuspension" &&
+            event.event.servedBy !== event.player ? (
+              <Typography.Paragraph color="muted" className="mt-1">
+                Served by {getPlayerLabel(event.event.servedBy)}
+              </Typography.Paragraph>
+            ) : null}
             {event.eventType === "shot" && (
               <Typography.Paragraph color="muted" className="mt-1">
                 Goal: <strong>{event.event.goal ? "Yes" : "No"}</strong>

@@ -1,10 +1,12 @@
 "use client";
 
 import { Button, Typography } from "@heroui/react";
+import type { ReactNode } from "react";
 import { FullscreenModal } from "./FullscreenModal";
 
 export interface ListSelectionOption<T> {
   text: string;
+  label?: ReactNode;
   key: string;
   value: T;
   group?: string;
@@ -36,7 +38,7 @@ export function ListSelectionModal<T>({
               variant="primary"
               onPress={() => onPickOption(option.value)}
             >
-              {option.text}
+              {option.label ?? option.text}
             </Button>
           ))
         : Array.from(new Set(options.map((option) => option.group || ""))).map(
@@ -60,7 +62,7 @@ export function ListSelectionModal<T>({
                         variant="primary"
                         onPress={() => onPickOption(option.value)}
                       >
-                        {option.text}
+                        {option.label ?? option.text}
                       </Button>
                     ))}
                 </div>

@@ -12,6 +12,8 @@ const playerEventSelectSchemaCsv = dbPlayerEventSchema.pick({
   shotAim: true,
   shotPosition: true,
   substitutionPlayerIn: true,
+  suspensionServedBy: true,
+  suspensionEndedSuspensionId: true,
 });
 
 export const PLAYER_EVENTS_CSV_COLUMN_KEYS = Object.keys(

@@ -7,8 +7,10 @@ import { fromPromise } from "xstate";
 import { playerEventsCollection } from "@/collections";
 import { ActiveGameEventDialogs } from "@/components/active-game/ActiveGameEventDialogs";
 import { ActiveGameView } from "@/components/active-game/ActiveGameView";
+import { SuspensionWarningDialog } from "@/components/active-game/dialogs/SuspensionWarningDialog";
 import { useActiveGameControls } from "@/components/active-game/hooks/useActiveGameControls";
 import { useActiveGameData } from "@/components/active-game/hooks/useActiveGameData";
+import type { ActiveSuspension } from "@/components/active-game/utils/activeSuspensions";
 import {
   awaitPlayerEventDeletionPersistence,
   awaitPlayerEventPersistence,
@@ -32,6 +34,14 @@ import {
 } from "@/matchSyncAtom";
 import type { DeepPartial } from "@/utils";
 
+interface PendingExternalSuspensionAction {
+  allowEnd: boolean;
+  label: string;
+  onCancel: () => void;
+  onContinue: () => void;
+  suspensions: ActiveSuspension[];
+}
+
 function ActiveGame() {
   const [matchStatus, setMatchStatus] = useState<MatchStatus | null>(null);
   const [starting7DialogOpen, setStarting7DialogOpen] = useState(false);
@@ -39,6 +49,11 @@ function ActiveGame() {
   const [isSavingStarting7, setIsSavingStarting7] = useState(false);
   const [isSavingQuickSub, setIsSavingQuickSub] = useState(false);
   const [isUndoingLastEvent, setIsUndoingLastEvent] = useState(false);
+  const [pendingExternalSuspensionAction, setPendingExternalSuspensionAction] =
+    useState<PendingExternalSuspensionAction | null>(null);
+  const [endingExternalSuspensionId, setEndingExternalSuspensionId] = useState<
+    string | null
+  >(null);
   const matchSync = useAtomValue(matchSyncAtom);
 
   const {
@@ -47,6 +62,7 @@ function ActiveGame() {
     activeGameRecord,
     activeGameEvents,
     activePlayerNumbers,
+    activeSuspensions,
     currentHalfForStarting,
     firstHalfStartingPlayerNumbers,
     secondHalfStartingPlayerNumbers,
@@ -113,6 +129,41 @@ function ActiveGame() {
 
   const isPersistingEvent =
     state.matches("finished") || state.matches("persistFailed");
+
+  const endSuspensionAndContinue = useCallback(
+    async (suspension: ActiveSuspension) => {
+      if (!activeGameData || !activeHalf) {
+        return false;
+      }
+
+      beginMatchSaving();
+      try {
+        const tx = insertPlayerEvent({
+          id: createClientId(),
+          player: suspension.offender,
+          game_id: activeGameData.gameId,
+          ellapsed_seconds: eventElapsedSeconds,
+          half: activeHalf,
+          eventType: "twoMinuteSuspensionEnded",
+          eventGroup: "sanction",
+          event: { suspensionId: suspension.id },
+        });
+        await awaitPlayerEventPersistence(tx);
+        markMatchSaved();
+        return true;
+      } catch (error) {
+        console.error("Failed to end suspension", error);
+        markMatchFailed(
+          "Could not end the suspension. Retry, or reload the match.",
+          () => {
+            void endSuspensionAndContinue(suspension);
+          },
+        );
+        return false;
+      }
+    },
+    [activeGameData, activeHalf, eventElapsedSeconds],
+  );
 
   const handleStartEvent = (eventGroup: EventGroup) => {
     if (!activeGame.data || !activeHalf) {
@@ -254,6 +305,29 @@ function ActiveGame() {
     ],
   );
 
+  const handleQuickSubAttempt = useCallback(
+    (playerOut: number, playerIn: number) => {
+      const suspensions = activeSuspensions.filter(
+        (suspension) =>
+          suspension.offender === playerIn || suspension.servedBy === playerIn,
+      );
+      if (suspensions.length > 0) {
+        setPendingExternalSuspensionAction({
+          allowEnd: true,
+          label: getPlayerLabel(playerIn),
+          onCancel: () => setQuickSubDialogOpen(false),
+          onContinue: () => {
+            void handleQuickSub(playerOut, playerIn);
+          },
+          suspensions,
+        });
+        return;
+      }
+      void handleQuickSub(playerOut, playerIn);
+    },
+    [activeSuspensions, getPlayerLabel, handleQuickSub],
+  );
+
   const handlePickManually = () => {
     if (!activeGame.data || !activeHalf) {
       return;
@@ -269,6 +343,54 @@ function ActiveGame() {
       half: activeHalf,
     });
   };
+
+  const handleStarting7Attempt = useCallback(
+    (numbers: number[]) => {
+      const suspensions = activeSuspensions.filter(
+        (suspension) =>
+          numbers.includes(suspension.offender) ||
+          numbers.includes(suspension.servedBy),
+      );
+      if (suspensions.length > 0) {
+        setPendingExternalSuspensionAction({
+          allowEnd: activeHalf !== null,
+          label: "the selected starting players",
+          onCancel: () => setStarting7DialogOpen(false),
+          onContinue: () => {
+            void handleSaveStarting7(numbers);
+          },
+          suspensions,
+        });
+        return;
+      }
+      void handleSaveStarting7(numbers);
+    },
+    [activeHalf, activeSuspensions, handleSaveStarting7],
+  );
+
+  const handleEndExternalSuspensionAndContinue = useCallback(
+    async (suspension: ActiveSuspension) => {
+      if (
+        !pendingExternalSuspensionAction ||
+        endingExternalSuspensionId !== null
+      ) {
+        return;
+      }
+      setEndingExternalSuspensionId(suspension.id);
+      const ended = await endSuspensionAndContinue(suspension);
+      setEndingExternalSuspensionId(null);
+      if (ended) {
+        const action = pendingExternalSuspensionAction.onContinue;
+        setPendingExternalSuspensionAction(null);
+        action();
+      }
+    },
+    [
+      endSuspensionAndContinue,
+      endingExternalSuspensionId,
+      pendingExternalSuspensionAction,
+    ],
+  );
 
   const undoEventById = useCallback(
     async (eventId: ClientId) => {
@@ -356,9 +478,12 @@ function ActiveGame() {
         undoEventLabel={undoEventLabel}
       />
       <ActiveGameEventDialogs
-        activeHalf={activeHalf}
         activePlayerNumbers={activePlayerNumbers}
-        eventElapsedSeconds={eventElapsedSeconds}
+        activeSuspensions={activeSuspensions}
+        getPlayerLabel={getPlayerLabel}
+        isSuspensionEndBlocked={
+          matchSync.status === "saving" || matchSync.status === "failed"
+        }
         isSavingQuickSub={isSavingQuickSub}
         isSavingStarting7={isSavingStarting7}
         quickSubDialogOpen={quickSubDialogOpen}
@@ -379,9 +504,44 @@ function ActiveGame() {
           }
         }}
         onPickManually={handlePickManually}
-        onQuickSub={handleQuickSub}
-        onSaveStarting7={handleSaveStarting7}
+        onEndSuspensionAndContinue={endSuspensionAndContinue}
+        onQuickSub={handleQuickSubAttempt}
+        onSaveStarting7={handleStarting7Attempt}
       />
+      {pendingExternalSuspensionAction ? (
+        <SuspensionWarningDialog
+          getPlayerLabel={getPlayerLabel}
+          isBlocked={
+            matchSync.status === "saving" || matchSync.status === "failed"
+          }
+          isEnding={endingExternalSuspensionId !== null}
+          onCancel={() => {
+            const action = pendingExternalSuspensionAction.onCancel;
+            setPendingExternalSuspensionAction(null);
+            if (
+              matchSync.status === "saving" ||
+              matchSync.status === "failed"
+            ) {
+              action();
+            }
+          }}
+          onContinue={() => {
+            const action = pendingExternalSuspensionAction.onContinue;
+            setPendingExternalSuspensionAction(null);
+            action();
+          }}
+          onEndAndContinue={
+            pendingExternalSuspensionAction.allowEnd
+              ? (suspension) => {
+                  void handleEndExternalSuspensionAndContinue(suspension);
+                }
+              : undefined
+          }
+          open
+          playerLabel={pendingExternalSuspensionAction.label}
+          suspensions={pendingExternalSuspensionAction.suspensions}
+        />
+      ) : null}
     </>
   );
 }

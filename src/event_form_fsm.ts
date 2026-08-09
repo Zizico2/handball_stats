@@ -34,6 +34,12 @@ export type Event =
   | { type: "PICK_SANCTION_EVENT_TYPE"; eventType: EventType }
   //
   | { type: "PICK_PLAYER"; player: Player }
+  | { type: "PICK_SUSPENSION_SERVER"; player: Player }
+  | {
+      type: "PICK_SUSPENSION_TO_END";
+      player: Player;
+      suspensionId: ClientId;
+    }
   | { type: "PICK_SHOT_DIRECTION"; pick: ShotDirectionFields }
   | { type: "PICK_GOAL_OR_NO_GOAL"; goal: boolean }
   | { type: "PICK_SHOT_POSITION"; position: ShotPosition }
@@ -131,6 +137,19 @@ export const eventMachine = setup({
               event.eventType === "redCard" ||
               event.eventType === "yellowCard" ||
               event.eventType === "twoMinuteSuspension",
+            actions: assign(({ context, event }) => {
+              return {
+                playerEvent: {
+                  ...context.playerEvent,
+                  eventType: event.eventType,
+                },
+              };
+            }),
+          },
+          {
+            target: "pickingSuspensionToEnd",
+            guard: ({ event }) =>
+              event.eventType === "twoMinuteSuspensionEnded",
             actions: assign(({ context, event }) => {
               return {
                 playerEvent: {
@@ -242,6 +261,16 @@ export const eventMachine = setup({
       on: {
         PICK_PLAYER: [
           {
+            target: "pickingSuspensionServer",
+            guard: ({ context }) =>
+              context.playerEvent.eventType === "twoMinuteSuspension",
+            actions: assign(({ context, event }) => {
+              return {
+                playerEvent: { ...context.playerEvent, player: event.player },
+              };
+            }),
+          },
+          {
             target: "finished",
             guard: ({ context }) =>
               context.playerEvent.eventType === "interception" ||
@@ -284,6 +313,41 @@ export const eventMachine = setup({
             }),
           },
         ],
+      },
+    },
+    pickingSuspensionServer: {
+      on: {
+        PICK_SUSPENSION_SERVER: {
+          target: "finished",
+          actions: assign(({ context, event }) => {
+            return {
+              playerEvent: {
+                ...context.playerEvent,
+                event: {
+                  servedBy: event.player,
+                },
+              },
+            };
+          }),
+        },
+      },
+    },
+    pickingSuspensionToEnd: {
+      on: {
+        PICK_SUSPENSION_TO_END: {
+          target: "finished",
+          actions: assign(({ context, event }) => {
+            return {
+              playerEvent: {
+                ...context.playerEvent,
+                player: event.player,
+                event: {
+                  suspensionId: event.suspensionId,
+                },
+              },
+            };
+          }),
+        },
       },
     },
     pickingSubstitutionPlayerIn: {
