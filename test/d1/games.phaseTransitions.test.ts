@@ -1,9 +1,10 @@
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import type { Game, GamePhaseTransitionResult } from "@/datamodel";
+import type { ClientId, Game, GamePhaseTransitionResult } from "@/datamodel";
 import { createDb } from "@/db";
 import * as schema from "@/db/schema";
+import { testClientId } from "@/testing/clientId";
 import { getTestDb, resetAppTables } from "./db";
 
 vi.mock("server-only", () => ({}));
@@ -15,20 +16,21 @@ vi.mock("@/server/db", () => ({
 const { gamesRoutes } = await import("@/server/api/routes/collections/games");
 
 const USER_ID = "user-phase-transitions";
-const TEAM_ID = 1;
-const GAME_ID = 10;
+const TEAM_ID = testClientId(1);
+const GAME_ID = testClientId(10);
+const POST_GAME_ID = testClientId(20);
+const PUT_GAME_ID = testClientId(21);
 
 async function seedTeamAndEmptyGame() {
   const db = getTestDb();
-  await db.insert(schema.teams).values({
-    userId: USER_ID,
-    localId: TEAM_ID,
-    name: "Home",
-  });
+  const [team] = await db
+    .insert(schema.teams)
+    .values({ userId: USER_ID, clientId: TEAM_ID, name: "Home" })
+    .returning();
   await db.insert(schema.games).values({
     userId: USER_ID,
-    localId: GAME_ID,
-    homeTeamLocalId: TEAM_ID,
+    clientId: GAME_ID,
+    homeTeamId: team.id,
     createdAt: "2026-01-01T00:00:00.000Z",
     firstHalfStartedAtMs: null,
     halftimeStartedAtMs: null,
@@ -36,7 +38,7 @@ async function seedTeamAndEmptyGame() {
   });
 }
 
-function transitionRequest(gameId: number, to: string) {
+function transitionRequest(gameId: ClientId, to: string) {
   return gamesRoutes.request(
     `/${gameId}/transitions`,
     {
@@ -62,7 +64,7 @@ describe("games phase transition API (D1)", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify([
           {
-            id: 20,
+            id: POST_GAME_ID,
             homeTeamId: TEAM_ID,
             createdAt: "2026-01-02T00:00:00.000Z",
             firstHalfStartedAtMs: 111,
@@ -78,7 +80,7 @@ describe("games phase transition API (D1)", () => {
     const body = (await res.json()) as Game[];
     expect(body).toEqual([
       {
-        id: 20,
+        id: POST_GAME_ID,
         homeTeamId: TEAM_ID,
         createdAt: "2026-01-02T00:00:00.000Z",
         firstHalfStartedAtMs: null,
@@ -90,7 +92,7 @@ describe("games phase transition API (D1)", () => {
     const row = await getTestDb()
       .select()
       .from(schema.games)
-      .where(eq(schema.games.localId, 20))
+      .where(eq(schema.games.clientId, POST_GAME_ID))
       .get();
     expect(row?.firstHalfStartedAtMs).toBeNull();
     expect(row?.halftimeStartedAtMs).toBeNull();
@@ -105,7 +107,7 @@ describe("games phase transition API (D1)", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify([
           {
-            id: 21,
+            id: PUT_GAME_ID,
             homeTeamId: TEAM_ID,
             createdAt: "2026-01-03T00:00:00.000Z",
             firstHalfStartedAtMs: 111,
@@ -154,7 +156,7 @@ describe("games phase transition API (D1)", () => {
     const row = await getTestDb()
       .select()
       .from(schema.games)
-      .where(eq(schema.games.localId, GAME_ID))
+      .where(eq(schema.games.clientId, GAME_ID))
       .get();
     expect(row?.firstHalfStartedAtMs).toBe(startedGame.firstHalfStartedAtMs);
   });
@@ -195,7 +197,7 @@ describe("games phase transition API (D1)", () => {
     const row = await getTestDb()
       .select()
       .from(schema.games)
-      .where(eq(schema.games.localId, GAME_ID))
+      .where(eq(schema.games.clientId, GAME_ID))
       .get();
     expect(row?.secondHalfStartedAtMs).not.toBeNull();
     expect(row?.halftimeStartedAtMs).toBeNull();

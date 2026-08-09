@@ -1,5 +1,8 @@
 import z from "zod";
 
+export const clientIdSchema = z.uuidv4().brand<"ClientId">();
+export type ClientId = z.infer<typeof clientIdSchema>;
+
 export const matchHalfSchema = z.enum(["firstHalf", "secondHalf"]);
 export type MatchHalf = z.infer<typeof matchHalfSchema>;
 
@@ -91,9 +94,10 @@ export const playerSchema = z.number();
 export type Player = z.infer<typeof playerSchema>;
 
 export const basePlayerEventSchema = z.object({
-  id: z.number(),
+  id: clientIdSchema,
+  sequence: z.number().int().positive().nullable().default(null),
   player: playerSchema,
-  game_id: z.number(),
+  game_id: clientIdSchema,
   ellapsed_seconds: z.number(),
   half: matchHalfSchema,
 });
@@ -284,30 +288,30 @@ function withBase<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
 }
 
 export const teamSchema = z.object({
-  id: z.number(),
+  id: clientIdSchema,
   name: z.string(),
 });
 export type Team = z.infer<typeof teamSchema>;
 
 export const teamPlayerSchema = z.object({
-  id: z.number(),
-  teamId: z.number(),
+  id: clientIdSchema,
+  teamId: clientIdSchema,
   name: z.string(),
   number: z.number(),
 });
 export type TeamPlayer = z.infer<typeof teamPlayerSchema>;
 
 export const quickSubPairSchema = z.object({
-  id: z.number(),
-  teamId: z.number(),
+  id: clientIdSchema,
+  teamId: clientIdSchema,
   playerNumberA: z.number(),
   playerNumberB: z.number(),
 });
 export type QuickSubPair = z.infer<typeof quickSubPairSchema>;
 
 export const gameSchema = z.object({
-  id: z.number(),
-  homeTeamId: z.number(),
+  id: clientIdSchema,
+  homeTeamId: clientIdSchema,
   createdAt: z.iso.datetime(),
   firstHalfStartedAtMs: z.number().nullable().optional(),
   halftimeStartedAtMs: z.number().nullable().optional(),
@@ -325,8 +329,8 @@ export type GamePhaseTransitionResult = z.infer<
 >;
 
 export const pauseToggleSchema = z.object({
-  id: z.uuid(),
-  gameId: z.number(),
+  id: clientIdSchema,
+  gameId: clientIdSchema,
   half: matchHalfSchema,
   // TODO: use z.date() for this.
   toggledAtMs: z.number(),
@@ -336,7 +340,7 @@ export type PauseToggle = z.infer<typeof pauseToggleSchema>;
 export const gamePauseStateBodySchema = z.object({
   half: matchHalfSchema,
   paused: z.boolean(),
-  clientId: z.uuid().optional(),
+  clientId: clientIdSchema.optional(),
 });
 export type GamePauseStateBody = z.infer<typeof gamePauseStateBodySchema>;
 
@@ -350,7 +354,7 @@ export const gamePauseStateResultSchema = z.object({
 export type GamePauseStateResult = z.infer<typeof gamePauseStateResultSchema>;
 
 export const matchClockSnapshotSchema = z.object({
-  gameId: z.number(),
+  gameId: clientIdSchema,
   serverNowMs: z.number(),
   activeHalf: matchHalfSchema.nullable(),
   activeElapsedSeconds: z.number(),
@@ -363,14 +367,14 @@ export type MatchClockSnapshot = z.infer<typeof matchClockSnapshotSchema>;
 
 export const activeGameSchema = z.object({
   id: z.literal(1),
-  gameId: z.number(),
-  homeTeamId: z.number(),
+  gameId: clientIdSchema,
+  homeTeamId: clientIdSchema,
 });
 export type ActiveGame = z.infer<typeof activeGameSchema>;
 
 export const startGameBodySchema = z.object({
-  id: z.number().int().positive(),
-  homeTeamId: z.number().int().positive(),
+  id: clientIdSchema,
+  homeTeamId: clientIdSchema,
   createdAt: z.iso.datetime(),
 });
 export type StartGameBody = z.infer<typeof startGameBodySchema>;

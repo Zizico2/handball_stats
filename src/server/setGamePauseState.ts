@@ -1,5 +1,5 @@
 import { and, count, eq, sql } from "drizzle-orm";
-import type { MatchHalf, PauseToggle } from "@/datamodel";
+import type { ClientId, MatchHalf, PauseToggle } from "@/datamodel";
 import { type DbPauseToggle, dbRowToPauseToggle } from "@/db";
 import * as schema from "@/db/schema";
 import { getDb } from "@/server/db";
@@ -16,14 +16,14 @@ export type SetGamePauseStateResult = {
 };
 
 export class GameNotFoundError extends Error {
-  constructor(gameId: number) {
+  constructor(gameId: ClientId) {
     super(`Game ${gameId} not found`);
     this.name = "GameNotFoundError";
   }
 }
 
 export class PauseStateConflictError extends Error {
-  constructor(gameId: number, half: MatchHalf, desiredPaused: boolean) {
+  constructor(gameId: ClientId, half: MatchHalf, desiredPaused: boolean) {
     super(
       `Game ${gameId} ${half} cannot be set to ${desiredPaused ? "paused" : "running"} in its current phase`,
     );
@@ -33,7 +33,7 @@ export class PauseStateConflictError extends Error {
 
 async function countHalfToggles(
   userId: string,
-  gameLocalId: number,
+  gameId: number,
   half: MatchHalf,
 ): Promise<number> {
   const db = await getDb();
@@ -43,7 +43,7 @@ async function countHalfToggles(
     .where(
       and(
         eq(schema.pauseToggles.userId, userId),
-        eq(schema.pauseToggles.gameLocalId, gameLocalId),
+        eq(schema.pauseToggles.gameId, gameId),
         eq(schema.pauseToggles.half, half),
       ),
     )
@@ -52,22 +52,19 @@ async function countHalfToggles(
   return row?.value ?? 0;
 }
 
-async function gameExists(
-  userId: string,
-  gameLocalId: number,
-): Promise<boolean> {
+async function loadGame(userId: string, gameClientId: ClientId) {
   const db = await getDb();
   const row = await db
-    .select({ localId: schema.games.localId })
+    .select({ id: schema.games.id })
     .from(schema.games)
     .where(
       and(
         eq(schema.games.userId, userId),
-        eq(schema.games.localId, gameLocalId),
+        eq(schema.games.clientId, gameClientId),
       ),
     )
     .get();
-  return row != null;
+  return row;
 }
 
 function asDbPauseToggle(row: Record<string, unknown>): DbPauseToggle {
@@ -75,7 +72,7 @@ function asDbPauseToggle(row: Record<string, unknown>): DbPauseToggle {
     id: Number(row.id),
     userId: String(row.userId ?? row.user_id),
     clientId: String(row.clientId ?? row.client_id),
-    gameLocalId: Number(row.gameLocalId ?? row.game_local_id),
+    gameId: Number(row.gameId ?? row.game_id),
     half: String(row.half),
     toggledAtMs: Number(row.toggledAtMs ?? row.toggled_at_ms),
   };
@@ -88,15 +85,15 @@ function asDbPauseToggle(row: Record<string, unknown>): DbPauseToggle {
  */
 export async function setGamePauseState(
   userId: string,
-  gameLocalId: number,
+  gameClientId: ClientId,
   half: MatchHalf,
   desiredPaused: boolean,
-  clientId: string,
+  clientId: ClientId,
   nowMs: number,
 ): Promise<SetGamePauseStateResult> {
-  if (!(await gameExists(userId, gameLocalId))) {
-    throw new GameNotFoundError(gameLocalId);
-  }
+  const game = await loadGame(userId, gameClientId);
+  if (!game) throw new GameNotFoundError(gameClientId);
+  const gameId = game.id;
 
   const db = await getDb();
   const expectedParity = expectedParityForPauseInsert(desiredPaused);
@@ -106,14 +103,14 @@ export async function setGamePauseState(
         ? sql`EXISTS (
             SELECT 1 FROM games
             WHERE user_id = ${userId}
-              AND local_id = ${gameLocalId}
+              AND id = ${gameId}
               AND first_half_started_at_ms IS NOT NULL
               AND second_half_started_at_ms IS NULL
           )`
         : sql`EXISTS (
             SELECT 1 FROM games
             WHERE user_id = ${userId}
-              AND local_id = ${gameLocalId}
+              AND id = ${gameId}
               AND first_half_started_at_ms IS NOT NULL
               AND halftime_started_at_ms IS NULL
               AND second_half_started_at_ms IS NULL
@@ -121,27 +118,30 @@ export async function setGamePauseState(
       : sql`EXISTS (
           SELECT 1 FROM games
           WHERE user_id = ${userId}
-            AND local_id = ${gameLocalId}
+            AND id = ${gameId}
             AND second_half_started_at_ms IS NOT NULL
         )`;
 
   // Attempt the conditional write first (same pattern as phase transitions).
   const insertedRow = await db.get<Record<string, unknown>>(sql`
-    INSERT INTO pause_toggles (user_id, client_id, game_local_id, half, toggled_at_ms)
-    SELECT ${userId}, ${clientId}, ${gameLocalId}, ${half}, ${nowMs}
+    INSERT INTO pause_toggles (user_id, client_id, game_id, half, toggled_at_ms)
+    SELECT ${userId}, ${clientId}, ${gameId}, ${half}, ${nowMs}
     WHERE (
       SELECT COUNT(*) FROM pause_toggles
       WHERE user_id = ${userId}
-        AND game_local_id = ${gameLocalId}
+        AND game_id = ${gameId}
         AND half = ${half}
     ) % 2 = ${expectedParity}
       AND ${phaseGuard}
-    RETURNING id, user_id, client_id, game_local_id, half, toggled_at_ms
+    RETURNING id, user_id, client_id, game_id, half, toggled_at_ms
   `);
 
   if (insertedRow) {
-    const pauseToggle = dbRowToPauseToggle(asDbPauseToggle(insertedRow));
-    const toggleCount = await countHalfToggles(userId, gameLocalId, half);
+    const pauseToggle = dbRowToPauseToggle(
+      asDbPauseToggle(insertedRow),
+      gameClientId,
+    );
+    const toggleCount = await countHalfToggles(userId, gameId, half);
     return {
       applied: true,
       paused: pausedFromToggleCount(toggleCount),
@@ -150,11 +150,11 @@ export async function setGamePauseState(
     };
   }
 
-  const toggleCount = await countHalfToggles(userId, gameLocalId, half);
+  const toggleCount = await countHalfToggles(userId, gameId, half);
   const paused = pausedFromToggleCount(toggleCount);
 
   if (paused !== desiredPaused) {
-    throw new PauseStateConflictError(gameLocalId, half, desiredPaused);
+    throw new PauseStateConflictError(gameClientId, half, desiredPaused);
   }
 
   return {

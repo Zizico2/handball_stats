@@ -1,7 +1,7 @@
-import type { MatchHalf } from "@/datamodel";
+import type { ClientId, MatchHalf } from "@/datamodel";
 
 export interface MatchClockSnapshot {
-  gameId: number;
+  gameId: ClientId;
   serverNowMs: number;
   activeHalf: MatchHalf | null;
   activeElapsedSeconds: number;
@@ -17,7 +17,7 @@ export interface MatchClockPauseToggle {
 }
 
 export interface BuildMatchClockSnapshotInput {
-  gameId: number;
+  gameId: ClientId;
   nowMs: number;
   firstHalfStartedAtMs: number | null;
   halftimeStartedAtMs: number | null;

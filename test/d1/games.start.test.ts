@@ -1,10 +1,11 @@
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import type { StartGameResult } from "@/datamodel";
+import type { ClientId, StartGameResult } from "@/datamodel";
 import { createDb } from "@/db";
 import * as schema from "@/db/schema";
 import { insertGameAndActiveMarkerAtomic } from "@/server/startGame";
+import { testClientId } from "@/testing/clientId";
 import { getTestDb, resetAppTables } from "./db";
 
 vi.mock("server-only", () => ({}));
@@ -16,28 +17,29 @@ vi.mock("@/server/db", () => ({
 const { gamesRoutes } = await import("@/server/api/routes/collections/games");
 
 const USER_ID = "user-start-game";
-const TEAM_ID = 1;
-const GAME_ID = 10;
+const TEAM_ID = testClientId(1);
+const GAME_ID = testClientId(10);
+const SECOND_GAME_ID = testClientId(11);
+const MISSING_TEAM_ID = testClientId(999);
 
 async function seedTeam() {
   const db = getTestDb();
-  await db.insert(schema.teams).values({
-    userId: USER_ID,
-    localId: TEAM_ID,
-    name: "Home",
-  });
+  const [team] = await db
+    .insert(schema.teams)
+    .values({ userId: USER_ID, clientId: TEAM_ID, name: "Home" })
+    .returning();
   await db.insert(schema.teamPlayers).values({
     userId: USER_ID,
-    localId: 1,
-    teamLocalId: TEAM_ID,
+    clientId: testClientId(2),
+    teamId: team.id,
     name: "Alex",
     number: 7,
   });
 }
 
 function startRequest(body: {
-  id: number;
-  homeTeamId: number;
+  id: ClientId;
+  homeTeamId: ClientId;
   createdAt: string;
 }) {
   return gamesRoutes.request(
@@ -97,7 +99,7 @@ describe("games start API (D1)", () => {
     expect(games[0].halftimeStartedAtMs).toBeNull();
     expect(games[0].secondHalfStartedAtMs).toBeNull();
     expect(active).toHaveLength(1);
-    expect(active[0].gameLocalId).toBe(GAME_ID);
+    expect(active[0].gameId).toBe(games[0].id);
   });
 
   test("POST /start returns 409 when an active game already exists", async () => {
@@ -108,7 +110,7 @@ describe("games start API (D1)", () => {
     });
 
     const res = await startRequest({
-      id: GAME_ID + 1,
+      id: SECOND_GAME_ID,
       homeTeamId: TEAM_ID,
       createdAt: "2026-01-03T00:00:00.000Z",
     });
@@ -121,13 +123,13 @@ describe("games start API (D1)", () => {
       .from(schema.games)
       .where(eq(schema.games.userId, USER_ID));
     expect(games).toHaveLength(1);
-    expect(games[0].localId).toBe(GAME_ID);
+    expect(games[0].clientId).toBe(GAME_ID);
   });
 
   test("POST /start returns 404 when home team is missing", async () => {
     const res = await startRequest({
       id: GAME_ID,
-      homeTeamId: 999,
+      homeTeamId: MISSING_TEAM_ID,
       createdAt: "2026-01-02T00:00:00.000Z",
     });
 
@@ -160,26 +162,28 @@ describe("games start API (D1)", () => {
 
   test("failed active-game write rolls back the game row", async () => {
     const db = getTestDb();
+    const team = await db
+      .select()
+      .from(schema.teams)
+      .where(eq(schema.teams.clientId, TEAM_ID))
+      .get();
+    if (!team) throw new Error("Seeded team was not found");
 
     await expect(
       insertGameAndActiveMarkerAtomic(
         db,
         {
           userId: USER_ID,
-          localId: GAME_ID,
-          homeTeamLocalId: TEAM_ID,
+          clientId: GAME_ID,
+          homeTeamId: team.id,
           createdAt: "2026-01-02T00:00:00.000Z",
           firstHalfStartedAtMs: null,
           halftimeStartedAtMs: null,
           secondHalfStartedAtMs: null,
         },
-        {
-          userId: USER_ID,
-          localId: 1,
-          gameLocalId: GAME_ID,
-          // Valid game FK would succeed; this team FK fails and aborts the batch.
-          homeTeamLocalId: 999,
-        },
+        USER_ID,
+        GAME_ID,
+        999,
       ),
     ).rejects.toThrow();
 
@@ -197,7 +201,7 @@ describe("games start API (D1)", () => {
         createdAt: "2026-01-02T00:00:00.000Z",
       }),
       startRequest({
-        id: GAME_ID + 1,
+        id: SECOND_GAME_ID,
         homeTeamId: TEAM_ID,
         createdAt: "2026-01-03T00:00:00.000Z",
       }),

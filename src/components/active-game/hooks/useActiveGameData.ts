@@ -11,7 +11,6 @@ import {
   teamsCollection,
 } from "@/collections";
 import { getActivePlayers } from "@/components/active-game/utils/activePlayers";
-import { useNextLocalId } from "@/hooks/useNextLocalId";
 import type { MatchStatus } from "@/inGameControlsAtoms";
 
 export function useActiveGameData(matchStatus: MatchStatus | null) {
@@ -34,15 +33,6 @@ export function useActiveGameData(matchStatus: MatchStatus | null) {
   const quickSubPairs = useLiveSuspenseQuery((q) =>
     q.from({ pair: quickSubPairsCollection }),
   );
-
-  const lastEvent = useLiveSuspenseQuery((q) =>
-    q
-      .from({ event: playerEventsCollection })
-      .orderBy(({ event }) => event.id, "desc")
-      .findOne(),
-  );
-
-  const nextEventId = useNextLocalId(lastEvent);
 
   const activeGameData = activeGame.data ?? null;
 
@@ -145,7 +135,6 @@ export function useActiveGameData(matchStatus: MatchStatus | null) {
     activePlayerNumbers,
     currentHalfForStarting,
     firstHalfStartingPlayerNumbers,
-    nextEventId,
     secondHalfStartingPlayerNumbers,
     selectedTeamPlayers,
     startingPlayerNumbers,

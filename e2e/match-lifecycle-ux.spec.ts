@@ -1,11 +1,8 @@
 import type { Page } from "@playwright/test";
+import type { ClientId } from "../src/datamodel";
+import { testClientId } from "../src/testing/clientId";
 import { expect, test } from "./fixtures";
-import {
-  E2E_GAME_ID,
-  E2E_TEAM_ID,
-  resetE2eData,
-  seedE2eTeam,
-} from "./seedE2eData";
+import { E2E_TEAM_ID, resetE2eData, seedE2eTeam } from "./seedE2eData";
 
 const hasAuth = Boolean(process.env.CLERK_SECRET_KEY);
 
@@ -17,7 +14,7 @@ const VIEWPORTS = [
 
 async function startActiveGame(
   request: import("@playwright/test").APIRequestContext,
-  gameId: number,
+  gameId: ClientId,
 ) {
   const start = await request.post("/api/collections/games/start", {
     data: {
@@ -166,7 +163,7 @@ test.describe("home hub and match UX polish", () => {
   test("signed-in home shows resume-match hub with phase and clock", async ({
     page,
   }) => {
-    await startActiveGame(page.request, E2E_GAME_ID + 40);
+    await startActiveGame(page.request, testClientId(140));
 
     await page.goto("/");
 
@@ -206,7 +203,7 @@ test.describe("home hub and match UX polish", () => {
     test(`active game layout at ${viewport.name} keeps gutters and touch targets`, async ({
       page,
     }) => {
-      await startActiveGame(page.request, E2E_GAME_ID + 50 + viewport.width);
+      await startActiveGame(page.request, testClientId(150 + viewport.width));
 
       await page.setViewportSize({
         width: viewport.width,
@@ -222,7 +219,7 @@ test.describe("home hub and match UX polish", () => {
   }
 
   test("end-match confirmation focuses Continue match", async ({ page }) => {
-    await startActiveGame(page.request, E2E_GAME_ID + 90);
+    await startActiveGame(page.request, testClientId(190));
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/active-game");

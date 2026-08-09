@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { createDb } from "@/db";
 import * as schema from "@/db/schema";
+import { testClientId } from "@/testing/clientId";
 import { getTestDb, resetAppTables } from "./db";
 
 vi.mock("server-only", () => ({}));
@@ -17,33 +18,45 @@ const { activeGameRoutes } = await import(
 
 const USER_ID = "user-ending-match";
 const OTHER_USER_ID = "other-user";
+const gameInternalIds = new Map<string, number>();
+
+function gameKey(userId: string, gameId: number) {
+  return `${userId}:${gameId}`;
+}
 
 async function seedMatch(
   userId: string,
   {
-    activeId,
+    isActive,
     gameId,
     teamId,
-  }: { activeId: number; gameId: number; teamId: number },
+  }: { isActive: boolean; gameId: number; teamId: number },
 ) {
   const db = getTestDb();
-  await db.insert(schema.teams).values({
-    userId,
-    localId: teamId,
-    name: `${userId} team ${teamId}`,
-  });
-  await db.insert(schema.games).values({
-    userId,
-    localId: gameId,
-    homeTeamLocalId: teamId,
-    createdAt: "2026-01-02T00:00:00.000Z",
-    firstHalfStartedAtMs: 1_000,
-  });
+  const [team] = await db
+    .insert(schema.teams)
+    .values({
+      userId,
+      clientId: testClientId(teamId),
+      name: `${userId} team ${teamId}`,
+    })
+    .returning();
+  const [game] = await db
+    .insert(schema.games)
+    .values({
+      userId,
+      clientId: testClientId(gameId),
+      homeTeamId: team.id,
+      createdAt: "2026-01-02T00:00:00.000Z",
+      firstHalfStartedAtMs: 1_000,
+    })
+    .returning();
+  gameInternalIds.set(gameKey(userId, gameId), game.id);
   await db.insert(schema.playerEvents).values({
     userId,
-    localId: gameId,
+    clientId: testClientId(gameId),
     player: 7,
-    gameLocalId: gameId,
+    gameId: game.id,
     ellapsedSeconds: 5,
     eventType: "starting-player",
     eventGroup: "starting-lineup",
@@ -51,17 +64,18 @@ async function seedMatch(
   });
   await db.insert(schema.pauseToggles).values({
     userId,
-    clientId: `${userId}-${gameId}-pause`,
-    gameLocalId: gameId,
+    clientId: `pause-${userId}-${gameId}`,
+    gameId: game.id,
     half: "firstHalf",
     toggledAtMs: 2_000,
   });
-  await db.insert(schema.activeGame).values({
-    userId,
-    localId: activeId,
-    gameLocalId: gameId,
-    homeTeamLocalId: teamId,
-  });
+  if (isActive) {
+    await db.insert(schema.activeGame).values({
+      userId,
+      gameId: game.id,
+      homeTeamId: team.id,
+    });
+  }
 }
 
 function deleteRequest(ids: number[]) {
@@ -77,13 +91,16 @@ function deleteRequest(ids: number[]) {
 }
 
 async function pauseTogglesForUserAndGame(userId: string, gameId: number) {
+  const internalGameId = gameInternalIds.get(gameKey(userId, gameId));
+  if (internalGameId === undefined)
+    throw new Error("Game must be seeded first");
   return getTestDb()
     .select()
     .from(schema.pauseToggles)
     .where(
       and(
         eq(schema.pauseToggles.userId, userId),
-        eq(schema.pauseToggles.gameLocalId, gameId),
+        eq(schema.pauseToggles.gameId, internalGameId),
       ),
     );
 }
@@ -91,10 +108,11 @@ async function pauseTogglesForUserAndGame(userId: string, gameId: number) {
 describe("active-game DELETE API (D1)", () => {
   beforeEach(async () => {
     await resetAppTables();
-    await seedMatch(USER_ID, { activeId: 1, gameId: 10, teamId: 100 });
-    await seedMatch(USER_ID, { activeId: 2, gameId: 20, teamId: 200 });
+    gameInternalIds.clear();
+    await seedMatch(USER_ID, { isActive: true, gameId: 10, teamId: 100 });
+    await seedMatch(USER_ID, { isActive: false, gameId: 20, teamId: 200 });
     await seedMatch(OTHER_USER_ID, {
-      activeId: 1,
+      isActive: true,
       gameId: 10,
       teamId: 100,
     });
@@ -109,7 +127,7 @@ describe("active-game DELETE API (D1)", () => {
         .select()
         .from(schema.activeGame)
         .where(eq(schema.activeGame.userId, USER_ID)),
-    ).toHaveLength(1);
+    ).toHaveLength(0);
     expect(await pauseTogglesForUserAndGame(USER_ID, 10)).toHaveLength(0);
   });
 
@@ -128,13 +146,19 @@ describe("active-game DELETE API (D1)", () => {
 
   test("retains the completed game's record and player events", async () => {
     await deleteRequest([1]);
+    const internalGameId = gameInternalIds.get(gameKey(USER_ID, 10));
+    if (internalGameId === undefined)
+      throw new Error("Seeded game was not found");
 
     expect(
       await getTestDb()
         .select()
         .from(schema.games)
         .where(
-          and(eq(schema.games.userId, USER_ID), eq(schema.games.localId, 10)),
+          and(
+            eq(schema.games.userId, USER_ID),
+            eq(schema.games.clientId, testClientId(10)),
+          ),
         ),
     ).toHaveLength(1);
     expect(
@@ -144,7 +168,7 @@ describe("active-game DELETE API (D1)", () => {
         .where(
           and(
             eq(schema.playerEvents.userId, USER_ID),
-            eq(schema.playerEvents.gameLocalId, 10),
+            eq(schema.playerEvents.gameId, internalGameId),
           ),
         ),
     ).toHaveLength(1);

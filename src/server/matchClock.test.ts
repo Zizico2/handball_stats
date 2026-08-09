@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { testClientId } from "@/testing/clientId";
 import { buildMatchClockSnapshot, calculateElapsedMs } from "./matchClockLogic";
 
 const FIRST_HALF_START_MS = 1_000_000;
@@ -26,7 +27,7 @@ describe("calculateElapsedMs", () => {
 describe("buildMatchClockSnapshot", () => {
   test("pre-match: no active half and zero elapsed", () => {
     const snapshot = buildMatchClockSnapshot({
-      gameId: 1,
+      gameId: testClientId(1),
       nowMs: FIRST_HALF_START_MS,
       firstHalfStartedAtMs: null,
       halftimeStartedAtMs: null,
@@ -35,7 +36,7 @@ describe("buildMatchClockSnapshot", () => {
     });
 
     expect(snapshot).toEqual({
-      gameId: 1,
+      gameId: testClientId(1),
       serverNowMs: FIRST_HALF_START_MS,
       activeHalf: null,
       activeElapsedSeconds: 0,
@@ -50,7 +51,7 @@ describe("buildMatchClockSnapshot", () => {
     const nowMs = FIRST_HALF_START_MS + 125_000;
 
     const snapshot = buildMatchClockSnapshot({
-      gameId: 2,
+      gameId: testClientId(2),
       nowMs,
       firstHalfStartedAtMs: FIRST_HALF_START_MS,
       halftimeStartedAtMs: null,
@@ -69,7 +70,7 @@ describe("buildMatchClockSnapshot", () => {
     const nowMs = HALFTIME_MS + 5 * 60 * 1000;
 
     const snapshot = buildMatchClockSnapshot({
-      gameId: 3,
+      gameId: testClientId(3),
       nowMs,
       firstHalfStartedAtMs: FIRST_HALF_START_MS,
       halftimeStartedAtMs: HALFTIME_MS,
@@ -87,7 +88,7 @@ describe("buildMatchClockSnapshot", () => {
     const nowMs = SECOND_HALF_START_MS + 90_000;
 
     const snapshot = buildMatchClockSnapshot({
-      gameId: 4,
+      gameId: testClientId(4),
       nowMs,
       firstHalfStartedAtMs: FIRST_HALF_START_MS,
       halftimeStartedAtMs: HALFTIME_MS,
@@ -105,7 +106,7 @@ describe("buildMatchClockSnapshot", () => {
     const nowMs = 5_000_000;
 
     const snapshot = buildMatchClockSnapshot({
-      gameId: 99,
+      gameId: testClientId(99),
       nowMs,
       firstHalfStartedAtMs: null,
       halftimeStartedAtMs: null,
@@ -125,7 +126,7 @@ describe("buildMatchClockSnapshot", () => {
     const nowMs = HALFTIME_MS + 60_000;
 
     const snapshot = buildMatchClockSnapshot({
-      gameId: 5,
+      gameId: testClientId(5),
       nowMs,
       firstHalfStartedAtMs: FIRST_HALF_START_MS,
       halftimeStartedAtMs: HALFTIME_MS,
@@ -144,7 +145,7 @@ describe("buildMatchClockSnapshot", () => {
     const nowMs = secondHalfStartMs + 90_000;
 
     const snapshot = buildMatchClockSnapshot({
-      gameId: 6,
+      gameId: testClientId(6),
       nowMs,
       firstHalfStartedAtMs: FIRST_HALF_START_MS,
       halftimeStartedAtMs: null,
@@ -163,7 +164,7 @@ describe("buildMatchClockSnapshot", () => {
     const nowMs = FIRST_HALF_START_MS + 12 * 60 * 1000;
 
     const snapshot = buildMatchClockSnapshot({
-      gameId: 7,
+      gameId: testClientId(7),
       nowMs,
       firstHalfStartedAtMs: FIRST_HALF_START_MS,
       halftimeStartedAtMs: null,
@@ -182,7 +183,7 @@ describe("buildMatchClockSnapshot", () => {
   test("second half without first half: throws", () => {
     expect(() =>
       buildMatchClockSnapshot({
-        gameId: 8,
+        gameId: testClientId(8),
         nowMs: 2_045_000,
         firstHalfStartedAtMs: null,
         halftimeStartedAtMs: null,
@@ -197,7 +198,7 @@ describe("buildMatchClockSnapshot", () => {
   test("halftime without first half: throws", () => {
     expect(() =>
       buildMatchClockSnapshot({
-        gameId: 9,
+        gameId: testClientId(9),
         nowMs: 2_045_000,
         firstHalfStartedAtMs: null,
         halftimeStartedAtMs: 2_000_000,

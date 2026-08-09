@@ -18,10 +18,11 @@ import {
   formatUndoEventLabel,
   getLastUndoableEvent,
 } from "@/components/active-game/utils/lastUndoableEvent";
-import type { EventGroup, PlayerEvent } from "@/datamodel";
+import type { ClientId, EventGroup, PlayerEvent } from "@/datamodel";
 import { eventMachine } from "@/event_form_fsm";
 import { usePlayerLabelMap } from "@/hooks/usePlayerLabelMap";
 import type { MatchStatus } from "@/inGameControlsAtoms";
+import { createClientId } from "@/lib/clientId";
 import { countGoals } from "@/lib/display/countGoals";
 import {
   beginMatchSaving,
@@ -48,7 +49,6 @@ function ActiveGame() {
     activePlayerNumbers,
     currentHalfForStarting,
     firstHalfStartingPlayerNumbers,
-    nextEventId,
     secondHalfStartingPlayerNumbers,
     selectedTeamPlayers,
     startingPlayerNumbers,
@@ -133,13 +133,16 @@ function ActiveGame() {
       eventGroup,
       ellapsed_seconds: eventElapsedSeconds,
       game_id: activeGame.data.gameId,
-      id: nextEventId,
+      id: createClientId(),
       half: activeHalf,
     });
   };
 
   const handleSaveStarting7 = useCallback(
-    async (numbers: number[]) => {
+    async (
+      numbers: number[],
+      eventIds: ClientId[] = numbers.map(() => createClientId()),
+    ) => {
       if (!activeGameData || isSavingStarting7) {
         return;
       }
@@ -159,7 +162,7 @@ function ActiveGame() {
         );
         const insertTxs = numbers.map((num, index) =>
           insertPlayerEvent({
-            id: nextEventId + index,
+            id: eventIds[index],
             player: num,
             game_id: activeGameData.gameId,
             ellapsed_seconds: 0,
@@ -183,7 +186,7 @@ function ActiveGame() {
         markMatchFailed(
           "Could not save the starting lineup. Please try again.",
           () => {
-            void handleSaveStarting7(numbers);
+            void handleSaveStarting7(numbers, eventIds);
           },
         );
       } finally {
@@ -195,12 +198,15 @@ function ActiveGame() {
       activeGameEvents,
       currentHalfForStarting,
       isSavingStarting7,
-      nextEventId,
     ],
   );
 
   const handleQuickSub = useCallback(
-    async (playerOut: number, playerIn: number) => {
+    async (
+      playerOut: number,
+      playerIn: number,
+      eventId: ClientId = createClientId(),
+    ) => {
       if (
         !activeHalf ||
         activeGame.data == null ||
@@ -215,7 +221,7 @@ function ActiveGame() {
 
       try {
         const tx = insertPlayerEvent({
-          id: nextEventId,
+          id: eventId,
           player: playerOut,
           game_id: activeGameData.gameId,
           ellapsed_seconds: eventElapsedSeconds,
@@ -232,7 +238,7 @@ function ActiveGame() {
         markMatchFailed(
           "Could not save the substitution. Please try again.",
           () => {
-            void handleQuickSub(playerOut, playerIn);
+            void handleQuickSub(playerOut, playerIn, eventId);
           },
         );
       } finally {
@@ -245,7 +251,6 @@ function ActiveGame() {
       activeHalf,
       eventElapsedSeconds,
       isSavingQuickSub,
-      nextEventId,
     ],
   );
 
@@ -260,13 +265,13 @@ function ActiveGame() {
       eventGroup: "substitution",
       ellapsed_seconds: eventElapsedSeconds,
       game_id: activeGame.data.gameId,
-      id: nextEventId,
+      id: createClientId(),
       half: activeHalf,
     });
   };
 
   const undoEventById = useCallback(
-    async (eventId: number) => {
+    async (eventId: ClientId) => {
       if (isUndoingLastEvent || matchSync.status === "saving") {
         return;
       }
@@ -351,13 +356,11 @@ function ActiveGame() {
         undoEventLabel={undoEventLabel}
       />
       <ActiveGameEventDialogs
-        activeGameGameId={activeGame.data?.gameId ?? null}
         activeHalf={activeHalf}
         activePlayerNumbers={activePlayerNumbers}
         eventElapsedSeconds={eventElapsedSeconds}
         isSavingQuickSub={isSavingQuickSub}
         isSavingStarting7={isSavingStarting7}
-        nextEventId={nextEventId}
         quickSubDialogOpen={quickSubDialogOpen}
         quickSubPairs={teamQuickSubPairs}
         selectedTeamPlayers={selectedTeamPlayers}

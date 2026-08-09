@@ -55,7 +55,17 @@ export const playerEventsCollection = createCollection(
     queryFn: listPlayerEventsQuery,
     onInsert: async ({ transaction }) => {
       const newItems = transaction.mutations.map((m) => m.modified);
-      await createPlayerEventsMutation(newItems);
+      const persistedItems = await createPlayerEventsMutation(newItems);
+      const persistedById = new Map(
+        persistedItems.map((item) => [item.id, item]),
+      );
+      transaction.mutations.forEach((mutation) => {
+        const persisted = persistedById.get(mutation.modified.id);
+        if (!persisted) {
+          throw new Error("Server response omitted an inserted player event");
+        }
+        mutation.modified = persisted;
+      });
     },
     onDelete: async ({ transaction }) => {
       const ids = transaction.mutations.map((m) => m.key);

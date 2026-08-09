@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
+import type { ClientId } from "@/datamodel";
 import {
   buildPlayerLabelMap,
   formatPlayerLabel,
@@ -9,10 +10,10 @@ import {
 interface PlayerLike {
   number: number;
   name: string;
-  teamId?: number;
+  teamId?: ClientId;
 }
 
-export function usePlayerLabelMap(players: PlayerLike[], teamId?: number) {
+export function usePlayerLabelMap(players: PlayerLike[], teamId?: ClientId) {
   const filteredPlayers = useMemo(
     () =>
       teamId === undefined

@@ -5,16 +5,17 @@ import {
   expect,
   test,
 } from "@playwright/test";
+import { testClientId } from "../src/testing/clientId";
 import { refreshE2eSession } from "./e2eAuth";
 
 const hasE2eCredentials = Boolean(
   process.env.CLERK_SECRET_KEY && process.env.E2E_RESET_TOKEN,
 );
 
-const TEAM = { id: 1, name: "Lifecycle Home" } as const;
+const TEAM = { id: testClientId(501), name: "Lifecycle Home" } as const;
 const PLAYERS = [
-  { id: 1, teamId: TEAM.id, name: "Alex", number: 7 },
-  { id: 2, teamId: TEAM.id, name: "Blake", number: 12 },
+  { id: testClientId(511), teamId: TEAM.id, name: "Alex", number: 7 },
+  { id: testClientId(512), teamId: TEAM.id, name: "Blake", number: 12 },
 ] as const;
 
 async function expectOk(response: APIResponse) {
@@ -140,7 +141,7 @@ test.describe("full match lifecycle", () => {
     ).toBeVisible();
     await page.getByRole("button", { name: "End match" }).click();
 
-    await expect(page).toHaveURL(/\/past-games\/\d+$/);
+    await expect(page).toHaveURL(/\/past-games\/[0-9a-f-]{36}$/);
     await expect(page.getByRole("heading", { name: TEAM.name })).toBeVisible({
       timeout: 15_000,
     });
@@ -158,7 +159,7 @@ test.describe("full match lifecycle", () => {
     await expect(pastGame.getByText("5 events", { exact: true })).toBeVisible();
 
     await pastGame.click();
-    await expect(page).toHaveURL(/\/past-games\/\d+$/);
+    await expect(page).toHaveURL(/\/past-games\/[0-9a-f-]{36}$/);
     await expect(page.getByRole("heading", { name: TEAM.name })).toBeVisible();
 
     const downloadPromise = page.waitForEvent("download");

@@ -1,13 +1,15 @@
+import type { ClientId } from "@/datamodel";
+
 interface PlayerLike {
   number: number;
   name: string;
-  teamId?: number;
+  teamId?: ClientId;
 }
 
 export function formatPlayerLabel(
   number: number,
   players?: PlayerLike[],
-  teamId?: number,
+  teamId?: ClientId,
 ): string {
   if (!players) {
     return `#${number}`;

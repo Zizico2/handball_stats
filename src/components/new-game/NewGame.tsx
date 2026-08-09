@@ -19,6 +19,7 @@ import {
 import { AppNextLink } from "@/components/AppNextLink";
 import { useNewGameForm } from "@/components/new-game/hooks/useNewGameForm";
 import { AlertCallout, AlertCalloutButton } from "@/components/ui/AlertCallout";
+import { type ClientId, clientIdSchema } from "@/datamodel";
 import { MIN_ROSTER_SIZE } from "@/lib/roster/minRosterSize";
 
 function NewGame() {
@@ -31,10 +32,10 @@ function NewGame() {
     q.from({ activeGame: activeGameCollection }).findOne(),
   );
 
-  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<ClientId | null>(null);
 
   const rosterCountByTeamId = useMemo(() => {
-    const counts = new Map<number, number>();
+    const counts = new Map<ClientId, number>();
     for (const player of teamPlayers.data) {
       counts.set(player.teamId, (counts.get(player.teamId) ?? 0) + 1);
     }
@@ -106,7 +107,7 @@ function NewGame() {
               </AppNextLink>
             }
           >
-            Active game #{activeGame.data.gameId}
+            Active game #{activeGame.data.gameId.slice(-8)}
             {activeTeamName ? ` (${activeTeamName})` : ""} is currently in
             progress. You must end it before you can start a new game.
           </AlertCallout>
@@ -133,10 +134,11 @@ function NewGame() {
           fullWidth
           isDisabled={!hasTeams || isStarting}
           placeholder="Select a team"
-          value={selectedTeamId?.toString() ?? null}
+          value={selectedTeamId ?? null}
           onChange={(value) => {
             clearStartError();
-            setSelectedTeamId(value ? Number(value) : null);
+            const parsed = clientIdSchema.safeParse(value);
+            setSelectedTeamId(parsed.success ? parsed.data : null);
           }}
         >
           <Label>Home Team</Label>

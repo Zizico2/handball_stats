@@ -1,3 +1,4 @@
+import type { ClientId } from "@/datamodel";
 import { MIN_ROSTER_SIZE } from "@/lib/roster/minRosterSize";
 
 export type HomeHubKind =
@@ -14,7 +15,7 @@ export interface HomeHubState {
   ctaLabel: string;
   ctaHref: string;
   teamName?: string | null;
-  recentGame?: { id: number; homeTeamName: string } | null;
+  recentGame?: { id: ClientId; homeTeamName: string } | null;
 }
 
 interface ResolveHomeHubStateInput {
@@ -23,7 +24,7 @@ interface ResolveHomeHubStateInput {
   readyTeamPlayerCount: number;
   hasActiveGame: boolean;
   activeTeamName: string | null;
-  recentGame: { id: number; homeTeamName: string } | null;
+  recentGame: { id: ClientId; homeTeamName: string } | null;
 }
 
 export function resolveHomeHubState(

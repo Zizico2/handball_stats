@@ -1,3 +1,4 @@
+import { comparePlayerEventOrder } from "@/components/active-game/utils/playerEventOrder";
 import type { MatchHalf, PlayerEvent } from "@/datamodel";
 
 export interface TimelineItem {
@@ -65,8 +66,9 @@ export function buildEventTimeline(events: PlayerEvent[]): TimelineItem[] {
     if (a.type === "startingLineup" && b.type !== "startingLineup") return 1;
     if (a.type !== "startingLineup" && b.type === "startingLineup") return -1;
 
-    const aId = a.event ? a.event.id : 0;
-    const bId = b.event ? b.event.id : 0;
-    return bId - aId;
+    if (a.event && b.event) {
+      return comparePlayerEventOrder(b.event, a.event);
+    }
+    return 0;
   });
 }

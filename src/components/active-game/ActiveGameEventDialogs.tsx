@@ -20,13 +20,11 @@ type EventMachineSnapshot = SnapshotFrom<typeof eventMachine>;
 type EventMachineSend = ActorRefFrom<typeof eventMachine>["send"];
 
 interface ActiveGameEventDialogsProps {
-  activeGameGameId: number | null;
   activeHalf: MatchHalf | null;
   activePlayerNumbers: Set<number>;
   eventElapsedSeconds: number;
   isSavingQuickSub: boolean;
   isSavingStarting7: boolean;
-  nextEventId: number;
   onCloseQuickSub: () => void;
   onCloseStarting7: () => void;
   onPickManually: () => void;

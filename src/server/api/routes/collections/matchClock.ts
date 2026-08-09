@@ -1,11 +1,12 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
+import { clientIdSchema } from "@/datamodel";
 import type { ApiEnv } from "@/server/api/types";
 import { getMatchClockSnapshot } from "@/server/matchClock";
 
 const paramsSchema = z.object({
-  gameId: z.coerce.number().int().positive(),
+  gameId: clientIdSchema,
 });
 
 export const matchClockRoutes = new Hono<ApiEnv>().get(

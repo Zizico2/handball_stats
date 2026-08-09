@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { PlayerEvent } from "@/datamodel";
 import { shotPosition } from "@/datamodel";
 import { PLAYER_EVENTS_CSV_COLUMN_KEYS } from "@/db/playerEventCsv";
+import { testClientId } from "@/testing/clientId";
 import type { DbPlayerEvent } from "./index";
 import { dbRowToPlayerEvent, playerEventToDbRow } from "./index";
 
@@ -11,9 +12,10 @@ function shotEvent(
   position: (typeof shotPosition.options)[number],
 ): PlayerEvent {
   return {
-    id: 1,
+    id: testClientId(1),
+    sequence: null,
     player: 7,
-    game_id: 10,
+    game_id: testClientId(10),
     ellapsed_seconds: 120,
     half: "firstHalf",
     eventType: "shot",
@@ -31,9 +33,9 @@ function dbShotRow(overrides: Partial<DbPlayerEvent> = {}): DbPlayerEvent {
   return {
     id: 1,
     userId: USER_ID,
-    localId: 1,
+    clientId: testClientId(1),
     player: 7,
-    gameLocalId: 10,
+    gameId: 10,
     ellapsedSeconds: 120,
     eventType: "shot",
     eventGroup: "attack",
@@ -52,14 +54,13 @@ describe("playerEvent shot position round trip", () => {
     shotPosition.options,
   )("preserves position %s through toDbRow and fromDbRow", (position) => {
     const event = shotEvent(position);
-    const row = playerEventToDbRow(event, USER_ID);
+    const row = playerEventToDbRow(event, USER_ID, 10);
     expect(row.shotPosition).toBe(position);
 
-    const parsed = dbRowToPlayerEvent({
-      ...dbShotRow(),
-      ...row,
-      id: 1,
-    } as DbPlayerEvent);
+    const parsed = dbRowToPlayerEvent(
+      { ...dbShotRow(), ...row, id: 1 } as DbPlayerEvent,
+      testClientId(10),
+    );
 
     expect(parsed.eventType).toBe("shot");
     if (parsed.eventType === "shot") {
@@ -69,7 +70,7 @@ describe("playerEvent shot position round trip", () => {
 
   test("shot rows without shotPosition fail to parse", () => {
     expect(() =>
-      dbRowToPlayerEvent(dbShotRow({ shotPosition: null })),
+      dbRowToPlayerEvent(dbShotRow({ shotPosition: null }), testClientId(10)),
     ).toThrow();
   });
 

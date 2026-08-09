@@ -1,13 +1,25 @@
 import { hc, parseResponse } from "hono/client";
-import type {
-  ActiveGame,
-  Game,
-  PauseToggle,
-  PlayerEvent,
-  QuickSubPair,
-  StartGameBody,
-  Team,
-  TeamPlayer,
+import {
+  type ActiveGame,
+  activeGameSchema,
+  type ClientId,
+  type Game,
+  gamePauseStateResultSchema,
+  gamePhaseTransitionResultSchema,
+  gameSchema,
+  matchClockSnapshotSchema,
+  type PauseToggle,
+  type PlayerEvent,
+  pauseToggleSchema,
+  playerEventSchema,
+  type QuickSubPair,
+  quickSubPairSchema,
+  type StartGameBody,
+  startGameResultSchema,
+  type Team,
+  type TeamPlayer,
+  teamPlayerSchema,
+  teamSchema,
 } from "@/datamodel";
 import type { ApiApp } from "@/server/api/app";
 import {
@@ -18,42 +30,68 @@ import {
 const apiClient = hc<ApiApp>("/");
 
 export async function listPlayerEventsQuery() {
-  return parseResponse(apiClient.api.collections["player-events"].$get());
+  return playerEventSchema
+    .array()
+    .parse(
+      await parseResponse(apiClient.api.collections["player-events"].$get()),
+    );
 }
 
 export async function listTeamsQuery() {
-  return parseResponse(apiClient.api.collections.teams.$get());
+  return teamSchema
+    .array()
+    .parse(await parseResponse(apiClient.api.collections.teams.$get()));
 }
 
 export async function listTeamPlayersQuery() {
-  return parseResponse(apiClient.api.collections["team-players"].$get());
+  return teamPlayerSchema
+    .array()
+    .parse(
+      await parseResponse(apiClient.api.collections["team-players"].$get()),
+    );
 }
 
 export async function listGamesQuery() {
-  return parseResponse(apiClient.api.collections.games.$get());
+  return gameSchema
+    .array()
+    .parse(await parseResponse(apiClient.api.collections.games.$get()));
 }
 
 export async function listActiveGameQuery() {
-  return parseResponse(apiClient.api.collections["active-game"].$get());
+  return activeGameSchema
+    .array()
+    .parse(
+      await parseResponse(apiClient.api.collections["active-game"].$get()),
+    );
 }
 
 export async function createPlayerEventsMutation(items: PlayerEvent[]) {
-  return parseResponse(
-    apiClient.api.collections["player-events"].$post({ json: items }),
-  );
+  return playerEventSchema
+    .array()
+    .parse(
+      await parseResponse(
+        apiClient.api.collections["player-events"].$post({ json: items }),
+      ),
+    );
 }
 
-export async function deletePlayerEventsMutation(ids: number[]) {
+export async function deletePlayerEventsMutation(ids: ClientId[]) {
   await parseResponse(
     apiClient.api.collections["player-events"].$delete({ json: ids }),
   );
 }
 
 export async function createTeamsMutation(items: Team[]) {
-  return parseResponse(apiClient.api.collections.teams.$post({ json: items }));
+  return teamSchema
+    .array()
+    .parse(
+      await parseResponse(
+        apiClient.api.collections.teams.$post({ json: items }),
+      ),
+    );
 }
 
-export async function deleteTeamsMutation(ids: number[]) {
+export async function deleteTeamsMutation(ids: ClientId[]) {
   try {
     await parseResponse(apiClient.api.collections.teams.$delete({ json: ids }));
   } catch (error) {
@@ -65,104 +103,144 @@ export async function deleteTeamsMutation(ids: number[]) {
 }
 
 export async function createTeamPlayersMutation(items: TeamPlayer[]) {
-  return parseResponse(
-    apiClient.api.collections["team-players"].$post({ json: items }),
-  );
+  return teamPlayerSchema
+    .array()
+    .parse(
+      await parseResponse(
+        apiClient.api.collections["team-players"].$post({ json: items }),
+      ),
+    );
 }
 
-export async function deleteTeamPlayersMutation(ids: number[]) {
+export async function deleteTeamPlayersMutation(ids: ClientId[]) {
   await parseResponse(
     apiClient.api.collections["team-players"].$delete({ json: ids }),
   );
 }
 
 export async function listQuickSubPairsQuery() {
-  return parseResponse(apiClient.api.collections["quick-sub-pairs"].$get());
+  return quickSubPairSchema
+    .array()
+    .parse(
+      await parseResponse(apiClient.api.collections["quick-sub-pairs"].$get()),
+    );
 }
 
 export async function createQuickSubPairsMutation(items: QuickSubPair[]) {
-  return parseResponse(
-    apiClient.api.collections["quick-sub-pairs"].$post({ json: items }),
-  );
+  return quickSubPairSchema
+    .array()
+    .parse(
+      await parseResponse(
+        apiClient.api.collections["quick-sub-pairs"].$post({ json: items }),
+      ),
+    );
 }
 
-export async function deleteQuickSubPairsMutation(ids: number[]) {
+export async function deleteQuickSubPairsMutation(ids: ClientId[]) {
   await parseResponse(
     apiClient.api.collections["quick-sub-pairs"].$delete({ json: ids }),
   );
 }
 
 export async function createGamesMutation(items: Game[]) {
-  return parseResponse(apiClient.api.collections.games.$post({ json: items }));
+  return gameSchema
+    .array()
+    .parse(
+      await parseResponse(
+        apiClient.api.collections.games.$post({ json: items }),
+      ),
+    );
 }
 
 export async function startGameMutation(body: StartGameBody) {
-  return parseResponse(
-    apiClient.api.collections.games.start.$post({ json: body }),
+  return startGameResultSchema.parse(
+    await parseResponse(
+      apiClient.api.collections.games.start.$post({ json: body }),
+    ),
   );
 }
 
 export async function upsertGamesMutation(items: Game[]) {
-  return parseResponse(apiClient.api.collections.games.$put({ json: items }));
+  return gameSchema
+    .array()
+    .parse(
+      await parseResponse(
+        apiClient.api.collections.games.$put({ json: items }),
+      ),
+    );
 }
 
 export async function transitionGamePhaseMutation(
-  gameId: number,
+  gameId: ClientId,
   to: "firstHalf" | "halftime" | "secondHalf",
 ) {
-  return parseResponse(
-    apiClient.api.collections.games[":gameId"].transitions.$post({
-      param: { gameId: String(gameId) },
-      json: { to },
-    }),
+  return gamePhaseTransitionResultSchema.parse(
+    await parseResponse(
+      apiClient.api.collections.games[":gameId"].transitions.$post({
+        param: { gameId: String(gameId) },
+        json: { to },
+      }),
+    ),
   );
 }
 
 export async function setGamePauseStateMutation(
-  gameId: number,
+  gameId: ClientId,
   body: {
     half: "firstHalf" | "secondHalf";
     paused: boolean;
-    clientId?: string;
+    clientId?: ClientId;
   },
 ) {
-  return parseResponse(
-    apiClient.api.collections.games[":gameId"]["pause-state"].$post({
-      param: { gameId: String(gameId) },
-      json: body,
-    }),
+  return gamePauseStateResultSchema.parse(
+    await parseResponse(
+      apiClient.api.collections.games[":gameId"]["pause-state"].$post({
+        param: { gameId: String(gameId) },
+        json: body,
+      }),
+    ),
   );
 }
 
 export async function upsertActiveGameMutation(items: ActiveGame[]) {
-  return parseResponse(
-    apiClient.api.collections["active-game"].$put({ json: items }),
-  );
+  return activeGameSchema
+    .array()
+    .parse(
+      await parseResponse(
+        apiClient.api.collections["active-game"].$put({ json: items }),
+      ),
+    );
 }
 
-export async function deleteActiveGameMutation(ids: number[]) {
+export async function deleteActiveGameMutation(ids: 1[]) {
   await parseResponse(
     apiClient.api.collections["active-game"].$delete({ json: ids }),
   );
 }
 
 export async function listPauseTogglesQuery() {
-  return parseResponse(apiClient.api.collections["pause-toggles"].$get());
+  return pauseToggleSchema
+    .array()
+    .parse(
+      await parseResponse(apiClient.api.collections["pause-toggles"].$get()),
+    );
 }
 
 export async function upsertPauseToggleMutation(item: PauseToggle) {
-  return parseResponse(
-    apiClient.api.collections["pause-toggles"][":pauseToggleId"].$put({
-      param: { pauseToggleId: item.id },
-      json: {
-        gameId: item.gameId,
-        half: item.half,
-      },
-    }),
+  return pauseToggleSchema.parse(
+    await parseResponse(
+      apiClient.api.collections["pause-toggles"][":pauseToggleId"].$put({
+        param: { pauseToggleId: item.id },
+        json: {
+          gameId: item.gameId,
+          half: item.half,
+        },
+      }),
+    ),
   );
 }
 
-export async function deletePauseToggleMutation(id: string) {
+export async function deletePauseToggleMutation(id: ClientId) {
   await parseResponse(
     apiClient.api.collections["pause-toggles"][":pauseToggleId"].$delete({
       param: { pauseToggleId: id },
@@ -170,10 +248,12 @@ export async function deletePauseToggleMutation(id: string) {
   );
 }
 
-export async function getMatchClockSnapshotQuery(gameId: number) {
-  return parseResponse(
-    apiClient.api.collections["match-clock"][":gameId"].$get({
-      param: { gameId: String(gameId) },
-    }),
+export async function getMatchClockSnapshotQuery(gameId: ClientId) {
+  return matchClockSnapshotSchema.parse(
+    await parseResponse(
+      apiClient.api.collections["match-clock"][":gameId"].$get({
+        param: { gameId: String(gameId) },
+      }),
+    ),
   );
 }

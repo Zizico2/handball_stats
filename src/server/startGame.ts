@@ -1,9 +1,8 @@
 import { and, eq, sql } from "drizzle-orm";
-import type { ActiveGame, Game } from "@/datamodel";
+import type { ActiveGame, ClientId, Game } from "@/datamodel";
 import {
   type AppDb,
   type DbActiveGame,
-  type DbActiveGameInsert,
   type DbGame,
   type DbGameInsert,
   dbRowToActiveGame,
@@ -20,7 +19,7 @@ export class StartGameConflictError extends Error {
 }
 
 export class StartGameTeamNotFoundError extends Error {
-  constructor(teamId: number) {
+  constructor(teamId: ClientId) {
     super(`Team ${teamId} not found`);
     this.name = "StartGameTeamNotFoundError";
   }
@@ -39,16 +38,20 @@ export class StartGameRosterTooSmallError extends Error {
 }
 
 export type StartGameInput = {
-  id: number;
-  homeTeamId: number;
+  id: ClientId;
+  homeTeamId: ClientId;
   createdAt: string;
 };
 
-function gameInsertRow(input: StartGameInput, userId: string): DbGameInsert {
+function gameInsertRow(
+  input: StartGameInput,
+  userId: string,
+  homeTeamId: number,
+): DbGameInsert {
   return {
     userId,
-    localId: input.id,
-    homeTeamLocalId: input.homeTeamId,
+    clientId: input.id,
+    homeTeamId,
     createdAt: input.createdAt,
     firstHalfStartedAtMs: null,
     halftimeStartedAtMs: null,
@@ -56,43 +59,31 @@ function gameInsertRow(input: StartGameInput, userId: string): DbGameInsert {
   };
 }
 
-function activeGameInsertRow(
-  input: StartGameInput,
-  userId: string,
-): DbActiveGameInsert {
-  return {
-    userId,
-    localId: 1,
-    gameLocalId: input.id,
-    homeTeamLocalId: input.homeTeamId,
-  };
-}
-
-/**
- * Inserts the game row and active-game marker atomically via D1 `batch`
- * (all-or-nothing).
- */
+/** Inserts the game and active marker atomically while resolving the new row ID. */
 export async function insertGameAndActiveMarkerAtomic(
   db: AppDb,
   gameRow: DbGameInsert,
-  activeRow: DbActiveGameInsert,
+  userId: string,
+  gameClientId: ClientId,
+  homeTeamId: number,
 ): Promise<{ game: DbGame; activeGame: DbActiveGame }> {
   const [gamesRows, activeRows] = await db.batch([
     db.insert(schema.games).values(gameRow).returning(),
-    db.insert(schema.activeGame).values(activeRow).returning(),
+    db
+      .insert(schema.activeGame)
+      .values({
+        userId,
+        gameId: sql`(SELECT ${schema.games.id} FROM ${schema.games} WHERE ${schema.games.userId} = ${userId} AND ${schema.games.clientId} = ${gameClientId})`,
+        homeTeamId,
+      })
+      .returning(),
   ]);
 
-  return {
-    game: gamesRows[0],
-    activeGame: activeRows[0],
-  };
+  return { game: gamesRows[0], activeGame: activeRows[0] };
 }
 
 function isUniqueConstraintError(error: unknown): boolean {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-
+  if (!error || typeof error !== "object") return false;
   const code =
     "code" in error && typeof error.code === "string" ? error.code : "";
   if (
@@ -102,12 +93,11 @@ function isUniqueConstraintError(error: unknown): boolean {
   ) {
     return true;
   }
-
   const message =
     "message" in error && typeof error.message === "string"
       ? error.message
       : String(error);
-  return /unique constraint failed|UNIQUE constraint failed/i.test(message);
+  return /unique constraint failed/i.test(message);
 }
 
 async function loadActiveGame(db: AppDb, userId: string) {
@@ -123,11 +113,7 @@ export async function startGame(
   userId: string,
   input: StartGameInput,
 ): Promise<{ game: Game; activeGame: ActiveGame }> {
-  const existingActive = await loadActiveGame(db, userId);
-
-  if (existingActive) {
-    throw new StartGameConflictError();
-  }
+  if (await loadActiveGame(db, userId)) throw new StartGameConflictError();
 
   const team = await db
     .select()
@@ -135,14 +121,11 @@ export async function startGame(
     .where(
       and(
         eq(schema.teams.userId, userId),
-        eq(schema.teams.localId, input.homeTeamId),
+        eq(schema.teams.clientId, input.homeTeamId),
       ),
     )
     .get();
-
-  if (!team) {
-    throw new StartGameTeamNotFoundError(input.homeTeamId);
-  }
+  if (!team) throw new StartGameTeamNotFoundError(input.homeTeamId);
 
   const rosterCountRow = await db
     .select({ count: sql<number>`count(*)` })
@@ -150,11 +133,10 @@ export async function startGame(
     .where(
       and(
         eq(schema.teamPlayers.userId, userId),
-        eq(schema.teamPlayers.teamLocalId, input.homeTeamId),
+        eq(schema.teamPlayers.teamId, team.id),
       ),
     )
     .get();
-
   const playerCount = Number(rosterCountRow?.count ?? 0);
   if (playerCount < MIN_ROSTER_SIZE) {
     throw new StartGameRosterTooSmallError(playerCount);
@@ -163,17 +145,16 @@ export async function startGame(
   try {
     const { game, activeGame } = await insertGameAndActiveMarkerAtomic(
       db,
-      gameInsertRow(input, userId),
-      activeGameInsertRow(input, userId),
+      gameInsertRow(input, userId, team.id),
+      userId,
+      input.id,
+      team.id,
     );
-
     return {
-      game: dbRowToGame(game),
-      activeGame: dbRowToActiveGame(activeGame),
+      game: dbRowToGame(game, input.homeTeamId),
+      activeGame: dbRowToActiveGame(activeGame, input.id, input.homeTeamId),
     };
   } catch (error) {
-    // Concurrent starts can both pass the pre-check; the losing insert hits
-    // the active_game unique index. Map that to 409 instead of a raw 500.
     if (isUniqueConstraintError(error) && (await loadActiveGame(db, userId))) {
       throw new StartGameConflictError();
     }

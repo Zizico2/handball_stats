@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import type { ActiveGame, Game, PauseToggle } from "@/datamodel";
+import { testClientId } from "@/testing/clientId";
 
 let pauseToggles: PauseToggle[] = [];
 const useNowCalls: Array<{
@@ -48,8 +49,8 @@ const { reconcileDisplayedMatchClock, useServerMatchClock } = await import(
 
 const activeGame: ActiveGame = {
   id: 1,
-  gameId: 42,
-  homeTeamId: 7,
+  gameId: testClientId(42),
+  homeTeamId: testClientId(7),
 };
 
 function ClockHarness({ game }: { game: Game }) {
@@ -76,8 +77,8 @@ function gameWithClock(
   >,
 ): Game {
   return {
-    id: 42,
-    homeTeamId: 7,
+    id: testClientId(42),
+    homeTeamId: testClientId(7),
     createdAt: "2026-07-21T00:00:00.000Z",
     ...timestamps,
   };
@@ -169,7 +170,7 @@ describe("useServerMatchClock timer activation", () => {
       }),
       [
         {
-          id: "11111111-1111-4111-8111-111111111111",
+          id: testClientId(111),
           gameId: activeGame.gameId,
           half: "firstHalf",
           toggledAtMs: 5_000,

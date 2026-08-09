@@ -7,8 +7,8 @@ import {
   teamPlayersCollection,
   teamsCollection,
 } from "@/collections";
-import type { QuickSubPair, Team, TeamPlayer } from "@/datamodel";
-import { useNextLocalId } from "@/hooks/useNextLocalId";
+import type { ClientId, QuickSubPair, Team, TeamPlayer } from "@/datamodel";
+import { createClientId } from "@/lib/clientId";
 import { quickSubPairReferencesPlayer } from "@/lib/quickSubPairs";
 import { TeamHasGamesError } from "@/server/api/teamDeletionErrors";
 
@@ -19,7 +19,7 @@ export interface TeamDeletionState {
   team: Team;
 }
 
-function evictDeletedTeamSetup(teamId: number) {
+function evictDeletedTeamSetup(teamId: ClientId) {
   // The API deletes these rows atomically; writeDelete also updates cached queries.
   const playerIds = teamPlayersCollection.toArray
     .filter((player) => player.teamId === teamId && player.$synced)
@@ -47,34 +47,9 @@ export function useTeamManagement() {
     q.from({ pair: quickSubPairsCollection }),
   );
 
-  const lastTeam = useLiveSuspenseQuery((q) =>
-    q
-      .from({ team: teamsCollection })
-      .orderBy(({ team }) => team.id, "desc")
-      .findOne(),
-  );
-
-  const lastPlayer = useLiveSuspenseQuery((q) =>
-    q
-      .from({ player: teamPlayersCollection })
-      .orderBy(({ player }) => player.id, "desc")
-      .findOne(),
-  );
-
-  const lastQuickSubPair = useLiveSuspenseQuery((q) =>
-    q
-      .from({ pair: quickSubPairsCollection })
-      .orderBy(({ pair }) => pair.id, "desc")
-      .findOne(),
-  );
-
-  const nextTeamId = useNextLocalId(lastTeam);
-  const nextPlayerId = useNextLocalId(lastPlayer);
-  const nextQuickSubPairId = useNextLocalId(lastQuickSubPair);
-
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
-  const [addPlayerTeamId, setAddPlayerTeamId] = useState<number | null>(null);
-  const [addQuickSubTeamId, setAddQuickSubTeamId] = useState<number | null>(
+  const [addPlayerTeamId, setAddPlayerTeamId] = useState<ClientId | null>(null);
+  const [addQuickSubTeamId, setAddQuickSubTeamId] = useState<ClientId | null>(
     null,
   );
   const [teamDeletion, setTeamDeletion] = useState<TeamDeletionState | null>(
@@ -104,7 +79,7 @@ export function useTeamManagement() {
       return;
     }
 
-    teamsCollection.insert({ id: nextTeamId, name: name.trim() });
+    teamsCollection.insert({ id: createClientId(), name: name.trim() });
     setCreateTeamOpen(false);
   };
 
@@ -116,7 +91,7 @@ export function useTeamManagement() {
     }
 
     teamPlayersCollection.insert({
-      id: nextPlayerId,
+      id: createClientId(),
       teamId: addPlayerTeamId,
       name: name.trim(),
       number,
@@ -135,7 +110,7 @@ export function useTeamManagement() {
   };
 
   const updateTeamDeletionStatus = (
-    teamId: number,
+    teamId: ClientId,
     status: TeamDeletionStatus,
   ) => {
     setTeamDeletion((current) =>
@@ -193,7 +168,7 @@ export function useTeamManagement() {
   const handleAddQuickSubPair = (numberA: number, numberB: number) => {
     if (addQuickSubTeamId === null) return;
     quickSubPairsCollection.insert({
-      id: nextQuickSubPairId,
+      id: createClientId(),
       teamId: addQuickSubTeamId,
       playerNumberA: numberA,
       playerNumberB: numberB,
