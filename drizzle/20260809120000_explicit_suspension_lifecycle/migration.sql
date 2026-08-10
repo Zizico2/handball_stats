@@ -18,6 +18,8 @@ CREATE TABLE `player_events` (
 	`suspension_served_by` integer,
 	`suspension_ended_suspension_id` text,
 	CONSTRAINT `fk_player_events_user_id_game_id_games_user_id_id_fk` FOREIGN KEY (`user_id`,`game_id`) REFERENCES `games`(`user_id`,`id`),
+	-- Unsupported in D1; enforced in code.
+	-- CONSTRAINT `fk_player_events_user_id_suspension_ended_suspension_id_player_events_user_id_client_id_fk` FOREIGN KEY (`user_id`,`suspension_ended_suspension_id`) REFERENCES `player_events`(`user_id`,`client_id`),
 	CONSTRAINT `player_events_half_check` CHECK(`half` IN ('firstHalf', 'secondHalf')),
 	CONSTRAINT `shot_direction_required_for_shot` CHECK(`event_type` != 'shot' OR `shot_direction` IS NOT NULL),
 	CONSTRAINT `shot_position_required_for_shot` CHECK(`event_type` != 'shot' OR `shot_position` IS NOT NULL),
@@ -38,7 +40,6 @@ SELECT
 	NULL
 FROM `legacy_player_events`;--> statement-breakpoint
 DROP TABLE `legacy_player_events`;--> statement-breakpoint
--- Pseudo foreign key: suspension_ended_suspension_id is validated server-side and cleaned up when its suspension is deleted.
 CREATE UNIQUE INDEX `player_events_user_id_client_id_uq` ON `player_events` (`user_id`,`client_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `player_events_user_id_ended_suspension_uq` ON `player_events` (`user_id`,`suspension_ended_suspension_id`);--> statement-breakpoint
 PRAGMA foreign_keys=ON;
