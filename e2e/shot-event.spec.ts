@@ -112,7 +112,7 @@ test.describe("shot event creation", () => {
       .click();
     await page.getByRole("button", { name: "#7 Alex", exact: true }).click();
     await expect(
-      page.getByText("#7 — Offensive Foul", { exact: true }),
+      page.getByText("#7 Alex — Offensive Foul", { exact: true }),
     ).toBeVisible();
   });
 });
