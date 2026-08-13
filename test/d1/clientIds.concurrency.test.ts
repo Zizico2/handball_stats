@@ -373,4 +373,57 @@ describe("client UUID concurrency (D1)", () => {
       }),
     ]);
   });
+
+  test("concurrent duplicate suspension ends return 409 instead of 500", async () => {
+    const db = getTestDb();
+    const teamClientId = testClientId(700);
+    const gameClientId = testClientId(701);
+    const suspensionId = testClientId(702);
+    const [team] = await db
+      .insert(schema.teams)
+      .values({ userId: USER_ID, clientId: teamClientId, name: "Home" })
+      .returning();
+    await db.insert(schema.games).values({
+      userId: USER_ID,
+      clientId: gameClientId,
+      homeTeamId: team.id,
+      createdAt: "2026-08-01T00:00:00.000Z",
+      firstHalfStartedAtMs: Date.now() - 1_000,
+    });
+
+    const suspensionResponse = await post(playerEventsRoutes, [
+      {
+        id: suspensionId,
+        sequence: null,
+        player: 7,
+        game_id: gameClientId,
+        ellapsed_seconds: 0,
+        half: "firstHalf",
+        eventType: "twoMinuteSuspension",
+        eventGroup: "sanction",
+        event: { servedBy: 7 },
+      },
+    ]);
+    expect(suspensionResponse.status).toBe(200);
+
+    const endBody = (id: ClientId) => [
+      {
+        id,
+        sequence: null,
+        player: 7,
+        game_id: gameClientId,
+        ellapsed_seconds: 0,
+        half: "firstHalf",
+        eventType: "twoMinuteSuspensionEnded" as const,
+        eventGroup: "sanction" as const,
+        event: { suspensionId },
+      },
+    ];
+    const responses = await Promise.all([
+      post(playerEventsRoutes, endBody(testClientId(703))),
+      post(playerEventsRoutes, endBody(testClientId(704))),
+    ]);
+    const statuses = responses.map((response) => response.status).toSorted();
+    expect(statuses).toEqual([200, 409]);
+  });
 });

@@ -313,7 +313,7 @@ function ActiveGame() {
       );
       if (suspensions.length > 0) {
         setPendingExternalSuspensionAction({
-          allowEnd: true,
+          allowEnd: activeHalf !== null,
           label: getPlayerLabel(playerIn),
           onCancel: () => setQuickSubDialogOpen(false),
           onContinue: () => {
@@ -325,7 +325,7 @@ function ActiveGame() {
       }
       void handleQuickSub(playerOut, playerIn);
     },
-    [activeSuspensions, getPlayerLabel, handleQuickSub],
+    [activeHalf, activeSuspensions, getPlayerLabel, handleQuickSub],
   );
 
   const handlePickManually = () => {
@@ -354,7 +354,7 @@ function ActiveGame() {
       if (suspensions.length > 0) {
         setPendingExternalSuspensionAction({
           allowEnd: activeHalf !== null,
-          label: "the selected starting players",
+          label: "One of the selected starting players",
           onCancel: () => setStarting7DialogOpen(false),
           onContinue: () => {
             void handleSaveStarting7(numbers);
@@ -518,6 +518,9 @@ function ActiveGame() {
           onCancel={() => {
             const action = pendingExternalSuspensionAction.onCancel;
             setPendingExternalSuspensionAction(null);
+            // Leave the parent picker open so the user can choose a different
+            // player. Close it only when sync is blocked, because Continue/End
+            // are disabled and cancel is the only way out of that dialog.
             if (
               matchSync.status === "saving" ||
               matchSync.status === "failed"

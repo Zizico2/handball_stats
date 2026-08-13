@@ -3,7 +3,11 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
 import type { ClientId, MatchHalf } from "@/datamodel";
-import { dbRowToPlayerEvent, playerEventToDbRow } from "@/db";
+import {
+  type DbPlayerEvent,
+  dbRowToPlayerEvent,
+  playerEventToDbRow,
+} from "@/db";
 import * as schema from "@/db/schema";
 import { parseClientId } from "@/lib/clientId";
 import type { ApiEnv } from "@/server/api/types";
@@ -11,6 +15,32 @@ import { getDb } from "@/server/db";
 import { getGamesByClientId } from "@/server/dbClientIds";
 import { getMatchClockSnapshot } from "@/server/matchClock";
 import { idsSchema, playerEventsArraySchema } from "./shared";
+
+function sqliteErrorText(error: unknown): string {
+  if (error == null) return "";
+  if (typeof error === "string") return error;
+  if (typeof error !== "object") return String(error);
+  const code =
+    "code" in error && typeof error.code === "string" ? error.code : "";
+  const message =
+    "message" in error && typeof error.message === "string"
+      ? error.message
+      : "";
+  const cause = "cause" in error ? sqliteErrorText(error.cause) : "";
+  return `${code} ${message} ${cause}`;
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return /SQLITE_CONSTRAINT_UNIQUE|CONSTRAINT_UNIQUE|unique constraint failed/i.test(
+    sqliteErrorText(error),
+  );
+}
+
+function isEndedSuspensionUniqueViolation(error: unknown): boolean {
+  return /ended_suspension|suspension_ended_suspension_id/i.test(
+    sqliteErrorText(error),
+  );
+}
 
 interface GameStartingPhase {
   firstHalfStartedAtMs: number | null;
@@ -217,10 +247,41 @@ export const playerEventsRoutes = new Hono<ApiEnv>()
       );
     });
 
-    const inserted = await db
-      .insert(schema.playerEvents)
-      .values(rows)
-      .returning();
+    let inserted: DbPlayerEvent[];
+    try {
+      inserted = await db.insert(schema.playerEvents).values(rows).returning();
+    } catch (error) {
+      if (endItems.length > 0 && isUniqueConstraintError(error)) {
+        const racedEndRows = await db
+          .select({
+            suspensionId: schema.playerEvents.suspensionEndedSuspensionId,
+          })
+          .from(schema.playerEvents)
+          .where(
+            and(
+              eq(schema.playerEvents.userId, userId),
+              inArray(
+                schema.playerEvents.suspensionEndedSuspensionId,
+                suspensionIds,
+              ),
+            ),
+          );
+        const racedEnds = new Set(
+          racedEndRows.flatMap((row) =>
+            row.suspensionId === null ? [] : [row.suspensionId],
+          ),
+        );
+        if (
+          isEndedSuspensionUniqueViolation(error) ||
+          endItems.some((item) => racedEnds.has(item.event.suspensionId))
+        ) {
+          throw new HTTPException(409, {
+            message: "That suspension has already been ended",
+          });
+        }
+      }
+      throw error;
+    }
     const itemsByClientId = new Map(items.map((item) => [item.id, item]));
     return c.json(
       inserted.map((row) => {
@@ -247,21 +308,7 @@ export const playerEventsRoutes = new Hono<ApiEnv>()
         ),
       );
     const suspensionIds = suspensionRows.map((row) => row.clientId);
-    if (suspensionIds.length > 0) {
-      await db
-        .delete(schema.playerEvents)
-        .where(
-          and(
-            eq(schema.playerEvents.userId, userId),
-            inArray(
-              schema.playerEvents.suspensionEndedSuspensionId,
-              suspensionIds,
-            ),
-          ),
-        );
-    }
-
-    await db
+    const deleteRequestedEvents = db
       .delete(schema.playerEvents)
       .where(
         and(
@@ -269,5 +316,23 @@ export const playerEventsRoutes = new Hono<ApiEnv>()
           inArray(schema.playerEvents.clientId, ids),
         ),
       );
+    if (suspensionIds.length > 0) {
+      await db.batch([
+        db
+          .delete(schema.playerEvents)
+          .where(
+            and(
+              eq(schema.playerEvents.userId, userId),
+              inArray(
+                schema.playerEvents.suspensionEndedSuspensionId,
+                suspensionIds,
+              ),
+            ),
+          ),
+        deleteRequestedEvents,
+      ]);
+    } else {
+      await deleteRequestedEvents;
+    }
     return c.body(null, 204);
   });

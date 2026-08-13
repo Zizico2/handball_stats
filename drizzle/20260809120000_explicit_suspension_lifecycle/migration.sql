@@ -1,4 +1,4 @@
-PRAGMA foreign_keys=OFF;--> statement-breakpoint
+PRAGMA defer_foreign_keys = true;--> statement-breakpoint
 ALTER TABLE `player_events` RENAME TO `legacy_player_events`;--> statement-breakpoint
 CREATE TABLE `player_events` (
 	`id` integer PRIMARY KEY AUTOINCREMENT,
@@ -41,5 +41,4 @@ SELECT
 FROM `legacy_player_events`;--> statement-breakpoint
 DROP TABLE `legacy_player_events`;--> statement-breakpoint
 CREATE UNIQUE INDEX `player_events_user_id_client_id_uq` ON `player_events` (`user_id`,`client_id`);--> statement-breakpoint
-CREATE UNIQUE INDEX `player_events_user_id_ended_suspension_uq` ON `player_events` (`user_id`,`suspension_ended_suspension_id`);--> statement-breakpoint
-PRAGMA foreign_keys=ON;
+CREATE UNIQUE INDEX `player_events_user_id_ended_suspension_uq` ON `player_events` (`user_id`,`suspension_ended_suspension_id`);
