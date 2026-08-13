@@ -1,3 +1,5 @@
+import { Chip } from "@heroui/react";
+import type { ActiveSuspension } from "@/components/active-game/utils/activeSuspensions";
 import { ListSelectionModal } from "@/components/ui/ListSelectionModal";
 import type { TeamPlayer } from "@/datamodel";
 import { formatPlayerLabel } from "@/lib/display/formatPlayerLabel";
@@ -5,6 +7,7 @@ import { formatPlayerLabel } from "@/lib/display/formatPlayerLabel";
 interface PickPlayerDialogProps {
   players: TeamPlayer[];
   activePlayerNumbers: Set<number>;
+  activeSuspensions?: ActiveSuspension[];
   prioritizeActive?: boolean;
   selectionMode?: "all" | "onCourtOnly" | "benchOnly";
   open: boolean;
@@ -15,6 +18,7 @@ interface PickPlayerDialogProps {
 export function PickPlayerDialog({
   players,
   activePlayerNumbers,
+  activeSuspensions = [],
   prioritizeActive = true,
   selectionMode = "all",
   open,
@@ -38,6 +42,23 @@ export function PickPlayerDialog({
       isOpen={open}
       options={sortedPlayers.map((player) => ({
         text: formatPlayerLabel(player.number, [player]),
+        label: (
+          <span className="flex items-center gap-2">
+            {(() => {
+              const suspensionCount = activeSuspensions.filter(
+                (suspension) =>
+                  suspension.offender === player.number ||
+                  suspension.servedBy === player.number,
+              ).length;
+              return suspensionCount > 0 ? (
+                <Chip color="warning" size="sm" variant="soft">
+                  {suspensionCount > 1 ? `2 min ×${suspensionCount}` : "2 min"}
+                </Chip>
+              ) : null;
+            })()}
+            <span>{formatPlayerLabel(player.number, [player])}</span>
+          </span>
+        ),
         key: `${player.number}`,
         value: player.number,
         disabled:

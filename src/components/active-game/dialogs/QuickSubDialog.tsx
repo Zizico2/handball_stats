@@ -1,7 +1,8 @@
 "use client";
 
-import { Button, Separator, Typography } from "@heroui/react";
+import { Button, Chip, Separator, Typography } from "@heroui/react";
 import { ArrowLeftRight } from "lucide-react";
+import type { ActiveSuspension } from "@/components/active-game/utils/activeSuspensions";
 import { FullscreenModal } from "@/components/ui/FullscreenModal";
 import type { QuickSubPair, TeamPlayer } from "@/datamodel";
 import { formatPlayerLabel } from "@/lib/display/formatPlayerLabel";
@@ -12,6 +13,7 @@ interface QuickSubDialogProps {
   pairs: QuickSubPair[];
   players: TeamPlayer[];
   activePlayerNumbers: Set<number>;
+  activeSuspensions?: ActiveSuspension[];
   isSaving?: boolean;
   onQuickSub: (playerOut: number, playerIn: number) => void;
   onPickManually: () => void;
@@ -23,12 +25,31 @@ export function QuickSubDialog({
   pairs,
   players,
   activePlayerNumbers,
+  activeSuspensions = [],
   isSaving = false,
   onQuickSub,
   onPickManually,
   onClose,
 }: QuickSubDialogProps) {
   const getPlayerLabel = (num: number) => formatPlayerLabel(num, players);
+  const getSuspensionCount = (num: number) =>
+    activeSuspensions.filter(
+      (suspension) =>
+        suspension.offender === num || suspension.servedBy === num,
+    ).length;
+  const renderPlayerLabel = (num: number) => {
+    const suspensionCount = getSuspensionCount(num);
+    return (
+      <span className="flex items-center gap-2">
+        {suspensionCount > 0 ? (
+          <Chip color="warning" size="sm" variant="soft">
+            {suspensionCount > 1 ? `2 min ×${suspensionCount}` : "2 min"}
+          </Chip>
+        ) : null}
+        {getPlayerLabel(num)}
+      </span>
+    );
+  };
   const rosteredPairs = filterQuickSubPairsForRoster(pairs, players);
 
   return (
@@ -78,13 +99,13 @@ export function QuickSubDialog({
                     <Typography.Paragraph
                       className={`font-bold ${disabledReason !== null ? "" : "text-danger"}`}
                     >
-                      {getPlayerLabel(pair.playerNumberA)}
+                      {renderPlayerLabel(pair.playerNumberA)}
                     </Typography.Paragraph>
                     <ArrowLeftRight className="size-4" />
                     <Typography.Paragraph
                       className={`font-bold ${disabledReason !== null ? "" : "text-success"}`}
                     >
-                      {getPlayerLabel(pair.playerNumberB)}
+                      {renderPlayerLabel(pair.playerNumberB)}
                     </Typography.Paragraph>
                   </div>
                   {disabledReason ? (

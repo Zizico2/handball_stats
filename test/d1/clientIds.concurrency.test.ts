@@ -38,6 +38,21 @@ function post(routes: { request: typeof teamsRoutes.request }, body: unknown) {
   );
 }
 
+function remove(
+  routes: { request: typeof teamsRoutes.request },
+  body: unknown,
+) {
+  return routes.request(
+    "/",
+    {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    { userId: USER_ID },
+  );
+}
+
 describe("client UUID concurrency (D1)", () => {
   beforeEach(resetAppTables);
 
@@ -194,5 +209,221 @@ describe("client UUID concurrency (D1)", () => {
       .where(eq(schema.playerEvents.gameId, game.id))
       .orderBy(asc(schema.playerEvents.id));
     expect(rows.map((row) => row.id)).toEqual([1, 3]);
+  });
+
+  test("suspension end events reference one suspension and preserve both players", async () => {
+    const db = getTestDb();
+    const teamClientId = testClientId(500);
+    const gameClientId = testClientId(501);
+    const suspensionId = testClientId(502);
+    const endId = testClientId(503);
+    const [team] = await db
+      .insert(schema.teams)
+      .values({ userId: USER_ID, clientId: teamClientId, name: "Home" })
+      .returning();
+    await db.insert(schema.games).values({
+      userId: USER_ID,
+      clientId: gameClientId,
+      homeTeamId: team.id,
+      createdAt: "2026-08-01T00:00:00.000Z",
+      firstHalfStartedAtMs: Date.now() - 1_000,
+    });
+
+    const suspensionResponse = await post(playerEventsRoutes, [
+      {
+        id: suspensionId,
+        sequence: null,
+        player: 7,
+        game_id: gameClientId,
+        ellapsed_seconds: 0,
+        half: "firstHalf",
+        eventType: "twoMinuteSuspension",
+        eventGroup: "sanction",
+        event: { servedBy: 12 },
+      },
+    ]);
+    expect(suspensionResponse.status).toBe(200);
+    const suspension = (await suspensionResponse.json())[0];
+    expect(suspension).toMatchObject({
+      id: suspensionId,
+      player: 7,
+      eventType: "twoMinuteSuspension",
+      event: { servedBy: 12 },
+    });
+
+    const endResponse = await post(playerEventsRoutes, [
+      {
+        id: endId,
+        sequence: null,
+        player: 7,
+        game_id: gameClientId,
+        ellapsed_seconds: 0,
+        half: "firstHalf",
+        eventType: "twoMinuteSuspensionEnded",
+        eventGroup: "sanction",
+        event: { suspensionId },
+      },
+    ]);
+    expect(endResponse.status).toBe(200);
+    expect((await endResponse.json())[0]).toMatchObject({
+      id: endId,
+      player: 7,
+      eventType: "twoMinuteSuspensionEnded",
+      event: { suspensionId },
+    });
+
+    const duplicateEndResponse = await post(playerEventsRoutes, [
+      {
+        id: testClientId(504),
+        sequence: null,
+        player: 7,
+        game_id: gameClientId,
+        ellapsed_seconds: 0,
+        half: "firstHalf",
+        eventType: "twoMinuteSuspensionEnded",
+        eventGroup: "sanction",
+        event: { suspensionId },
+      },
+    ]);
+    expect(duplicateEndResponse.status).toBe(409);
+
+    const invalidEndResponse = await post(playerEventsRoutes, [
+      {
+        id: testClientId(505),
+        sequence: null,
+        player: 7,
+        game_id: gameClientId,
+        ellapsed_seconds: 0,
+        half: "firstHalf",
+        eventType: "twoMinuteSuspensionEnded",
+        eventGroup: "sanction",
+        event: { suspensionId: testClientId(999) },
+      },
+    ]);
+    expect(invalidEndResponse.status).toBe(400);
+
+    const deleteResponse = await remove(playerEventsRoutes, [suspensionId]);
+    expect(deleteResponse.status).toBe(204);
+    const remainingLifecycleRows = await db
+      .select()
+      .from(schema.playerEvents)
+      .where(eq(schema.playerEvents.userId, USER_ID));
+    expect(
+      remainingLifecycleRows.some(
+        (row) => row.clientId === suspensionId || row.clientId === endId,
+      ),
+    ).toBe(false);
+  });
+
+  test("accepts a suspension start and end in the same POST batch", async () => {
+    const db = getTestDb();
+    const teamClientId = testClientId(600);
+    const gameClientId = testClientId(601);
+    const suspensionId = testClientId(602);
+    const endId = testClientId(603);
+    const [team] = await db
+      .insert(schema.teams)
+      .values({ userId: USER_ID, clientId: teamClientId, name: "Home" })
+      .returning();
+    await db.insert(schema.games).values({
+      userId: USER_ID,
+      clientId: gameClientId,
+      homeTeamId: team.id,
+      createdAt: "2026-08-01T00:00:00.000Z",
+      firstHalfStartedAtMs: Date.now() - 1_000,
+    });
+
+    const response = await post(playerEventsRoutes, [
+      {
+        id: suspensionId,
+        sequence: null,
+        player: 7,
+        game_id: gameClientId,
+        ellapsed_seconds: 0,
+        half: "firstHalf",
+        eventType: "twoMinuteSuspension",
+        eventGroup: "sanction",
+        event: { servedBy: 7 },
+      },
+      {
+        id: endId,
+        sequence: null,
+        player: 7,
+        game_id: gameClientId,
+        ellapsed_seconds: 0,
+        half: "firstHalf",
+        eventType: "twoMinuteSuspensionEnded",
+        eventGroup: "sanction",
+        event: { suspensionId },
+      },
+    ]);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual([
+      expect.objectContaining({
+        id: suspensionId,
+        player: 7,
+        eventType: "twoMinuteSuspension",
+        event: { servedBy: 7 },
+      }),
+      expect.objectContaining({
+        id: endId,
+        player: 7,
+        eventType: "twoMinuteSuspensionEnded",
+        event: { suspensionId },
+      }),
+    ]);
+  });
+
+  test("concurrent duplicate suspension ends return 409 instead of 500", async () => {
+    const db = getTestDb();
+    const teamClientId = testClientId(700);
+    const gameClientId = testClientId(701);
+    const suspensionId = testClientId(702);
+    const [team] = await db
+      .insert(schema.teams)
+      .values({ userId: USER_ID, clientId: teamClientId, name: "Home" })
+      .returning();
+    await db.insert(schema.games).values({
+      userId: USER_ID,
+      clientId: gameClientId,
+      homeTeamId: team.id,
+      createdAt: "2026-08-01T00:00:00.000Z",
+      firstHalfStartedAtMs: Date.now() - 1_000,
+    });
+
+    const suspensionResponse = await post(playerEventsRoutes, [
+      {
+        id: suspensionId,
+        sequence: null,
+        player: 7,
+        game_id: gameClientId,
+        ellapsed_seconds: 0,
+        half: "firstHalf",
+        eventType: "twoMinuteSuspension",
+        eventGroup: "sanction",
+        event: { servedBy: 7 },
+      },
+    ]);
+    expect(suspensionResponse.status).toBe(200);
+
+    const endBody = (id: ClientId) => [
+      {
+        id,
+        sequence: null,
+        player: 7,
+        game_id: gameClientId,
+        ellapsed_seconds: 0,
+        half: "firstHalf",
+        eventType: "twoMinuteSuspensionEnded" as const,
+        eventGroup: "sanction" as const,
+        event: { suspensionId },
+      },
+    ];
+    const responses = await Promise.all([
+      post(playerEventsRoutes, endBody(testClientId(703))),
+      post(playerEventsRoutes, endBody(testClientId(704))),
+    ]);
+    const statuses = responses.map((response) => response.status).toSorted();
+    expect(statuses).toEqual([200, 409]);
   });
 });

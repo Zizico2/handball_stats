@@ -33,6 +33,11 @@ const EVENT_TYPE_OPTIONS: Record<
       key: "twoMinuteSuspension",
       value: "twoMinuteSuspension",
     },
+    {
+      text: "End 2 Minute Suspension",
+      key: "twoMinuteSuspensionEnded",
+      value: "twoMinuteSuspensionEnded",
+    },
   ],
   substitution: [],
 };
@@ -45,12 +50,14 @@ const EVENT_GROUP_TITLES: Record<EventGroup, string> = {
 };
 
 interface PickEventTypeDialogProps {
+  disabledEventTypes?: ReadonlySet<EventType>;
   group: EventGroup;
   open: boolean;
   onPickEventType: (eventType: EventType | null) => void;
 }
 
 export function PickEventTypeDialog({
+  disabledEventTypes = new Set(),
   group,
   open,
   onPickEventType,
@@ -58,7 +65,10 @@ export function PickEventTypeDialog({
   return (
     <ListSelectionModal
       isOpen={open}
-      options={EVENT_TYPE_OPTIONS[group]}
+      options={EVENT_TYPE_OPTIONS[group].map((option) => ({
+        ...option,
+        disabled: disabledEventTypes.has(option.value),
+      }))}
       title={EVENT_GROUP_TITLES[group]}
       onPickOption={onPickEventType}
     />

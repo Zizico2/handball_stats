@@ -1,7 +1,8 @@
 "use client";
 
-import { Button, Checkbox, Modal, Typography } from "@heroui/react";
+import { Button, Checkbox, Chip, Modal, Typography } from "@heroui/react";
 import { useState } from "react";
+import type { ActiveSuspension } from "@/components/active-game/utils/activeSuspensions";
 import { resolveInitialStartingSelection } from "@/components/active-game/utils/resolveInitialStartingSelection";
 import type { TeamPlayer } from "@/datamodel";
 import { formatPlayerLabel } from "@/lib/display/formatPlayerLabel";
@@ -11,6 +12,7 @@ interface PickStarting7DialogProps {
   players: TeamPlayer[];
   currentStartingNumbers: number[];
   activePlayerNumbers: Set<number>;
+  activeSuspensions?: ActiveSuspension[];
   isSaving?: boolean;
   onSave: (numbers: number[]) => void;
   onClose: () => void;
@@ -21,6 +23,7 @@ export function PickStarting7Dialog({
   players,
   currentStartingNumbers,
   activePlayerNumbers,
+  activeSuspensions = [],
   isSaving = false,
   onSave,
   onClose,
@@ -80,7 +83,23 @@ export function PickStarting7Dialog({
                       <Checkbox.Control>
                         <Checkbox.Indicator />
                       </Checkbox.Control>
-                      {formatPlayerLabel(player.number, [player])}
+                      <span className="flex items-center gap-2">
+                        {(() => {
+                          const suspensionCount = activeSuspensions.filter(
+                            (suspension) =>
+                              suspension.offender === player.number ||
+                              suspension.servedBy === player.number,
+                          ).length;
+                          return suspensionCount > 0 ? (
+                            <Chip color="warning" size="sm" variant="soft">
+                              {suspensionCount > 1
+                                ? `2 min ×${suspensionCount}`
+                                : "2 min"}
+                            </Chip>
+                          ) : null;
+                        })()}
+                        {formatPlayerLabel(player.number, [player])}
+                      </span>
                     </Checkbox.Content>
                   </Checkbox>
                 );

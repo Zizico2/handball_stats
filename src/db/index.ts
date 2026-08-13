@@ -73,6 +73,34 @@ const dbPlayerEventToDomainSchema = dbPlayerEventSchema
       };
     }
 
+    if (row.eventType === "twoMinuteSuspension") {
+      if (row.suspensionServedBy === null) {
+        throw new Error("Missing suspensionServedBy in DB row");
+      }
+      return {
+        ...base,
+        eventType: row.eventType,
+        eventGroup: row.eventGroup,
+        event: {
+          servedBy: row.suspensionServedBy,
+        },
+      };
+    }
+
+    if (row.eventType === "twoMinuteSuspensionEnded") {
+      if (row.suspensionEndedSuspensionId === null) {
+        throw new Error("Missing suspensionEndedSuspensionId in DB row");
+      }
+      return {
+        ...base,
+        eventType: row.eventType,
+        eventGroup: row.eventGroup,
+        event: {
+          suspensionId: parseClientId(row.suspensionEndedSuspensionId),
+        },
+      };
+    }
+
     return {
       ...base,
       eventType: row.eventType,
@@ -133,6 +161,8 @@ export function playerEventToDbRow(
     shotAim: null as string | null,
     shotPosition: null as string | null,
     substitutionPlayerIn: null as number | null,
+    suspensionServedBy: null as number | null,
+    suspensionEndedSuspensionId: null as string | null,
   };
 
   if (event.eventType === "shot") {
@@ -149,6 +179,20 @@ export function playerEventToDbRow(
     return {
       ...base,
       substitutionPlayerIn: event.event.playerIn,
+    };
+  }
+
+  if (event.eventType === "twoMinuteSuspension") {
+    return {
+      ...base,
+      suspensionServedBy: event.event.servedBy,
+    };
+  }
+
+  if (event.eventType === "twoMinuteSuspensionEnded") {
+    return {
+      ...base,
+      suspensionEndedSuspensionId: event.event.suspensionId,
     };
   }
 

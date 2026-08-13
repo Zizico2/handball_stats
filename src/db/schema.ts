@@ -152,11 +152,17 @@ export const playerEvents = sqliteTable(
     shotAim: text("shot_aim"),
     shotPosition: text("shot_position"),
     substitutionPlayerIn: integer("substitution_player_in"),
+    suspensionServedBy: integer("suspension_served_by"),
+    suspensionEndedSuspensionId: text("suspension_ended_suspension_id"),
   },
   (table) => [
     uniqueIndex("player_events_user_id_client_id_uq").on(
       table.userId,
       table.clientId,
+    ),
+    uniqueIndex("player_events_user_id_ended_suspension_uq").on(
+      table.userId,
+      table.suspensionEndedSuspensionId,
     ),
     foreignKey({
       columns: [table.userId, table.gameId],
@@ -176,6 +182,18 @@ export const playerEvents = sqliteTable(
       "shot_position_required_for_shot",
       sql.raw(
         `\`${table.eventType.name}\` != 'shot' OR \`${table.shotPosition.name}\` IS NOT NULL`,
+      ),
+    ),
+    check(
+      "suspension_served_by_required",
+      sql.raw(
+        `\`${table.eventType.name}\` != 'twoMinuteSuspension' OR \`${table.suspensionServedBy.name}\` IS NOT NULL`,
+      ),
+    ),
+    check(
+      "suspension_end_reference_required",
+      sql.raw(
+        `\`${table.eventType.name}\` != 'twoMinuteSuspensionEnded' OR \`${table.suspensionEndedSuspensionId.name}\` IS NOT NULL`,
       ),
     ),
   ],

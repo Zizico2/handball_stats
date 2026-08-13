@@ -244,6 +244,7 @@ describe("event form state machine", () => {
       eventType: "twoMinuteSuspension",
     });
     actor.send({ type: "PICK_PLAYER", player: 7 });
+    actor.send({ type: "PICK_SUSPENSION_SERVER", player: 7 });
     await waitFor(actor, (snapshot) => snapshot.matches("persistFailed"));
     expect(attempts).toHaveLength(1);
 
@@ -253,6 +254,59 @@ describe("event form state machine", () => {
       (snapshot) => snapshot.matches("idle") && attempts.length === 2,
     );
     expect(attempts[1]).toEqual(attempts[0]);
+    actor.stop();
+  });
+
+  test("captures a separate serving player for suspensions", async () => {
+    const persisted: DeepPartial<PlayerEvent>[] = [];
+    const actor = createTestActor(async (event) => {
+      persisted.push(event);
+    });
+    actor.start();
+
+    actor.send({ ...START, eventGroup: "sanction" });
+    actor.send({
+      type: "PICK_SANCTION_EVENT_TYPE",
+      eventType: "twoMinuteSuspension",
+    });
+    actor.send({ type: "PICK_PLAYER", player: 7 });
+    expect(actor.getSnapshot().matches("pickingSuspensionServer")).toBe(true);
+    actor.send({ type: "PICK_SUSPENSION_SERVER", player: 12 });
+    await waitForPersistedIdle(actor, persisted);
+
+    expect(persisted[0]).toMatchObject({
+      eventType: "twoMinuteSuspension",
+      player: 7,
+      event: { servedBy: 12 },
+    });
+    actor.stop();
+  });
+
+  test("records an end event against the selected suspension", async () => {
+    const persisted: DeepPartial<PlayerEvent>[] = [];
+    const actor = createTestActor(async (event) => {
+      persisted.push(event);
+    });
+    actor.start();
+
+    actor.send({ ...START, eventGroup: "sanction" });
+    actor.send({
+      type: "PICK_SANCTION_EVENT_TYPE",
+      eventType: "twoMinuteSuspensionEnded",
+    });
+    expect(actor.getSnapshot().matches("pickingSuspensionToEnd")).toBe(true);
+    actor.send({
+      type: "PICK_SUSPENSION_TO_END",
+      player: 7,
+      suspensionId: testClientId(77),
+    });
+    await waitForPersistedIdle(actor, persisted);
+
+    expect(persisted[0]).toMatchObject({
+      eventType: "twoMinuteSuspensionEnded",
+      player: 7,
+      event: { suspensionId: testClientId(77) },
+    });
     actor.stop();
   });
 });
