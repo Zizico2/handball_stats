@@ -49,7 +49,7 @@ test.describe("shot event creation", () => {
     await attack.click();
 
     await page.getByRole("button", { name: "Shot" }).click();
-    await page.getByRole("button", { name: /#7/ }).click();
+    await page.getByRole("button", { name: "#7 Alex", exact: true }).click();
     await expect(
       page.getByRole("heading", { name: "Pick Shot Position" }),
     ).toBeVisible();
@@ -71,7 +71,7 @@ test.describe("shot event creation", () => {
     await expect(page.getByText(/Direction: OnTarget/)).toBeVisible();
     await expect(page.getByText(/Aim: TopLeft/)).toBeVisible();
 
-    const defense = page.getByRole("button", { name: "Defense" });
+    const defense = page.getByRole("button", { name: "Defense", exact: true });
     await defense.click();
     await page.getByRole("button", { name: "Shot", exact: true }).click();
     await expect(
@@ -96,7 +96,7 @@ test.describe("shot event creation", () => {
     await page
       .getByRole("button", { name: "Offensive Foul Provoked", exact: true })
       .click();
-    await page.getByRole("button", { name: /#7/ }).click();
+    await page.getByRole("button", { name: "#7 Alex", exact: true }).click();
     await expect(page.getByText(/Offensive Foul Provoked/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Attack" })).toBeEnabled({
       timeout: 15_000,
@@ -106,7 +106,7 @@ test.describe("shot event creation", () => {
     await page
       .getByRole("button", { name: "Offensive Foul", exact: true })
       .click();
-    await page.getByRole("button", { name: /#7/ }).click();
+    await page.getByRole("button", { name: "#7 Alex", exact: true }).click();
     await expect(
       page.getByText("#7 — Offensive Foul", { exact: true }),
     ).toBeVisible();
