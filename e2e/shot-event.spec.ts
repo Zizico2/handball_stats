@@ -97,7 +97,11 @@ test.describe("shot event creation", () => {
       .getByRole("button", { name: "Offensive Foul Provoked", exact: true })
       .click();
     await page.getByRole("button", { name: "#7 Alex", exact: true }).click();
-    await expect(page.getByText(/Offensive Foul Provoked/)).toBeVisible();
+    await expect(
+      page
+        .getByRole("main")
+        .getByText("Offensive Foul Provoked", { exact: true }),
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: "Attack" })).toBeEnabled({
       timeout: 15_000,
     });
