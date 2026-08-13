@@ -105,6 +105,16 @@ test.describe("full match lifecycle", () => {
       timeout: 15_000,
     });
 
+    await page.getByRole("button", { name: "Defense" }).click();
+    await page.getByRole("button", { name: "Shot", exact: true }).click();
+    await page.getByRole("button", { name: "6m+" }).click();
+    await page.getByRole("button", { name: "Top right" }).click();
+    await page.getByRole("button", { name: "Goal", exact: true }).click();
+    await expect(page.getByText(/Goal: Yes/)).toHaveCount(2, {
+      timeout: 15_000,
+    });
+    await expect(attack).toBeEnabled({ timeout: 15_000 });
+
     await openMatchControls(page);
     await page.getByRole("menuitem", { name: "Pause Match" }).click();
     await openMatchControls(page);
@@ -145,9 +155,9 @@ test.describe("full match lifecycle", () => {
     await expect(page.getByRole("heading", { name: TEAM.name })).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByText("1 goals", { exact: true })).toBeVisible();
+    await expect(page.getByText("1–1 score", { exact: true })).toBeVisible();
     await expect(
-      page.getByText("5 logged events", { exact: true }),
+      page.getByText("6 logged events", { exact: true }),
     ).toBeVisible();
 
     await page.getByRole("link", { name: "Back to past games" }).click();
@@ -155,8 +165,10 @@ test.describe("full match lifecycle", () => {
       page.getByRole("heading", { name: "Past Games", exact: true }),
     ).toBeVisible();
     const pastGame = page.getByRole("link", { name: new RegExp(TEAM.name) });
-    await expect(pastGame.getByText("1 goals", { exact: true })).toBeVisible();
-    await expect(pastGame.getByText("5 events", { exact: true })).toBeVisible();
+    await expect(
+      pastGame.getByText("1–1 score", { exact: true }),
+    ).toBeVisible();
+    await expect(pastGame.getByText("6 events", { exact: true })).toBeVisible();
 
     await pastGame.click();
     await expect(page).toHaveURL(/\/past-games\/[0-9a-f-]{36}$/);

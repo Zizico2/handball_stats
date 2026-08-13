@@ -5,7 +5,7 @@ import {
   getLastUndoableEvent,
 } from "@/components/active-game/utils/lastUndoableEvent";
 import type { PlayerEvent } from "@/datamodel";
-import { countGoals } from "@/lib/display/countGoals";
+import { countGoals, countScores } from "@/lib/display/countGoals";
 import { testClientId } from "@/testing/clientId";
 
 const getPlayerLabel = (number: number) => `#${number}`;
@@ -47,6 +47,24 @@ function shot(
       position: "9m+",
       direction: "OnTarget",
       aim: "TopLeft",
+    },
+  };
+}
+
+function defenseShot(id: number, goal: boolean): PlayerEvent {
+  return {
+    id: testClientId(id),
+    sequence: id,
+    game_id: testClientId(100),
+    ellapsed_seconds: 60,
+    half: "firstHalf",
+    eventType: "shot",
+    eventGroup: "defense",
+    event: {
+      goal,
+      position: "6m+",
+      direction: "OnTarget",
+      aim: "MiddleCenter",
     },
   };
 }
@@ -113,6 +131,9 @@ describe("formatUndoEventLabel", () => {
     expect(formatUndoEventLabel(shot(2, 7, false), getPlayerLabel)).toBe(
       "#7 — Shot (Miss)",
     );
+    expect(formatUndoEventLabel(defenseShot(5, true), getPlayerLabel)).toBe(
+      "Defense — Shot (Goal)",
+    );
     expect(formatUndoEventLabel(substitution(3, 7, 9), getPlayerLabel)).toBe(
       "#7 → #9",
     );
@@ -139,6 +160,15 @@ describe("undo derived state", () => {
 
     const afterGoalUndo = afterUndo.filter((event) => event.sequence !== 2);
     expect(countGoals(afterGoalUndo)).toBe(0);
+  });
+
+  test("undoing a defense goal updates only the opponent score", () => {
+    const events: PlayerEvent[] = [shot(1, 7, true), defenseShot(2, true)];
+    expect(countScores(events)).toEqual({ teamScore: 1, opponentScore: 1 });
+
+    const last = getLastUndoableEvent(events);
+    const afterUndo = events.filter((event) => event.id !== last?.id);
+    expect(countScores(afterUndo)).toEqual({ teamScore: 1, opponentScore: 0 });
   });
 
   test("removing a substitution restores on-court players", () => {

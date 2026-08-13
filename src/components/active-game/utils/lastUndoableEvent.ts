@@ -34,8 +34,15 @@ export function formatUndoEventLabel(
 
   if (event.eventType === "shot") {
     const result = event.event.goal ? "Goal" : "Miss";
+    if (event.eventGroup === "defense") {
+      return `Defense — Shot (${result})`;
+    }
     return `${getPlayerLabel(event.player)} — Shot (${result})`;
   }
 
-  return `${getPlayerLabel(event.player)} — ${formatEventTypeLabel(event.eventType)}`;
+  const eventTypeLabel =
+    event.eventType === "offensiveFoul" && event.eventGroup === "defense"
+      ? "Offensive Foul Provoked"
+      : formatEventTypeLabel(event.eventType);
+  return `${getPlayerLabel(event.player)} — ${eventTypeLabel}`;
 }

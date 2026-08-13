@@ -32,7 +32,9 @@ export function StartingLineupCard({
         <Separator className="my-2" />
         <Typography.Paragraph className="font-medium">
           {startingPlayers
-            .map((event) => getPlayerLabel(event.player))
+            .flatMap((event) =>
+              "player" in event ? [getPlayerLabel(event.player)] : [],
+            )
             .join(", ")}
         </Typography.Paragraph>
       </Card.Content>

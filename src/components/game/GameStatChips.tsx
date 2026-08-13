@@ -1,24 +1,24 @@
 import { Chip } from "@heroui/react";
 
 interface GameStatChipsProps {
-  score: number;
+  teamScore: number;
+  opponentScore: number;
   eventCount: number;
   playerCount?: number;
-  scoreLabel?: string;
   eventLabel?: string;
 }
 
 export function GameStatChips({
-  score,
+  teamScore,
+  opponentScore,
   eventCount,
   playerCount,
-  scoreLabel = "goals",
   eventLabel = "events",
 }: GameStatChipsProps) {
   return (
     <>
       <Chip color="success" variant="secondary">
-        {score} {scoreLabel}
+        {teamScore}–{opponentScore} score
       </Chip>
       <Chip variant="secondary">
         {eventCount} {eventLabel}

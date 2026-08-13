@@ -45,7 +45,8 @@ export async function PastGamesList() {
                 <div className="flex flex-wrap items-center gap-2">
                   <GameStatChips
                     eventCount={game.eventCount}
-                    score={game.score}
+                    opponentScore={game.opponentScore}
+                    teamScore={game.teamScore}
                   />
                   <ChevronRight className="size-5 text-muted" />
                 </div>

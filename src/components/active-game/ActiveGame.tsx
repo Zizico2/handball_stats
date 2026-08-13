@@ -25,7 +25,7 @@ import { eventMachine } from "@/event_form_fsm";
 import { usePlayerLabelMap } from "@/hooks/usePlayerLabelMap";
 import type { MatchStatus } from "@/inGameControlsAtoms";
 import { createClientId } from "@/lib/clientId";
-import { countGoals } from "@/lib/display/countGoals";
+import { countScores } from "@/lib/display/countGoals";
 import {
   beginMatchSaving,
   markMatchFailed,
@@ -73,13 +73,15 @@ function ActiveGame() {
     teamQuickSubPairs,
   } = useActiveGameData(matchStatus);
 
+  const { teamScore, opponentScore } = countScores(activeGameEvents);
   const { activeHalf, eventElapsedSeconds, minutes, seconds } =
     useActiveGameControls({
       activeGameData,
       activeGameRecord,
       eventCount: activeGameEvents.length,
       firstHalfStartingPlayerNumbers,
-      goals: countGoals(activeGameEvents),
+      teamScore,
+      opponentScore,
       secondHalfStartingPlayerNumbers,
       matchStatus,
       setMatchStatus,

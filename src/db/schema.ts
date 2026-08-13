@@ -141,7 +141,7 @@ export const playerEvents = sqliteTable(
     id: integer().primaryKey({ autoIncrement: true }),
     userId: text("user_id").notNull(),
     clientId: text("client_id").notNull(),
-    player: integer().notNull(),
+    player: integer(),
     gameId: integer("game_id").notNull(),
     ellapsedSeconds: integer("ellapsed_seconds").notNull(),
     eventType: text("event_type").notNull(),
@@ -171,6 +171,12 @@ export const playerEvents = sqliteTable(
     check(
       "player_events_half_check",
       sql.raw(`\`${table.half.name}\` IN ('firstHalf', 'secondHalf')`),
+    ),
+    check(
+      "player_required_unless_defense_shot",
+      sql.raw(
+        `(\`${table.eventType.name}\` = 'shot' AND \`${table.eventGroup.name}\` = 'defense') OR \`${table.player.name}\` IS NOT NULL`,
+      ),
     ),
     check(
       "shot_direction_required_for_shot",

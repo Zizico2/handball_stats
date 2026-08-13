@@ -39,10 +39,10 @@ const dbPlayerEventToDomainSchema = dbPlayerEventSchema
     const base = {
       id: row.clientId,
       sequence: row.id,
-      player: row.player,
       game_id: row.gameClientId,
       ellapsed_seconds: row.ellapsedSeconds,
       half: row.half,
+      ...(row.player !== null ? { player: row.player } : {}),
     };
 
     if (row.eventType === "shot") {
@@ -150,7 +150,7 @@ export function playerEventToDbRow(
   const base = {
     userId,
     clientId: event.id,
-    player: event.player,
+    player: "player" in event ? event.player : null,
     gameId,
     ellapsedSeconds: event.ellapsed_seconds,
     eventType: event.eventType,

@@ -106,8 +106,16 @@ describe("event form state machine", () => {
         pick: { type: "PICK_ATTACK_EVENT_TYPE", eventType: "lostBall" },
       },
       {
+        group: "attack",
+        pick: { type: "PICK_ATTACK_EVENT_TYPE", eventType: "offensiveFoul" },
+      },
+      {
         group: "defense",
         pick: { type: "PICK_DEFENSE_EVENT_TYPE", eventType: "interception" },
+      },
+      {
+        group: "defense",
+        pick: { type: "PICK_DEFENSE_EVENT_TYPE", eventType: "offensiveFoul" },
       },
       {
         group: "sanction",
@@ -157,6 +165,64 @@ describe("event form state machine", () => {
       event: { playerIn: 12 },
     });
     substitution.stop();
+  });
+
+  test("records a playerless defense shot and asks for a goal only on target", async () => {
+    const persisted: DeepPartial<PlayerEvent>[] = [];
+    const actor = createTestActor(async (event) => {
+      persisted.push(event);
+    });
+    actor.start();
+
+    actor.send({ ...START, eventGroup: "defense", id: testClientId(35) });
+    actor.send({ type: "PICK_DEFENSE_EVENT_TYPE", eventType: "shot" });
+    expect(actor.getSnapshot().matches("pickingShotPosition")).toBe(true);
+    actor.send({ type: "PICK_SHOT_POSITION", position: "6m+" });
+    actor.send({
+      type: "PICK_SHOT_DIRECTION",
+      pick: { direction: "OnTarget", aim: "MiddleCenter" },
+    });
+    expect(actor.getSnapshot().matches("pickingGoalOrNoGoal")).toBe(true);
+    actor.send({ type: "PICK_GOAL_OR_NO_GOAL", goal: true });
+    await waitForPersistedIdle(actor, persisted);
+
+    expect(persisted[0]).toEqual({
+      eventGroup: "defense",
+      ellapsed_seconds: 42,
+      game_id: testClientId(5),
+      id: testClientId(35),
+      half: "firstHalf",
+      eventType: "shot",
+      event: {
+        position: "6m+",
+        direction: "OnTarget",
+        aim: "MiddleCenter",
+        goal: true,
+      },
+    });
+
+    actor.send({ ...START, eventGroup: "defense", id: testClientId(36) });
+    actor.send({ type: "PICK_DEFENSE_EVENT_TYPE", eventType: "shot" });
+    actor.send({ type: "PICK_SHOT_POSITION", position: "rightWing" });
+    actor.send({
+      type: "PICK_SHOT_DIRECTION",
+      pick: { direction: "Blocked" },
+    });
+    await waitForPersistedIdle(actor, persisted, 2);
+    expect(persisted[1]).toEqual({
+      eventGroup: "defense",
+      ellapsed_seconds: 42,
+      game_id: testClientId(5),
+      id: testClientId(36),
+      half: "firstHalf",
+      eventType: "shot",
+      event: {
+        position: "rightWing",
+        direction: "Blocked",
+        goal: false,
+      },
+    });
+    actor.stop();
   });
 
   test("cancel resets partial context and allows a clean restart", async () => {

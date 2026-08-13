@@ -103,6 +103,8 @@ export const basePlayerEventSchema = z.object({
 });
 export type BasePlayerEvent = z.infer<typeof basePlayerEventSchema>;
 
+const basePlayerlessEventSchema = basePlayerEventSchema.omit({ player: true });
+
 export const interceptionEventSchema = withBase(
   z.object({
     eventType: z.literal("interception"),
@@ -137,13 +139,28 @@ export const blockedShotEventSchema = withBase(
 );
 export type BlockedShotEvent = z.infer<typeof blockedShotEventSchema>;
 
-export const offensiveFoulEventSchema = withBase(
+export const defenseOffensiveFoulEventSchema = withBase(
   z.object({
     eventType: z.literal("offensiveFoul"),
     eventGroup: z.literal("defense"),
   }),
 );
-export type OffensiveFoulEvent = z.infer<typeof offensiveFoulEventSchema>;
+export type DefenseOffensiveFoulEvent = z.infer<
+  typeof defenseOffensiveFoulEventSchema
+>;
+
+export const attackOffensiveFoulEventSchema = withBase(
+  z.object({
+    eventType: z.literal("offensiveFoul"),
+    eventGroup: z.literal("attack"),
+  }),
+);
+export type AttackOffensiveFoulEvent = z.infer<
+  typeof attackOffensiveFoulEventSchema
+>;
+
+/** Kept as an alias for callers that used the original defense-only type. */
+export type OffensiveFoulEvent = DefenseOffensiveFoulEvent;
 
 export const provoked7meterEventSchema = withBase(
   z.object({
@@ -244,6 +261,13 @@ export const shotEventSchema = withBase(
 );
 export type ShotEvent = z.infer<typeof shotEventSchema>;
 
+export const defenseShotEventSchema = basePlayerlessEventSchema.extend({
+  eventType: z.literal("shot"),
+  eventGroup: z.literal("defense"),
+  event: shotSchema,
+});
+export type DefenseShotEvent = z.infer<typeof defenseShotEventSchema>;
+
 export const substitutionEventSchema = withBase(
   z.object({
     eventType: z.literal("substitution"),
@@ -263,9 +287,13 @@ export const startingPlayerEventSchema = withBase(
 );
 export type StartingPlayerEvent = z.infer<typeof startingPlayerEventSchema>;
 
-export const playerEventSchema = z.discriminatedUnion("eventType", [
+// `eventType` is not unique across attack and defense (for example, both
+// groups have shots), so the union must validate the complete event shape.
+export const playerEventSchema = z.union([
   // attack events
   shotEventSchema,
+  defenseShotEventSchema,
+  attackOffensiveFoulEventSchema,
   provoked7meterEventSchema,
   provoked2minEventSchema,
   travellingEventSchema,
@@ -277,7 +305,7 @@ export const playerEventSchema = z.discriminatedUnion("eventType", [
   sevenMeterConcededEventSchema,
   oneOnOneLostEventSchema,
   blockedShotEventSchema,
-  offensiveFoulEventSchema,
+  defenseOffensiveFoulEventSchema,
   // sanction events
   redCardEventSchema,
   yellowCardEventSchema,
@@ -290,14 +318,34 @@ export const playerEventSchema = z.discriminatedUnion("eventType", [
 
 export type PlayerEvent = z.infer<typeof playerEventSchema>;
 
-export const eventTypeSchema = z.enum(
-  playerEventSchema.options.map((option) => option.shape.eventType.value),
-);
+export const eventTypeSchema = z.enum([
+  "shot",
+  "offensiveFoul",
+  "provoked7meter",
+  "provoked2min",
+  "travelling",
+  "dribbleFault",
+  "forcing",
+  "lostBall",
+  "interception",
+  "sevenMeterConceded",
+  "oneOnOneLost",
+  "blockedShot",
+  "redCard",
+  "yellowCard",
+  "twoMinuteSuspension",
+  "twoMinuteSuspensionEnded",
+  "substitution",
+  "startingPlayer",
+]);
 export type EventType = z.infer<typeof eventTypeSchema>;
 
-export const eventGroupSchema = z.enum(
-  playerEventSchema.options.map((option) => option.shape.eventGroup.value),
-);
+export const eventGroupSchema = z.enum([
+  "attack",
+  "defense",
+  "sanction",
+  "substitution",
+]);
 export type EventGroup = z.infer<typeof eventGroupSchema>;
 
 function withBase<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {

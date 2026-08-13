@@ -19,7 +19,8 @@ export interface PastGameSummary {
   id: ClientId;
   createdAt: string;
   homeTeamName: string;
-  score: number;
+  teamScore: number;
+  opponentScore: number;
   eventCount: number;
 }
 
@@ -55,6 +56,7 @@ export async function listPastGames(): Promise<PastGameSummary[]> {
       .select({
         gameId: schema.playerEvents.gameId,
         eventType: schema.playerEvents.eventType,
+        eventGroup: schema.playerEvents.eventGroup,
         shotGoal: schema.playerEvents.shotGoal,
       })
       .from(schema.playerEvents)
@@ -64,24 +66,39 @@ export async function listPastGames(): Promise<PastGameSummary[]> {
   const activeGameIds = new Set(activeRows.map((row) => row.gameId));
   const statsByGameId = new Map<
     number,
-    { score: number; eventCount: number }
+    { teamScore: number; opponentScore: number; eventCount: number }
   >();
   for (const row of eventRows) {
-    const stats = statsByGameId.get(row.gameId) ?? { score: 0, eventCount: 0 };
+    const stats = statsByGameId.get(row.gameId) ?? {
+      teamScore: 0,
+      opponentScore: 0,
+      eventCount: 0,
+    };
     stats.eventCount += 1;
-    if (row.eventType === "shot" && row.shotGoal) stats.score += 1;
+    if (row.eventType === "shot" && row.shotGoal) {
+      if (row.eventGroup === "defense") {
+        stats.opponentScore += 1;
+      } else {
+        stats.teamScore += 1;
+      }
+    }
     statsByGameId.set(row.gameId, stats);
   }
 
   return games
     .filter(({ game }) => !activeGameIds.has(game.id))
     .map(({ game, homeTeamName }) => {
-      const stats = statsByGameId.get(game.id) ?? { score: 0, eventCount: 0 };
+      const stats = statsByGameId.get(game.id) ?? {
+        teamScore: 0,
+        opponentScore: 0,
+        eventCount: 0,
+      };
       return {
         id: parseClientId(game.clientId),
         createdAt: game.createdAt,
         homeTeamName,
-        score: stats.score,
+        teamScore: stats.teamScore,
+        opponentScore: stats.opponentScore,
         eventCount: stats.eventCount,
       };
     });

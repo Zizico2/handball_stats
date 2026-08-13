@@ -77,7 +77,8 @@ function hasSamePlayerEventIntent(actual: PlayerEvent, expected: PlayerEvent) {
   return (
     actual.id === expected.id &&
     actual.game_id === expected.game_id &&
-    actual.player === expected.player &&
+    ("player" in actual ? actual.player : null) ===
+      ("player" in expected ? expected.player : null) &&
     actual.half === expected.half &&
     actual.eventType === expected.eventType &&
     actual.eventGroup === expected.eventGroup &&

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { PlayerEvent } from "@/datamodel";
-import { shotPosition } from "@/datamodel";
+import { playerEventSchema, shotPosition } from "@/datamodel";
 import { PLAYER_EVENTS_CSV_COLUMN_KEYS } from "@/db/playerEventCsv";
 import { testClientId } from "@/testing/clientId";
 import type { DbPlayerEvent } from "./index";
@@ -25,6 +25,24 @@ function shotEvent(
       direction: "OnTarget",
       aim: "TopLeft",
       position,
+    },
+  };
+}
+
+function defenseShotEvent(): PlayerEvent {
+  return {
+    id: testClientId(4),
+    sequence: null,
+    game_id: testClientId(10),
+    ellapsed_seconds: 120,
+    half: "firstHalf",
+    eventType: "shot",
+    eventGroup: "defense",
+    event: {
+      goal: true,
+      direction: "OnTarget",
+      aim: "BottomRight",
+      position: "rightWing",
     },
   };
 }
@@ -88,6 +106,82 @@ describe("playerEvent shot position round trip", () => {
     expect(() =>
       dbRowToPlayerEvent(dbShotRow({ shotPosition: null }), testClientId(10)),
     ).toThrow();
+  });
+
+  test("round trips a playerless defense shot", () => {
+    const event = defenseShotEvent();
+    const row = playerEventToDbRow(event, USER_ID, 10);
+    expect(row.player).toBeNull();
+    expect(row.eventGroup).toBe("defense");
+    expect(PLAYER_EVENTS_CSV_COLUMN_KEYS).toContain("player");
+
+    const parsed = dbRowToPlayerEvent(
+      {
+        ...dbShotRow(),
+        ...row,
+        id: 4,
+      } as DbPlayerEvent,
+      testClientId(10),
+    );
+
+    expect(parsed).toMatchObject({ ...event, sequence: 4 });
+  });
+
+  test("keeps offensive fouls distinct by event group", () => {
+    const events: PlayerEvent[] = [
+      {
+        id: testClientId(5),
+        sequence: null,
+        player: 7,
+        game_id: testClientId(10),
+        ellapsed_seconds: 120,
+        half: "firstHalf",
+        eventType: "offensiveFoul",
+        eventGroup: "attack",
+      },
+      {
+        id: testClientId(6),
+        sequence: null,
+        player: 12,
+        game_id: testClientId(10),
+        ellapsed_seconds: 121,
+        half: "firstHalf",
+        eventType: "offensiveFoul",
+        eventGroup: "defense",
+      },
+    ];
+
+    for (const event of events) {
+      const row = playerEventToDbRow(event, USER_ID, 10);
+      const parsed = dbRowToPlayerEvent(
+        { ...dbShotRow(), ...row, id: event.sequence ?? 5 } as DbPlayerEvent,
+        testClientId(10),
+      );
+      expect(parsed).toMatchObject({
+        eventType: "offensiveFoul",
+        eventGroup: event.eventGroup,
+        player: "player" in event ? event.player : null,
+      });
+    }
+  });
+
+  test("validates player requirements by event group", () => {
+    expect(playerEventSchema.parse(defenseShotEvent())).not.toHaveProperty(
+      "player",
+    );
+    expect(() =>
+      playerEventSchema.parse({
+        ...defenseShotEvent(),
+        eventGroup: "attack",
+      }),
+    ).toThrow();
+    expect(
+      playerEventSchema.parse({
+        ...defenseShotEvent(),
+        eventGroup: "attack",
+        player: 7,
+      }),
+    ).toMatchObject({ eventGroup: "attack", player: 7 });
   });
 
   test("PLAYER_EVENTS_CSV_COLUMN_KEYS includes shotPosition", () => {

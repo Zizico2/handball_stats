@@ -13,6 +13,9 @@ interface EventLogCardProps {
 }
 
 export function EventLogCard({ event, getPlayerLabel }: EventLogCardProps) {
+  const playerLabel = "player" in event ? getPlayerLabel(event.player) : null;
+  const eventTypeLabel = formatEventTypeLabel(event);
+
   return (
     <Card className="border border-separator shadow-sm">
       <Card.Content className="px-4 py-3">
@@ -49,10 +52,8 @@ export function EventLogCard({ event, getPlayerLabel }: EventLogCardProps) {
         ) : (
           <div className="mt-1">
             <Typography.Paragraph className="font-medium">
-              {getPlayerLabel(event.player)} —{" "}
-              <span className="capitalize">
-                {event.eventType.replace(/([A-Z])/g, " $1")}
-              </span>
+              {playerLabel ? `${playerLabel} — ` : null}
+              <span>{eventTypeLabel}</span>
             </Typography.Paragraph>
             {event.eventType === "twoMinuteSuspension" &&
             event.event.servedBy !== event.player ? (
@@ -74,4 +75,14 @@ export function EventLogCard({ event, getPlayerLabel }: EventLogCardProps) {
       </Card.Content>
     </Card>
   );
+}
+
+function formatEventTypeLabel(event: PlayerEvent): string {
+  if (event.eventType === "offensiveFoul" && event.eventGroup === "defense") {
+    return "Offensive Foul Provoked";
+  }
+
+  return event.eventType
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (character) => character.toUpperCase());
 }

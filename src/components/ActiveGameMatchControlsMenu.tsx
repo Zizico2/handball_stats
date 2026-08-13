@@ -155,7 +155,10 @@ export default function ActiveGameMatchControlsMenu() {
                   Clock: <strong>{clockLabel}</strong>
                 </li>
                 <li>
-                  Goals: <strong>{inGameControls.goals}</strong>
+                  Score:{" "}
+                  <strong>
+                    {inGameControls.teamScore}–{inGameControls.opponentScore}
+                  </strong>
                 </li>
                 <li>
                   Events: <strong>{inGameControls.eventCount}</strong>

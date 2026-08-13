@@ -7,6 +7,11 @@ const EVENT_TYPE_OPTIONS: Record<
 > = {
   attack: [
     { text: "Shot", key: "shot", value: "shot" },
+    {
+      text: "Offensive Foul",
+      key: "offensiveFoul",
+      value: "offensiveFoul",
+    },
     { text: "Provoked 7meter", key: "provoked7meter", value: "provoked7meter" },
     { text: "Provoked 2min", key: "provoked2min", value: "provoked2min" },
     { text: "Travelling", key: "travelling", value: "travelling" },
@@ -15,6 +20,7 @@ const EVENT_TYPE_OPTIONS: Record<
     { text: "Lost Ball", key: "lostBall", value: "lostBall" },
   ],
   defense: [
+    { text: "Shot", key: "shot", value: "shot" },
     { text: "Interception", key: "interception", value: "interception" },
     {
       text: "7 Meter Conceded",
@@ -23,7 +29,11 @@ const EVENT_TYPE_OPTIONS: Record<
     },
     { text: "1-on-1 Lost", key: "oneOnOneLost", value: "oneOnOneLost" },
     { text: "Blocked Shot", key: "blockedShot", value: "blockedShot" },
-    { text: "Offensive Foul", key: "offensiveFoul", value: "offensiveFoul" },
+    {
+      text: "Offensive Foul Provoked",
+      key: "offensiveFoul",
+      value: "offensiveFoul",
+    },
   ],
   sanction: [
     { text: "Red Card", key: "redCard", value: "redCard" },

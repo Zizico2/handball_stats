@@ -182,6 +182,7 @@ export const eventMachine = setup({
             guard: ({ event }) =>
               event.eventType === "provoked7meter" ||
               event.eventType === "provoked2min" ||
+              event.eventType === "offensiveFoul" ||
               event.eventType === "travelling" ||
               event.eventType === "dribbleFault" ||
               event.eventType === "forcing" ||
@@ -201,6 +202,18 @@ export const eventMachine = setup({
     startingDefense: {
       on: {
         PICK_DEFENSE_EVENT_TYPE: [
+          {
+            target: "startingShot",
+            guard: ({ event }) => event.eventType === "shot",
+            actions: assign(({ context, event }) => {
+              return {
+                playerEvent: {
+                  ...context.playerEvent,
+                  eventType: event.eventType,
+                },
+              };
+            }),
+          },
           // {
           //   target: "startingInterception",
           //   guard: ({ event }) => event.eventType === "interception",
@@ -248,9 +261,16 @@ export const eventMachine = setup({
     //   ],
     // },
     startingShot: {
-      always: {
-        target: "pickingPlayer",
-      },
+      always: [
+        {
+          target: "pickingShotPosition",
+          guard: ({ context }) => context.playerEvent.eventGroup === "defense",
+        },
+        {
+          target: "pickingPlayer",
+          guard: ({ context }) => context.playerEvent.eventGroup === "attack",
+        },
+      ],
     },
     // startingInterception: {
     //   always: {
