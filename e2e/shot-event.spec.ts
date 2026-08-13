@@ -84,7 +84,12 @@ test.describe("shot event creation", () => {
     await page.getByRole("button", { name: "Bottom right" }).click();
     await page.getByRole("button", { name: "Goal", exact: true }).click();
     await expect(page.getByText(/DEFENSE/)).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(/Goal: Yes/)).toBeVisible();
+    await expect(
+      page.getByText(
+        "Goal: Yes | Position: 6m+ | Direction: OnTarget | Aim: BottomRight",
+        { exact: true },
+      ),
+    ).toBeVisible();
     await expect(defense).toBeEnabled({ timeout: 15_000 });
 
     await defense.click();

@@ -76,7 +76,7 @@ test.describe("two-minute suspension lifecycle", () => {
       .getByRole("button", { name: /#7 Alex.*served by #7 Alex/ })
       .click();
 
-    await expect(page.getByText(/two Minute Suspension Ended/)).toBeVisible({
+    await expect(page.getByText(/Two Minute Suspension Ended/)).toBeVisible({
       timeout: 15_000,
     });
 
