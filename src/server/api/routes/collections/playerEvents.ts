@@ -102,6 +102,22 @@ export const playerEventsRoutes = new Hono<ApiEnv>()
       const referencedById = new Map(
         referencedRows.map((row) => [row.clientId, row]),
       );
+      for (const item of items) {
+        if (
+          item.eventType !== "twoMinuteSuspension" ||
+          referencedById.has(item.id)
+        ) {
+          continue;
+        }
+        const game = gamesByClientId.get(item.game_id);
+        if (!game) continue;
+        referencedById.set(item.id, {
+          clientId: item.id,
+          player: item.player,
+          gameId: game.id,
+          eventType: item.eventType,
+        });
+      }
 
       for (const item of endItems) {
         const referenced = referencedById.get(item.event.suspensionId);

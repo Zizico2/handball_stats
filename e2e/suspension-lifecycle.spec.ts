@@ -39,12 +39,19 @@ test.describe("two-minute suspension lifecycle", () => {
       }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Save suspension" }).click();
-
-    await expect(page.getByText("2 min")).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.getByRole("heading", {
+        name: "Who Serves the 2 Minute Suspension?",
+      }),
+    ).toBeHidden();
 
     await page.getByRole("button", { name: "Attack" }).click();
     await page.getByRole("button", { name: "Shot", exact: true }).click();
-    await page.getByRole("button", { name: /2 min.*#7 Alex/ }).click();
+    const suspendedPlayer = page.getByRole("button", {
+      name: /2 min.*#7 Alex/,
+    });
+    await expect(suspendedPlayer).toBeVisible({ timeout: 15_000 });
+    await suspendedPlayer.click();
     await expect(
       page.getByRole("heading", { name: "Player has an active suspension" }),
     ).toBeVisible();

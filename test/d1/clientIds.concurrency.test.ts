@@ -314,4 +314,63 @@ describe("client UUID concurrency (D1)", () => {
       ),
     ).toBe(false);
   });
+
+  test("accepts a suspension start and end in the same POST batch", async () => {
+    const db = getTestDb();
+    const teamClientId = testClientId(600);
+    const gameClientId = testClientId(601);
+    const suspensionId = testClientId(602);
+    const endId = testClientId(603);
+    const [team] = await db
+      .insert(schema.teams)
+      .values({ userId: USER_ID, clientId: teamClientId, name: "Home" })
+      .returning();
+    await db.insert(schema.games).values({
+      userId: USER_ID,
+      clientId: gameClientId,
+      homeTeamId: team.id,
+      createdAt: "2026-08-01T00:00:00.000Z",
+      firstHalfStartedAtMs: Date.now() - 1_000,
+    });
+
+    const response = await post(playerEventsRoutes, [
+      {
+        id: suspensionId,
+        sequence: null,
+        player: 7,
+        game_id: gameClientId,
+        ellapsed_seconds: 0,
+        half: "firstHalf",
+        eventType: "twoMinuteSuspension",
+        eventGroup: "sanction",
+        event: { servedBy: 7 },
+      },
+      {
+        id: endId,
+        sequence: null,
+        player: 7,
+        game_id: gameClientId,
+        ellapsed_seconds: 0,
+        half: "firstHalf",
+        eventType: "twoMinuteSuspensionEnded",
+        eventGroup: "sanction",
+        event: { suspensionId },
+      },
+    ]);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual([
+      expect.objectContaining({
+        id: suspensionId,
+        player: 7,
+        eventType: "twoMinuteSuspension",
+        event: { servedBy: 7 },
+      }),
+      expect.objectContaining({
+        id: endId,
+        player: 7,
+        eventType: "twoMinuteSuspensionEnded",
+        event: { suspensionId },
+      }),
+    ]);
+  });
 });
