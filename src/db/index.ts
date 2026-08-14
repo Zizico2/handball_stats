@@ -59,6 +59,19 @@ const dbPlayerEventToDomainSchema = dbPlayerEventSchema
       };
     }
 
+    if (row.eventType === "sevenMeterTaken") {
+      return {
+        ...base,
+        eventType: row.eventType,
+        eventGroup: row.eventGroup,
+        event: {
+          goal: row.shotGoal ?? false,
+          direction: row.shotDirection,
+          ...(row.shotAim !== null ? { aim: row.shotAim } : {}),
+        },
+      };
+    }
+
     if (row.eventType === "substitution") {
       if (row.substitutionPlayerIn === null) {
         throw new Error("Missing substitutionPlayerIn in DB row");
@@ -172,6 +185,15 @@ export function playerEventToDbRow(
       shotDirection: event.event.direction,
       shotAim: event.event.aim ?? null,
       shotPosition: event.event.position,
+    };
+  }
+
+  if (event.eventType === "sevenMeterTaken") {
+    return {
+      ...base,
+      shotGoal: event.event.goal,
+      shotDirection: event.event.direction,
+      shotAim: event.event.aim ?? null,
     };
   }
 

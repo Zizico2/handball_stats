@@ -32,12 +32,14 @@ export function formatUndoEventLabel(
     return `${getPlayerLabel(event.player)} → ${getPlayerLabel(event.event.playerIn)}`;
   }
 
-  if (event.eventType === "shot") {
+  if (event.eventType === "shot" || event.eventType === "sevenMeterTaken") {
     const result = event.event.goal ? "Goal" : "Miss";
+    const eventLabel =
+      event.eventType === "sevenMeterTaken" ? "7 Meter Taken" : "Shot";
     if (event.eventGroup === "defense") {
-      return `Defense — Shot (${result})`;
+      return `Defense — ${eventLabel} (${result})`;
     }
-    return `${getPlayerLabel(event.player)} — Shot (${result})`;
+    return `${getPlayerLabel(event.player)} — ${eventLabel} (${result})`;
   }
 
   const eventTypeLabel =

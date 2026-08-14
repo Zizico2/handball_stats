@@ -47,6 +47,46 @@ function defenseShotEvent(): PlayerEvent {
   };
 }
 
+function attackSevenMeterTakenEvent(): Extract<
+  PlayerEvent,
+  { eventType: "sevenMeterTaken"; eventGroup: "attack" }
+> {
+  return {
+    id: testClientId(7),
+    sequence: null,
+    player: 7,
+    game_id: testClientId(10),
+    ellapsed_seconds: 130,
+    half: "firstHalf",
+    eventType: "sevenMeterTaken",
+    eventGroup: "attack",
+    event: {
+      goal: true,
+      direction: "OnTarget",
+      aim: "TopCenter",
+    },
+  };
+}
+
+function defenseSevenMeterTakenEvent(): Extract<
+  PlayerEvent,
+  { eventType: "sevenMeterTaken"; eventGroup: "defense" }
+> {
+  return {
+    id: testClientId(8),
+    sequence: null,
+    game_id: testClientId(10),
+    ellapsed_seconds: 140,
+    half: "firstHalf",
+    eventType: "sevenMeterTaken",
+    eventGroup: "defense",
+    event: {
+      goal: false,
+      direction: "Post",
+    },
+  };
+}
+
 function dbShotRow(overrides: Partial<DbPlayerEvent> = {}): DbPlayerEvent {
   return {
     id: 1,
@@ -125,6 +165,53 @@ describe("playerEvent shot position round trip", () => {
     );
 
     expect(parsed).toMatchObject({ ...event, sequence: 4 });
+  });
+
+  test("round trips seven-meter attempts without a position", () => {
+    const events = [
+      attackSevenMeterTakenEvent(),
+      defenseSevenMeterTakenEvent(),
+    ];
+
+    for (const [index, event] of events.entries()) {
+      const row = playerEventToDbRow(event, USER_ID, 10);
+      expect(row.player).toBe(event.eventGroup === "attack" ? 7 : null);
+      expect(row.shotPosition).toBeNull();
+      expect(row.shotDirection).toBe(event.event.direction);
+
+      const parsed = dbRowToPlayerEvent(
+        {
+          ...dbShotRow(),
+          ...row,
+          id: 7 + index,
+        } as DbPlayerEvent,
+        testClientId(10),
+      );
+
+      expect(parsed).toEqual({ ...event, sequence: 7 + index });
+      expect(parsed.eventType).toBe("sevenMeterTaken");
+      if (parsed.eventType === "sevenMeterTaken") {
+        expect(parsed.event).not.toHaveProperty("position");
+      }
+    }
+  });
+
+  test("validates seven-meter player and shot-result requirements", () => {
+    expect(
+      playerEventSchema.parse(defenseSevenMeterTakenEvent()),
+    ).not.toHaveProperty("player");
+    expect(() =>
+      playerEventSchema.parse({
+        ...defenseSevenMeterTakenEvent(),
+        eventGroup: "attack",
+      }),
+    ).toThrow();
+    expect(() =>
+      playerEventSchema.parse({
+        ...attackSevenMeterTakenEvent(),
+        event: { goal: true, direction: "Post" },
+      }),
+    ).toThrow();
   });
 
   test("keeps offensive fouls distinct by event group", () => {

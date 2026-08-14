@@ -75,7 +75,10 @@ export async function listPastGames(): Promise<PastGameSummary[]> {
       eventCount: 0,
     };
     stats.eventCount += 1;
-    if (row.eventType === "shot" && row.shotGoal) {
+    if (
+      (row.eventType === "shot" || row.eventType === "sevenMeterTaken") &&
+      row.shotGoal
+    ) {
       if (row.eventGroup === "defense") {
         stats.opponentScore += 1;
       } else {

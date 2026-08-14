@@ -73,10 +73,24 @@ export const shotDirectionFieldsSchema = withShotDirectionFields(z.object({}));
 
 export type ShotDirectionFields = z.infer<typeof shotDirectionFieldsSchema>;
 
-export const baseShotSchema = z.object({
+const baseShotResultSchema = z.object({
   goal: z.boolean(),
+});
+
+export const baseShotSchema = baseShotResultSchema.extend({
   position: shotPosition,
 });
+
+export const shotResultSchema = withShotDirectionFields(baseShotResultSchema)
+  .refine(({ direction, goal }) => !(direction === "OffTarget" && goal), {
+    message: "An off-target attempt cannot be a goal",
+    path: ["goal"],
+  })
+  .refine(({ direction, goal }) => !(direction === "Post" && goal), {
+    message: "A post attempt cannot be a goal",
+    path: ["goal"],
+  });
+export type ShotResult = z.infer<typeof shotResultSchema>;
 
 export const shotSchema = withShotDirectionFields(baseShotSchema)
   .refine(({ direction, goal }) => !(direction === "OffTarget" && goal), {
@@ -268,6 +282,27 @@ export const defenseShotEventSchema = basePlayerlessEventSchema.extend({
 });
 export type DefenseShotEvent = z.infer<typeof defenseShotEventSchema>;
 
+export const attackSevenMeterTakenEventSchema = withBase(
+  z.object({
+    eventType: z.literal("sevenMeterTaken"),
+    eventGroup: z.literal("attack"),
+    event: shotResultSchema,
+  }),
+);
+export type AttackSevenMeterTakenEvent = z.infer<
+  typeof attackSevenMeterTakenEventSchema
+>;
+
+export const defenseSevenMeterTakenEventSchema =
+  basePlayerlessEventSchema.extend({
+    eventType: z.literal("sevenMeterTaken"),
+    eventGroup: z.literal("defense"),
+    event: shotResultSchema,
+  });
+export type DefenseSevenMeterTakenEvent = z.infer<
+  typeof defenseSevenMeterTakenEventSchema
+>;
+
 export const substitutionEventSchema = withBase(
   z.object({
     eventType: z.literal("substitution"),
@@ -293,6 +328,8 @@ export const playerEventSchema = z.union([
   // attack events
   shotEventSchema,
   defenseShotEventSchema,
+  attackSevenMeterTakenEventSchema,
+  defenseSevenMeterTakenEventSchema,
   attackOffensiveFoulEventSchema,
   provoked7meterEventSchema,
   provoked2minEventSchema,
@@ -320,6 +357,7 @@ export type PlayerEvent = z.infer<typeof playerEventSchema>;
 
 export const eventTypeSchema = z.enum([
   "shot",
+  "sevenMeterTaken",
   "offensiveFoul",
   "provoked7meter",
   "provoked2min",

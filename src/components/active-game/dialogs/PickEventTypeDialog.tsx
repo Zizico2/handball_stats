@@ -8,6 +8,11 @@ const EVENT_TYPE_OPTIONS: Record<
   attack: [
     { text: "Shot", key: "shot", value: "shot" },
     {
+      text: "7 Meter Taken",
+      key: "sevenMeterTaken",
+      value: "sevenMeterTaken",
+    },
+    {
       text: "Offensive Foul",
       key: "offensiveFoul",
       value: "offensiveFoul",
@@ -21,6 +26,11 @@ const EVENT_TYPE_OPTIONS: Record<
   ],
   defense: [
     { text: "Shot", key: "shot", value: "shot" },
+    {
+      text: "7 Meter Taken",
+      key: "sevenMeterTaken",
+      value: "sevenMeterTaken",
+    },
     { text: "Interception", key: "interception", value: "interception" },
     {
       text: "7 Meter Conceded",

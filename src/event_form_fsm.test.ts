@@ -225,6 +225,90 @@ describe("event form state machine", () => {
     actor.stop();
   });
 
+  test("records attack and defense seven-meter attempts without asking for a position", async () => {
+    const persisted: DeepPartial<PlayerEvent>[] = [];
+    const actor = createTestActor(async (event) => {
+      persisted.push(event);
+    });
+    actor.start();
+
+    actor.send({ ...START, id: testClientId(37) });
+    actor.send({
+      type: "PICK_ATTACK_EVENT_TYPE",
+      eventType: "sevenMeterTaken",
+    });
+    expect(actor.getSnapshot().matches("pickingPlayer")).toBe(true);
+    actor.send({ type: "PICK_PLAYER", player: 7 });
+    expect(actor.getSnapshot().matches("pickingShotDirection")).toBe(true);
+    actor.send({
+      type: "PICK_SHOT_DIRECTION",
+      pick: { direction: "OnTarget", aim: "TopCenter" },
+    });
+    expect(actor.getSnapshot().matches("pickingGoalOrNoGoal")).toBe(true);
+    actor.send({ type: "PICK_GOAL_OR_NO_GOAL", goal: true });
+    await waitForPersistedIdle(actor, persisted);
+
+    expect(persisted[0]).toEqual({
+      eventGroup: "attack",
+      ellapsed_seconds: 42,
+      game_id: testClientId(5),
+      id: testClientId(37),
+      half: "firstHalf",
+      eventType: "sevenMeterTaken",
+      player: 7,
+      event: {
+        direction: "OnTarget",
+        aim: "TopCenter",
+        goal: true,
+      },
+    });
+
+    actor.send({ ...START, eventGroup: "defense", id: testClientId(38) });
+    actor.send({
+      type: "PICK_DEFENSE_EVENT_TYPE",
+      eventType: "sevenMeterTaken",
+    });
+    expect(actor.getSnapshot().matches("pickingShotDirection")).toBe(true);
+    actor.send({
+      type: "PICK_SHOT_DIRECTION",
+      pick: { direction: "Blocked" },
+    });
+    await waitForPersistedIdle(actor, persisted, 2);
+
+    expect(persisted[1]).toEqual({
+      eventGroup: "defense",
+      ellapsed_seconds: 42,
+      game_id: testClientId(5),
+      id: testClientId(38),
+      half: "firstHalf",
+      eventType: "sevenMeterTaken",
+      event: {
+        direction: "Blocked",
+        aim: undefined,
+        goal: false,
+      },
+    });
+    actor.stop();
+  });
+
+  test("cancels a partially recorded seven-meter attempt", () => {
+    const actor = createTestActor();
+    actor.start();
+
+    actor.send(START);
+    actor.send({
+      type: "PICK_ATTACK_EVENT_TYPE",
+      eventType: "sevenMeterTaken",
+    });
+    actor.send({ type: "PICK_PLAYER", player: 7 });
+    expect(actor.getSnapshot().matches("pickingShotDirection")).toBe(true);
+
+    actor.send({ type: "CANCEL" });
+    expect(actor.getSnapshot().matches("idle")).toBe(true);
+    expect(actor.getSnapshot().context.playerEvent).toEqual({});
+    actor.stop();
+  });
+
   test("cancel resets partial context and allows a clean restart", async () => {
     const persisted: DeepPartial<PlayerEvent>[] = [];
     const actor = createTestActor(async (event) => {

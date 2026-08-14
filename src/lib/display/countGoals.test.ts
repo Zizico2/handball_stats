@@ -36,6 +36,31 @@ const defenseGoal: PlayerEvent = {
   },
 };
 
+const attackSevenMeterGoal: PlayerEvent = {
+  ...base,
+  id: "00000000-0000-4000-8000-000000000006" as PlayerEvent["id"],
+  player: 12,
+  eventType: "sevenMeterTaken",
+  eventGroup: "attack",
+  event: {
+    goal: true,
+    direction: "OnTarget",
+    aim: "BottomLeft",
+  },
+};
+
+const defenseSevenMeterGoal: PlayerEvent = {
+  ...base,
+  id: "00000000-0000-4000-8000-000000000007" as PlayerEvent["id"],
+  eventType: "sevenMeterTaken",
+  eventGroup: "defense",
+  event: {
+    goal: true,
+    direction: "OnTarget",
+    aim: "BottomRight",
+  },
+};
+
 describe("countScores", () => {
   test("separates attack and defense shot goals", () => {
     expect(countScores([attackGoal, defenseGoal])).toEqual({
@@ -43,6 +68,14 @@ describe("countScores", () => {
       opponentScore: 1,
     });
     expect(countGoals([attackGoal, defenseGoal])).toBe(1);
+  });
+
+  test("counts attack and defense seven-meter goals for the correct side", () => {
+    expect(countScores([attackSevenMeterGoal, defenseSevenMeterGoal])).toEqual({
+      teamScore: 1,
+      opponentScore: 1,
+    });
+    expect(countGoals([attackSevenMeterGoal, defenseSevenMeterGoal])).toBe(1);
   });
 
   test("ignores misses and non-shot events", () => {

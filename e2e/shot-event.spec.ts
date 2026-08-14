@@ -114,5 +114,63 @@ test.describe("shot event creation", () => {
     await expect(
       page.getByText("#7 Alex — Offensive Foul", { exact: true }),
     ).toBeVisible();
+
+    await page.getByRole("button", { name: "Attack", exact: true }).click();
+    await page
+      .getByRole("button", { name: "7 Meter Taken", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Pick a Player" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "#7 Alex", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Shot target" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Pick Shot Position" }),
+    ).toBeHidden();
+    await page.getByRole("button", { name: "Top center" }).click();
+    await page.getByRole("button", { name: "Goal", exact: true }).click();
+    await expect(
+      page.getByText("#7 Alex — 7 Meter Taken", { exact: true }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.getByText("Goal: Yes | Direction: OnTarget | Aim: TopCenter", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", {
+        name: "Undo: #7 Alex — 7 Meter Taken (Goal)",
+        exact: true,
+      }),
+    ).toBeVisible();
+
+    await defense.click();
+    await page
+      .getByRole("button", { name: "7 Meter Taken", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Shot target" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Pick a Player" }),
+    ).toBeHidden();
+    await expect(
+      page.getByRole("heading", { name: "Pick Shot Position" }),
+    ).toBeHidden();
+    await page.getByRole("button", { name: "Bottom center" }).click();
+    await page.getByRole("button", { name: "Goal", exact: true }).click();
+    await expect(
+      page.getByText("Goal: Yes | Direction: OnTarget | Aim: BottomCenter", {
+        exact: true,
+      }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.getByRole("button", {
+        name: "Undo: Defense — 7 Meter Taken (Goal)",
+        exact: true,
+      }),
+    ).toBeVisible();
   });
 });

@@ -8,7 +8,10 @@ export interface MatchScore {
 export function countScores(events: PlayerEvent[]): MatchScore {
   return events.reduce<MatchScore>(
     (score, event) => {
-      if (event.eventType !== "shot" || !event.event.goal) {
+      if (
+        (event.eventType !== "shot" && event.eventType !== "sevenMeterTaken") ||
+        !event.event.goal
+      ) {
         return score;
       }
 

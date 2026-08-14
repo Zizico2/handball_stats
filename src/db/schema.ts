@@ -173,15 +173,15 @@ export const playerEvents = sqliteTable(
       sql.raw(`\`${table.half.name}\` IN ('firstHalf', 'secondHalf')`),
     ),
     check(
-      "player_required_unless_defense_shot",
+      "player_required_unless_defense_attempt",
       sql.raw(
-        `(\`${table.eventType.name}\` = 'shot' AND \`${table.eventGroup.name}\` = 'defense') OR \`${table.player.name}\` IS NOT NULL`,
+        `(\`${table.eventType.name}\` IN ('shot', 'sevenMeterTaken') AND \`${table.eventGroup.name}\` = 'defense') OR \`${table.player.name}\` IS NOT NULL`,
       ),
     ),
     check(
-      "shot_direction_required_for_shot",
+      "shot_direction_required_for_attempt",
       sql.raw(
-        `\`${table.eventType.name}\` != 'shot' OR \`${table.shotDirection.name}\` IS NOT NULL`,
+        `\`${table.eventType.name}\` NOT IN ('shot', 'sevenMeterTaken') OR \`${table.shotDirection.name}\` IS NOT NULL`,
       ),
     ),
     check(

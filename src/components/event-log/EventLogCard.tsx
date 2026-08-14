@@ -15,6 +15,8 @@ interface EventLogCardProps {
 export function EventLogCard({ event, getPlayerLabel }: EventLogCardProps) {
   const playerLabel = "player" in event ? getPlayerLabel(event.player) : null;
   const eventTypeLabel = formatEventTypeLabel(event);
+  const isShotResult =
+    event.eventType === "shot" || event.eventType === "sevenMeterTaken";
 
   return (
     <Card className="border border-separator shadow-sm">
@@ -61,10 +63,11 @@ export function EventLogCard({ event, getPlayerLabel }: EventLogCardProps) {
                 Served by {getPlayerLabel(event.event.servedBy)}
               </Typography.Paragraph>
             ) : null}
-            {event.eventType === "shot" && (
+            {isShotResult && (
               <Typography.Paragraph color="muted" className="mt-1">
                 Goal: <strong>{event.event.goal ? "Yes" : "No"}</strong>
-                {` | Position: ${event.event.position}`}
+                {event.eventType === "shot" &&
+                  ` | Position: ${event.event.position}`}
                 {event.event.direction &&
                   ` | Direction: ${event.event.direction}`}
                 {event.event.aim && ` | Aim: ${event.event.aim}`}
@@ -78,6 +81,10 @@ export function EventLogCard({ event, getPlayerLabel }: EventLogCardProps) {
 }
 
 function formatEventTypeLabel(event: PlayerEvent): string {
+  if (event.eventType === "sevenMeterTaken") {
+    return "7 Meter Taken";
+  }
+
   if (event.eventType === "offensiveFoul" && event.eventGroup === "defense") {
     return "Offensive Foul Provoked";
   }

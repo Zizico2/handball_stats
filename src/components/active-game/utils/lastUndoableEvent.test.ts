@@ -69,6 +69,30 @@ function defenseShot(id: number, goal: boolean): PlayerEvent {
   };
 }
 
+function sevenMeterTaken(
+  id: number,
+  group: "attack" | "defense",
+  goal: boolean,
+): PlayerEvent {
+  const baseEvent = {
+    id: testClientId(id),
+    sequence: id,
+    game_id: testClientId(100),
+    ellapsed_seconds: 70,
+    half: "firstHalf" as const,
+    eventType: "sevenMeterTaken" as const,
+    event: {
+      goal,
+      direction: "OnTarget" as const,
+      aim: "MiddleCenter" as const,
+    },
+  };
+
+  return group === "attack"
+    ? { ...baseEvent, eventGroup: "attack", player: 7 }
+    : { ...baseEvent, eventGroup: "defense" };
+}
+
 function substitution(
   id: number,
   playerOut: number,
@@ -134,6 +158,15 @@ describe("formatUndoEventLabel", () => {
     expect(formatUndoEventLabel(defenseShot(5, true), getPlayerLabel)).toBe(
       "Defense — Shot (Goal)",
     );
+    expect(
+      formatUndoEventLabel(sevenMeterTaken(6, "attack", true), getPlayerLabel),
+    ).toBe("#7 — 7 Meter Taken (Goal)");
+    expect(
+      formatUndoEventLabel(
+        sevenMeterTaken(7, "defense", false),
+        getPlayerLabel,
+      ),
+    ).toBe("Defense — 7 Meter Taken (Miss)");
     expect(formatUndoEventLabel(substitution(3, 7, 9), getPlayerLabel)).toBe(
       "#7 → #9",
     );
@@ -164,6 +197,18 @@ describe("undo derived state", () => {
 
   test("undoing a defense goal updates only the opponent score", () => {
     const events: PlayerEvent[] = [shot(1, 7, true), defenseShot(2, true)];
+    expect(countScores(events)).toEqual({ teamScore: 1, opponentScore: 1 });
+
+    const last = getLastUndoableEvent(events);
+    const afterUndo = events.filter((event) => event.id !== last?.id);
+    expect(countScores(afterUndo)).toEqual({ teamScore: 1, opponentScore: 0 });
+  });
+
+  test("undoing a defense seven-meter goal updates only the opponent score", () => {
+    const events: PlayerEvent[] = [
+      sevenMeterTaken(1, "attack", true),
+      sevenMeterTaken(2, "defense", true),
+    ];
     expect(countScores(events)).toEqual({ teamScore: 1, opponentScore: 1 });
 
     const last = getLastUndoableEvent(events);
