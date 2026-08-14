@@ -9,12 +9,12 @@ import {
   playerEventToDbRow,
 } from "@/db";
 import * as schema from "@/db/schema";
-import { parseClientId } from "@/lib/clientId";
+import { parsePlayerEventId } from "@/lib/clientId";
 import type { ApiEnv } from "@/server/api/types";
 import { getDb } from "@/server/db";
 import { getGamesByClientId } from "@/server/dbClientIds";
 import { getMatchClockSnapshot } from "@/server/matchClock";
-import { idsSchema, playerEventsArraySchema } from "./shared";
+import { playerEventIdsSchema, playerEventsArraySchema } from "./shared";
 
 function sqliteErrorText(error: unknown): string {
   if (error == null) return "";
@@ -285,13 +285,13 @@ export const playerEventsRoutes = new Hono<ApiEnv>()
     const itemsByClientId = new Map(items.map((item) => [item.id, item]));
     return c.json(
       inserted.map((row) => {
-        const item = itemsByClientId.get(parseClientId(row.clientId));
+        const item = itemsByClientId.get(parsePlayerEventId(row.clientId));
         if (!item) throw new Error("Inserted event was not in the request");
         return dbRowToPlayerEvent(row, item.game_id);
       }),
     );
   })
-  .delete("/", zValidator("json", idsSchema), async (c) => {
+  .delete("/", zValidator("json", playerEventIdsSchema), async (c) => {
     const ids = c.req.valid("json");
     const { userId } = c.env;
     const db = await getDb();

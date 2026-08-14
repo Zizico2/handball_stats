@@ -2,14 +2,14 @@
 
 import type { ActiveSuspension } from "@/components/active-game/utils/activeSuspensions";
 import { ListSelectionModal } from "@/components/ui/ListSelectionModal";
-import type { ClientId } from "@/datamodel";
+import type { PlayerEventId } from "@/datamodel";
 
 interface PickSuspensionToEndDialogProps {
   activeSuspensions: ActiveSuspension[];
   getPlayerLabel: (number: number) => string;
   open: boolean;
   onPick: (
-    selection: { player: number; suspensionId: ClientId } | null,
+    selection: { player: number; suspensionId: PlayerEventId } | null,
   ) => void;
 }
 

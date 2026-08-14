@@ -22,7 +22,7 @@ test.describe("instant navigations", () => {
     });
 
     await expect(
-      page.getByText(/No past games yet|goals|events/).first(),
+      page.getByText(/No past games yet|score|events/).first(),
     ).toBeVisible({
       timeout: 15_000,
     });
@@ -64,7 +64,7 @@ test.describe("instant navigations", () => {
     });
 
     await expect(
-      page.getByText(/logged events|rostered players|goals/).first(),
+      page.getByText(/logged events|rostered players|score/).first(),
     ).toBeVisible({ timeout: 15_000 });
   });
 });

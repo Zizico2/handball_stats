@@ -105,6 +105,45 @@ test.describe("full match lifecycle", () => {
       timeout: 15_000,
     });
 
+    await page.getByRole("button", { name: "Defense" }).click();
+    await page.getByRole("button", { name: "Shot", exact: true }).click();
+    await page.getByRole("button", { name: "6m+" }).click();
+    await page.getByRole("button", { name: "Top right" }).click();
+    await page.getByRole("button", { name: "Goal", exact: true }).click();
+    await expect(page.getByText(/Goal: Yes/)).toHaveCount(2, {
+      timeout: 15_000,
+    });
+    await expect(attack).toBeEnabled({ timeout: 15_000 });
+
+    await attack.click();
+    await page
+      .getByRole("button", { name: "7 Meter Taken", exact: true })
+      .click();
+    await page.getByRole("button", { name: "#7 Alex", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Pick Shot Position" }),
+    ).toBeHidden();
+    await page.getByRole("button", { name: "Top center" }).click();
+    await page.getByRole("button", { name: "Goal", exact: true }).click();
+    await expect(attack).toBeEnabled({ timeout: 15_000 });
+
+    await page.getByRole("button", { name: "Defense", exact: true }).click();
+    await page
+      .getByRole("button", { name: "7 Meter Taken", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Pick a Player" }),
+    ).toBeHidden();
+    await expect(
+      page.getByRole("heading", { name: "Pick Shot Position" }),
+    ).toBeHidden();
+    await page.getByRole("button", { name: "Bottom center" }).click();
+    await page.getByRole("button", { name: "Goal", exact: true }).click();
+    await expect(page.getByText(/Goal: Yes/)).toHaveCount(4, {
+      timeout: 15_000,
+    });
+    await expect(attack).toBeEnabled({ timeout: 15_000 });
+
     await openMatchControls(page);
     await page.getByRole("menuitem", { name: "Pause Match" }).click();
     await openMatchControls(page);
@@ -145,9 +184,9 @@ test.describe("full match lifecycle", () => {
     await expect(page.getByRole("heading", { name: TEAM.name })).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByText("1 goals", { exact: true })).toBeVisible();
+    await expect(page.getByText("2–2 score", { exact: true })).toBeVisible();
     await expect(
-      page.getByText("5 logged events", { exact: true }),
+      page.getByText("8 logged events", { exact: true }),
     ).toBeVisible();
 
     await page.getByRole("link", { name: "Back to past games" }).click();
@@ -155,8 +194,10 @@ test.describe("full match lifecycle", () => {
       page.getByRole("heading", { name: "Past Games", exact: true }),
     ).toBeVisible();
     const pastGame = page.getByRole("link", { name: new RegExp(TEAM.name) });
-    await expect(pastGame.getByText("1 goals", { exact: true })).toBeVisible();
-    await expect(pastGame.getByText("5 events", { exact: true })).toBeVisible();
+    await expect(
+      pastGame.getByText("2–2 score", { exact: true }),
+    ).toBeVisible();
+    await expect(pastGame.getByText("8 events", { exact: true })).toBeVisible();
 
     await pastGame.click();
     await expect(page).toHaveURL(/\/past-games\/[0-9a-f-]{36}$/);
@@ -176,5 +217,29 @@ test.describe("full match lifecycle", () => {
     expect(shotRow).toBeDefined();
     expect(shotRow).toContain("OnTarget");
     expect(shotRow?.toLowerCase()).toContain("true");
+
+    const [header, ...csvRows] = csv
+      .trim()
+      .split(/\r?\n/)
+      .map((row) => row.split(","));
+    const eventTypeIndex = header.indexOf("eventType");
+    const eventGroupIndex = header.indexOf("eventGroup");
+    const playerIndex = header.indexOf("player");
+    const shotPositionIndex = header.indexOf("shotPosition");
+    const sevenMeterRows = csvRows.filter(
+      (row) => row[eventTypeIndex] === "sevenMeterTaken",
+    );
+    expect(sevenMeterRows).toHaveLength(2);
+
+    const attackSevenMeterRow = sevenMeterRows.find(
+      (row) => row[eventGroupIndex] === "attack",
+    );
+    const defenseSevenMeterRow = sevenMeterRows.find(
+      (row) => row[eventGroupIndex] === "defense",
+    );
+    expect(attackSevenMeterRow?.[playerIndex]).toBe("7");
+    expect(attackSevenMeterRow?.[shotPositionIndex]).toBe("");
+    expect(defenseSevenMeterRow?.[playerIndex]).toBe("");
+    expect(defenseSevenMeterRow?.[shotPositionIndex]).toBe("");
   });
 });

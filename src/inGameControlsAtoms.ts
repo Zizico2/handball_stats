@@ -29,7 +29,8 @@ export interface ActiveGameControlsState extends ActiveGameControlActions {
   gameId: ClientId | null;
   clockMinutes: number;
   clockSeconds: number;
-  goals: number;
+  teamScore: number;
+  opponentScore: number;
   eventCount: number;
   primaryClockAction: PrimaryClockAction;
   primaryClockActionLabel: string | null;
@@ -99,7 +100,8 @@ export const initialActiveGameControlsState: ActiveGameControlsState = {
   gameId: null,
   clockMinutes: 0,
   clockSeconds: 0,
-  goals: 0,
+  teamScore: 0,
+  opponentScore: 0,
   eventCount: 0,
   primaryClockAction: null,
   primaryClockActionLabel: null,

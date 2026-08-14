@@ -11,7 +11,7 @@ import type {
   TeamPlayer,
 } from "@/datamodel";
 import { clientIdSchema, playerEventSchema } from "@/datamodel";
-import { parseClientId } from "@/lib/clientId";
+import { parseClientId, parsePlayerEventId } from "@/lib/clientId";
 import * as schema from "./schema";
 
 export type DbPlayerEvent = typeof schema.playerEvents.$inferSelect;
@@ -37,12 +37,12 @@ const dbPlayerEventToDomainSchema = dbPlayerEventSchema
   .extend({ gameClientId: clientIdSchema })
   .transform((row): unknown => {
     const base = {
-      id: row.clientId,
+      id: parsePlayerEventId(row.clientId),
       sequence: row.id,
-      player: row.player,
       game_id: row.gameClientId,
       ellapsed_seconds: row.ellapsedSeconds,
       half: row.half,
+      ...(row.player !== null ? { player: row.player } : {}),
     };
 
     if (row.eventType === "shot") {
@@ -54,6 +54,19 @@ const dbPlayerEventToDomainSchema = dbPlayerEventSchema
           goal: row.shotGoal ?? false,
           direction: row.shotDirection,
           position: row.shotPosition,
+          ...(row.shotAim !== null ? { aim: row.shotAim } : {}),
+        },
+      };
+    }
+
+    if (row.eventType === "sevenMeterTaken") {
+      return {
+        ...base,
+        eventType: row.eventType,
+        eventGroup: row.eventGroup,
+        event: {
+          goal: row.shotGoal ?? false,
+          direction: row.shotDirection,
           ...(row.shotAim !== null ? { aim: row.shotAim } : {}),
         },
       };
@@ -96,7 +109,7 @@ const dbPlayerEventToDomainSchema = dbPlayerEventSchema
         eventType: row.eventType,
         eventGroup: row.eventGroup,
         event: {
-          suspensionId: parseClientId(row.suspensionEndedSuspensionId),
+          suspensionId: parsePlayerEventId(row.suspensionEndedSuspensionId),
         },
       };
     }
@@ -150,7 +163,7 @@ export function playerEventToDbRow(
   const base = {
     userId,
     clientId: event.id,
-    player: event.player,
+    player: "player" in event ? event.player : null,
     gameId,
     ellapsedSeconds: event.ellapsed_seconds,
     eventType: event.eventType,
@@ -172,6 +185,15 @@ export function playerEventToDbRow(
       shotDirection: event.event.direction,
       shotAim: event.event.aim ?? null,
       shotPosition: event.event.position,
+    };
+  }
+
+  if (event.eventType === "sevenMeterTaken") {
+    return {
+      ...base,
+      shotGoal: event.event.goal,
+      shotDirection: event.event.direction,
+      shotAim: event.event.aim ?? null,
     };
   }
 

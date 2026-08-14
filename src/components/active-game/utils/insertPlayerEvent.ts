@@ -1,8 +1,8 @@
 import z from "zod";
 import { playerEventsCollection } from "@/collections";
 import {
-  type ClientId,
   type PlayerEvent,
+  type PlayerEventId,
   playerEventSchema,
 } from "@/datamodel";
 
@@ -53,7 +53,7 @@ export async function awaitPlayerEventPersistence(
 
 export async function awaitPlayerEventDeletionPersistence(
   tx: { isPersisted: { promise: Promise<unknown> } },
-  eventId: ClientId,
+  eventId: PlayerEventId,
 ): Promise<void> {
   try {
     await tx.isPersisted.promise;
@@ -77,7 +77,8 @@ function hasSamePlayerEventIntent(actual: PlayerEvent, expected: PlayerEvent) {
   return (
     actual.id === expected.id &&
     actual.game_id === expected.game_id &&
-    actual.player === expected.player &&
+    ("player" in actual ? actual.player : null) ===
+      ("player" in expected ? expected.player : null) &&
     actual.half === expected.half &&
     actual.eventType === expected.eventType &&
     actual.eventGroup === expected.eventGroup &&

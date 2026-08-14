@@ -8,6 +8,7 @@ import type {
   MatchHalf,
   Player,
   PlayerEvent,
+  PlayerEventId,
   ShotDirectionFields,
   ShotPosition,
 } from "./datamodel";
@@ -18,6 +19,10 @@ interface Context {
   playerEvent: DeepPartial<PlayerEvent>;
 }
 
+function isShotResultEventType(eventType: EventType | undefined) {
+  return eventType === "shot" || eventType === "sevenMeterTaken";
+}
+
 export type Event =
   | {
       type: "START";
@@ -25,7 +30,7 @@ export type Event =
       eventGroup: EventGroup;
       ellapsed_seconds: number;
       game_id: ClientId;
-      id: ClientId;
+      id: PlayerEventId;
       half: MatchHalf;
     }
   //
@@ -38,7 +43,7 @@ export type Event =
   | {
       type: "PICK_SUSPENSION_TO_END";
       player: Player;
-      suspensionId: ClientId;
+      suspensionId: PlayerEventId;
     }
   | { type: "PICK_SHOT_DIRECTION"; pick: ShotDirectionFields }
   | { type: "PICK_GOAL_OR_NO_GOAL"; goal: boolean }
@@ -179,9 +184,22 @@ export const eventMachine = setup({
           },
           {
             target: "pickingPlayer",
+            guard: ({ event }) => event.eventType === "sevenMeterTaken",
+            actions: assign(({ context, event }) => {
+              return {
+                playerEvent: {
+                  ...context.playerEvent,
+                  eventType: event.eventType,
+                },
+              };
+            }),
+          },
+          {
+            target: "pickingPlayer",
             guard: ({ event }) =>
               event.eventType === "provoked7meter" ||
               event.eventType === "provoked2min" ||
+              event.eventType === "offensiveFoul" ||
               event.eventType === "travelling" ||
               event.eventType === "dribbleFault" ||
               event.eventType === "forcing" ||
@@ -201,6 +219,30 @@ export const eventMachine = setup({
     startingDefense: {
       on: {
         PICK_DEFENSE_EVENT_TYPE: [
+          {
+            target: "startingShot",
+            guard: ({ event }) => event.eventType === "shot",
+            actions: assign(({ context, event }) => {
+              return {
+                playerEvent: {
+                  ...context.playerEvent,
+                  eventType: event.eventType,
+                },
+              };
+            }),
+          },
+          {
+            target: "pickingShotDirection",
+            guard: ({ event }) => event.eventType === "sevenMeterTaken",
+            actions: assign(({ context, event }) => {
+              return {
+                playerEvent: {
+                  ...context.playerEvent,
+                  eventType: event.eventType,
+                },
+              };
+            }),
+          },
           // {
           //   target: "startingInterception",
           //   guard: ({ event }) => event.eventType === "interception",
@@ -248,9 +290,16 @@ export const eventMachine = setup({
     //   ],
     // },
     startingShot: {
-      always: {
-        target: "pickingPlayer",
-      },
+      always: [
+        {
+          target: "pickingShotPosition",
+          guard: ({ context }) => context.playerEvent.eventGroup === "defense",
+        },
+        {
+          target: "pickingPlayer",
+          guard: ({ context }) => context.playerEvent.eventGroup === "attack",
+        },
+      ],
     },
     // startingInterception: {
     //   always: {
@@ -287,6 +336,16 @@ export const eventMachine = setup({
               context.playerEvent.eventType === "redCard" ||
               context.playerEvent.eventType === "yellowCard" ||
               context.playerEvent.eventType === "twoMinuteSuspension",
+            actions: assign(({ context, event }) => {
+              return {
+                playerEvent: { ...context.playerEvent, player: event.player },
+              };
+            }),
+          },
+          {
+            target: "pickingShotDirection",
+            guard: ({ context }) =>
+              context.playerEvent.eventType === "sevenMeterTaken",
             actions: assign(({ context, event }) => {
               return {
                 playerEvent: { ...context.playerEvent, player: event.player },
@@ -398,7 +457,7 @@ export const eventMachine = setup({
         PICK_SHOT_DIRECTION: {
           target: "pickingShotDirectionRouting",
           actions: assign(({ context, event }) => {
-            if (context.playerEvent.eventType !== "shot") {
+            if (!isShotResultEventType(context.playerEvent.eventType)) {
               console.error(
                 "Invalid event type in pickingShotDirection state:",
                 context.playerEvent.eventType,
@@ -426,13 +485,13 @@ export const eventMachine = setup({
         {
           target: "pickingGoalOrNoGoal",
           guard: ({ context }) =>
-            context.playerEvent.eventType === "shot" &&
+            isShotResultEventType(context.playerEvent.eventType) &&
             context.playerEvent.event?.direction === "OnTarget",
         },
         {
           target: "finished",
           actions: assign(({ context }) => {
-            if (context.playerEvent.eventType !== "shot") {
+            if (!isShotResultEventType(context.playerEvent.eventType)) {
               console.error(
                 "Invalid event type in pickingShotDirectionRouting state:",
                 context.playerEvent.eventType,
@@ -458,7 +517,7 @@ export const eventMachine = setup({
         PICK_GOAL_OR_NO_GOAL: {
           target: "finished",
           actions: assign(({ context, event }) => {
-            if (context.playerEvent.eventType !== "shot") {
+            if (!isShotResultEventType(context.playerEvent.eventType)) {
               console.error(
                 "Invalid event type in pickingGoalOrNoGoal state:",
                 context.playerEvent.eventType,

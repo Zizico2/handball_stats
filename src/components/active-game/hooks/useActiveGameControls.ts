@@ -28,7 +28,8 @@ interface UseActiveGameControlsParams {
   activeGameRecord: Game | null;
   eventCount: number;
   firstHalfStartingPlayerNumbers: number[];
-  goals: number;
+  teamScore: number;
+  opponentScore: number;
   secondHalfStartingPlayerNumbers: number[];
   matchStatus: MatchStatus | null;
   setMatchStatus: Dispatch<SetStateAction<MatchStatus | null>>;
@@ -40,7 +41,8 @@ export function useActiveGameControls({
   activeGameRecord,
   eventCount,
   firstHalfStartingPlayerNumbers,
-  goals,
+  teamScore,
+  opponentScore,
   secondHalfStartingPlayerNumbers,
   matchStatus,
   setMatchStatus,
@@ -127,7 +129,8 @@ export function useActiveGameControls({
       gameId: activeGameData?.gameId ?? null,
       clockMinutes: minutes,
       clockSeconds: seconds,
-      goals,
+      teamScore,
+      opponentScore,
       eventCount,
       primaryClockAction: primary.action,
       primaryClockActionLabel: primary.label,
@@ -145,7 +148,8 @@ export function useActiveGameControls({
   }, [
     activeGameData,
     eventCount,
-    goals,
+    opponentScore,
+    teamScore,
     handleEndMatch,
     isClockMutationPending,
     isRunning,

@@ -79,7 +79,10 @@ export function useActiveGameData(matchStatus: MatchStatus | null) {
   );
 
   const startingPlayerNumbers = useMemo(
-    () => startingEvents.map((event) => event.player),
+    () =>
+      startingEvents.flatMap((event) =>
+        "player" in event ? [event.player] : [],
+      ),
     [startingEvents],
   );
 
@@ -90,7 +93,7 @@ export function useActiveGameData(matchStatus: MatchStatus | null) {
           (event) =>
             event.eventType === "startingPlayer" && event.half === "firstHalf",
         )
-        .map((event) => event.player),
+        .flatMap((event) => ("player" in event ? [event.player] : [])),
     [activeGameEvents],
   );
 
@@ -101,7 +104,7 @@ export function useActiveGameData(matchStatus: MatchStatus | null) {
           (event) =>
             event.eventType === "startingPlayer" && event.half === "secondHalf",
         )
-        .map((event) => event.player),
+        .flatMap((event) => ("player" in event ? [event.player] : [])),
     [activeGameEvents],
   );
 

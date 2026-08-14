@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createActor, fromPromise, waitFor } from "xstate";
 import type { PlayerEvent } from "./datamodel";
 import { eventMachine } from "./event_form_fsm";
-import { testClientId } from "./testing/clientId";
+import { testClientId, testPlayerEventId } from "./testing/clientId";
 import type { DeepPartial } from "./utils";
 
 const START = {
@@ -10,7 +10,7 @@ const START = {
   eventGroup: "attack" as const,
   ellapsed_seconds: 42,
   game_id: testClientId(5),
-  id: testClientId(9),
+  id: testPlayerEventId(9),
   half: "firstHalf" as const,
 };
 
@@ -64,7 +64,7 @@ describe("event form state machine", () => {
       eventGroup: "attack",
       ellapsed_seconds: 42,
       game_id: testClientId(5),
-      id: testClientId(9),
+      id: testPlayerEventId(9),
       half: "firstHalf",
       eventType: "shot",
       player: 7,
@@ -76,7 +76,7 @@ describe("event form state machine", () => {
       },
     });
 
-    actor.send({ ...START, id: testClientId(10), ellapsed_seconds: 51 });
+    actor.send({ ...START, id: testPlayerEventId(10), ellapsed_seconds: 51 });
     actor.send({ type: "PICK_ATTACK_EVENT_TYPE", eventType: "shot" });
     actor.send({ type: "PICK_PLAYER", player: 12 });
     actor.send({ type: "PICK_SHOT_POSITION", position: "leftWing" });
@@ -87,7 +87,7 @@ describe("event form state machine", () => {
     await waitForPersistedIdle(actor, persisted, 2);
 
     expect(persisted[1]).toMatchObject({
-      id: testClientId(10),
+      id: testPlayerEventId(10),
       eventType: "shot",
       player: 12,
       event: {
@@ -106,8 +106,16 @@ describe("event form state machine", () => {
         pick: { type: "PICK_ATTACK_EVENT_TYPE", eventType: "lostBall" },
       },
       {
+        group: "attack",
+        pick: { type: "PICK_ATTACK_EVENT_TYPE", eventType: "offensiveFoul" },
+      },
+      {
         group: "defense",
         pick: { type: "PICK_DEFENSE_EVENT_TYPE", eventType: "interception" },
+      },
+      {
+        group: "defense",
+        pick: { type: "PICK_DEFENSE_EVENT_TYPE", eventType: "offensiveFoul" },
       },
       {
         group: "sanction",
@@ -123,7 +131,7 @@ describe("event form state machine", () => {
       actor.start();
       actor.send({
         ...START,
-        id: testClientId(20 + index),
+        id: testPlayerEventId(20 + index),
         eventGroup: scenario.group,
       });
       actor.send(scenario.pick);
@@ -144,7 +152,7 @@ describe("event form state machine", () => {
     substitution.start();
     substitution.send({
       ...START,
-      id: testClientId(30),
+      id: testPlayerEventId(30),
       eventGroup: "substitution",
     });
     substitution.send({ type: "PICK_PLAYER", player: 7 });
@@ -157,6 +165,160 @@ describe("event form state machine", () => {
       event: { playerIn: 12 },
     });
     substitution.stop();
+  });
+
+  test("records a playerless defense shot and asks for a goal only on target", async () => {
+    const persisted: DeepPartial<PlayerEvent>[] = [];
+    const actor = createTestActor(async (event) => {
+      persisted.push(event);
+    });
+    actor.start();
+
+    actor.send({
+      ...START,
+      eventGroup: "defense",
+      id: testPlayerEventId(35),
+    });
+    actor.send({ type: "PICK_DEFENSE_EVENT_TYPE", eventType: "shot" });
+    expect(actor.getSnapshot().matches("pickingShotPosition")).toBe(true);
+    actor.send({ type: "PICK_SHOT_POSITION", position: "6m+" });
+    actor.send({
+      type: "PICK_SHOT_DIRECTION",
+      pick: { direction: "OnTarget", aim: "MiddleCenter" },
+    });
+    expect(actor.getSnapshot().matches("pickingGoalOrNoGoal")).toBe(true);
+    actor.send({ type: "PICK_GOAL_OR_NO_GOAL", goal: true });
+    await waitForPersistedIdle(actor, persisted);
+
+    expect(persisted[0]).toEqual({
+      eventGroup: "defense",
+      ellapsed_seconds: 42,
+      game_id: testClientId(5),
+      id: testPlayerEventId(35),
+      half: "firstHalf",
+      eventType: "shot",
+      event: {
+        position: "6m+",
+        direction: "OnTarget",
+        aim: "MiddleCenter",
+        goal: true,
+      },
+    });
+
+    actor.send({
+      ...START,
+      eventGroup: "defense",
+      id: testPlayerEventId(36),
+    });
+    actor.send({ type: "PICK_DEFENSE_EVENT_TYPE", eventType: "shot" });
+    actor.send({ type: "PICK_SHOT_POSITION", position: "rightWing" });
+    actor.send({
+      type: "PICK_SHOT_DIRECTION",
+      pick: { direction: "Blocked" },
+    });
+    await waitForPersistedIdle(actor, persisted, 2);
+    expect(persisted[1]).toEqual({
+      eventGroup: "defense",
+      ellapsed_seconds: 42,
+      game_id: testClientId(5),
+      id: testPlayerEventId(36),
+      half: "firstHalf",
+      eventType: "shot",
+      event: {
+        position: "rightWing",
+        direction: "Blocked",
+        goal: false,
+      },
+    });
+    actor.stop();
+  });
+
+  test("records attack and defense seven-meter attempts without asking for a position", async () => {
+    const persisted: DeepPartial<PlayerEvent>[] = [];
+    const actor = createTestActor(async (event) => {
+      persisted.push(event);
+    });
+    actor.start();
+
+    actor.send({ ...START, id: testPlayerEventId(37) });
+    actor.send({
+      type: "PICK_ATTACK_EVENT_TYPE",
+      eventType: "sevenMeterTaken",
+    });
+    expect(actor.getSnapshot().matches("pickingPlayer")).toBe(true);
+    actor.send({ type: "PICK_PLAYER", player: 7 });
+    expect(actor.getSnapshot().matches("pickingShotDirection")).toBe(true);
+    actor.send({
+      type: "PICK_SHOT_DIRECTION",
+      pick: { direction: "OnTarget", aim: "TopCenter" },
+    });
+    expect(actor.getSnapshot().matches("pickingGoalOrNoGoal")).toBe(true);
+    actor.send({ type: "PICK_GOAL_OR_NO_GOAL", goal: true });
+    await waitForPersistedIdle(actor, persisted);
+
+    expect(persisted[0]).toEqual({
+      eventGroup: "attack",
+      ellapsed_seconds: 42,
+      game_id: testClientId(5),
+      id: testPlayerEventId(37),
+      half: "firstHalf",
+      eventType: "sevenMeterTaken",
+      player: 7,
+      event: {
+        direction: "OnTarget",
+        aim: "TopCenter",
+        goal: true,
+      },
+    });
+
+    actor.send({
+      ...START,
+      eventGroup: "defense",
+      id: testPlayerEventId(38),
+    });
+    actor.send({
+      type: "PICK_DEFENSE_EVENT_TYPE",
+      eventType: "sevenMeterTaken",
+    });
+    expect(actor.getSnapshot().matches("pickingShotDirection")).toBe(true);
+    actor.send({
+      type: "PICK_SHOT_DIRECTION",
+      pick: { direction: "Blocked" },
+    });
+    await waitForPersistedIdle(actor, persisted, 2);
+
+    expect(persisted[1]).toEqual({
+      eventGroup: "defense",
+      ellapsed_seconds: 42,
+      game_id: testClientId(5),
+      id: testPlayerEventId(38),
+      half: "firstHalf",
+      eventType: "sevenMeterTaken",
+      event: {
+        direction: "Blocked",
+        aim: undefined,
+        goal: false,
+      },
+    });
+    actor.stop();
+  });
+
+  test("cancels a partially recorded seven-meter attempt", () => {
+    const actor = createTestActor();
+    actor.start();
+
+    actor.send(START);
+    actor.send({
+      type: "PICK_ATTACK_EVENT_TYPE",
+      eventType: "sevenMeterTaken",
+    });
+    actor.send({ type: "PICK_PLAYER", player: 7 });
+    expect(actor.getSnapshot().matches("pickingShotDirection")).toBe(true);
+
+    actor.send({ type: "CANCEL" });
+    expect(actor.getSnapshot().matches("idle")).toBe(true);
+    expect(actor.getSnapshot().context.playerEvent).toEqual({});
+    actor.stop();
   });
 
   test("cancel resets partial context and allows a clean restart", async () => {
@@ -181,7 +343,7 @@ describe("event form state machine", () => {
     actor.send({
       ...START,
       eventGroup: "defense",
-      id: testClientId(40),
+      id: testPlayerEventId(40),
       ellapsed_seconds: 3,
       half: "secondHalf",
     });
@@ -195,7 +357,7 @@ describe("event form state machine", () => {
       eventGroup: "defense",
       ellapsed_seconds: 3,
       game_id: testClientId(5),
-      id: testClientId(40),
+      id: testPlayerEventId(40),
       half: "secondHalf",
       eventType: "blockedShot",
       player: 12,
@@ -298,14 +460,14 @@ describe("event form state machine", () => {
     actor.send({
       type: "PICK_SUSPENSION_TO_END",
       player: 7,
-      suspensionId: testClientId(77),
+      suspensionId: testPlayerEventId(77),
     });
     await waitForPersistedIdle(actor, persisted);
 
     expect(persisted[0]).toMatchObject({
       eventType: "twoMinuteSuspensionEnded",
       player: 7,
-      event: { suspensionId: testClientId(77) },
+      event: { suspensionId: testPlayerEventId(77) },
     });
     actor.stop();
   });

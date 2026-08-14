@@ -5,8 +5,9 @@ import {
   getLastUndoableEvent,
 } from "@/components/active-game/utils/lastUndoableEvent";
 import type { PlayerEvent } from "@/datamodel";
-import { countGoals } from "@/lib/display/countGoals";
-import { testClientId } from "@/testing/clientId";
+import { parsePlayerEventId } from "@/lib/clientId";
+import { countGoals, countScores } from "@/lib/display/countGoals";
+import { testClientId, testPlayerEventId } from "@/testing/clientId";
 
 const getPlayerLabel = (number: number) => `#${number}`;
 
@@ -16,7 +17,7 @@ function startingPlayer(
   half: "firstHalf" | "secondHalf" = "firstHalf",
 ): PlayerEvent {
   return {
-    id: testClientId(id),
+    id: testPlayerEventId(id),
     sequence: id,
     player,
     game_id: testClientId(100),
@@ -34,7 +35,7 @@ function shot(
   ellapsed_seconds = 60,
 ): PlayerEvent {
   return {
-    id: testClientId(id),
+    id: testPlayerEventId(id),
     sequence: id,
     player,
     game_id: testClientId(100),
@@ -51,6 +52,48 @@ function shot(
   };
 }
 
+function defenseShot(id: number, goal: boolean): PlayerEvent {
+  return {
+    id: testPlayerEventId(id),
+    sequence: id,
+    game_id: testClientId(100),
+    ellapsed_seconds: 60,
+    half: "firstHalf",
+    eventType: "shot",
+    eventGroup: "defense",
+    event: {
+      goal,
+      position: "6m+",
+      direction: "OnTarget",
+      aim: "MiddleCenter",
+    },
+  };
+}
+
+function sevenMeterTaken(
+  id: number,
+  group: "attack" | "defense",
+  goal: boolean,
+): PlayerEvent {
+  const baseEvent = {
+    id: testPlayerEventId(id),
+    sequence: id,
+    game_id: testClientId(100),
+    ellapsed_seconds: 70,
+    half: "firstHalf" as const,
+    eventType: "sevenMeterTaken" as const,
+    event: {
+      goal,
+      direction: "OnTarget" as const,
+      aim: "MiddleCenter" as const,
+    },
+  };
+
+  return group === "attack"
+    ? { ...baseEvent, eventGroup: "attack", player: 7 }
+    : { ...baseEvent, eventGroup: "defense" };
+}
+
 function substitution(
   id: number,
   playerOut: number,
@@ -58,7 +101,7 @@ function substitution(
   ellapsed_seconds = 90,
 ): PlayerEvent {
   return {
-    id: testClientId(id),
+    id: testPlayerEventId(id),
     sequence: id,
     player: playerOut,
     game_id: testClientId(100),
@@ -72,7 +115,7 @@ function substitution(
 
 function yellowCard(id: number, player: number): PlayerEvent {
   return {
-    id: testClientId(id),
+    id: testPlayerEventId(id),
     sequence: id,
     player,
     game_id: testClientId(100),
@@ -103,6 +146,43 @@ describe("getLastUndoableEvent", () => {
     expect(last?.sequence).toBe(5);
     expect(last?.eventType).toBe("substitution");
   });
+
+  test("treats a later optimistic event as the latest action", () => {
+    const events: PlayerEvent[] = [
+      { ...shot(3, 7, true), sequence: 20 },
+      { ...sevenMeterTaken(4, "attack", true), sequence: null },
+    ];
+
+    const last = getLastUndoableEvent(events);
+    expect(last?.eventType).toBe("sevenMeterTaken");
+  });
+
+  test("uses UUIDv7 creation order for consecutive optimistic events", () => {
+    const events: PlayerEvent[] = [
+      { ...sevenMeterTaken(4, "attack", true), sequence: null },
+      { ...shot(3, 7, true), sequence: null },
+    ];
+
+    const last = getLastUndoableEvent(events);
+    expect(last?.eventType).toBe("sevenMeterTaken");
+  });
+
+  test("uses durable client creation order when persisted and optimistic rows mix", () => {
+    const first = {
+      ...shot(30, 7, true),
+      id: parsePlayerEventId("018f2c42-7c43-7a40-9f62-7d824f7a3dc8"),
+    };
+    const latest = {
+      ...sevenMeterTaken(31, "attack", true),
+      id: parsePlayerEventId("018f2c42-7c44-7a40-9f62-7d824f7a3dc8"),
+    };
+
+    const last = getLastUndoableEvent([
+      { ...first, sequence: null },
+      { ...latest, sequence: 24 },
+    ]);
+    expect(last?.eventType).toBe("sevenMeterTaken");
+  });
 });
 
 describe("formatUndoEventLabel", () => {
@@ -113,6 +193,18 @@ describe("formatUndoEventLabel", () => {
     expect(formatUndoEventLabel(shot(2, 7, false), getPlayerLabel)).toBe(
       "#7 — Shot (Miss)",
     );
+    expect(formatUndoEventLabel(defenseShot(5, true), getPlayerLabel)).toBe(
+      "Defense — Shot (Goal)",
+    );
+    expect(
+      formatUndoEventLabel(sevenMeterTaken(6, "attack", true), getPlayerLabel),
+    ).toBe("#7 — 7 Meter Taken (Goal)");
+    expect(
+      formatUndoEventLabel(
+        sevenMeterTaken(7, "defense", false),
+        getPlayerLabel,
+      ),
+    ).toBe("Defense — 7 Meter Taken (Miss)");
     expect(formatUndoEventLabel(substitution(3, 7, 9), getPlayerLabel)).toBe(
       "#7 → #9",
     );
@@ -139,6 +231,27 @@ describe("undo derived state", () => {
 
     const afterGoalUndo = afterUndo.filter((event) => event.sequence !== 2);
     expect(countGoals(afterGoalUndo)).toBe(0);
+  });
+
+  test("undoing a defense goal updates only the opponent score", () => {
+    const events: PlayerEvent[] = [shot(1, 7, true), defenseShot(2, true)];
+    expect(countScores(events)).toEqual({ teamScore: 1, opponentScore: 1 });
+
+    const last = getLastUndoableEvent(events);
+    const afterUndo = events.filter((event) => event.id !== last?.id);
+    expect(countScores(afterUndo)).toEqual({ teamScore: 1, opponentScore: 0 });
+  });
+
+  test("undoing a defense seven-meter goal updates only the opponent score", () => {
+    const events: PlayerEvent[] = [
+      sevenMeterTaken(1, "attack", true),
+      sevenMeterTaken(2, "defense", true),
+    ];
+    expect(countScores(events)).toEqual({ teamScore: 1, opponentScore: 1 });
+
+    const last = getLastUndoableEvent(events);
+    const afterUndo = events.filter((event) => event.id !== last?.id);
+    expect(countScores(afterUndo)).toEqual({ teamScore: 1, opponentScore: 0 });
   });
 
   test("removing a substitution restores on-court players", () => {

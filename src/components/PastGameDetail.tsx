@@ -7,7 +7,7 @@ import { GameStatChips } from "@/components/game/GameStatChips";
 import { PastGameCsvDownloadButton } from "@/components/PastGameCsvDownloadButton";
 import { PastGameEventLog } from "@/components/PastGameEventLog";
 import { clientIdSchema } from "@/datamodel";
-import { countGoals } from "@/lib/display/countGoals";
+import { countScores } from "@/lib/display/countGoals";
 import {
   getPastGameLog,
   getPastGamePlayerEventsCsv,
@@ -35,7 +35,7 @@ export async function PastGameDetailContent({
     notFound();
   }
 
-  const score = countGoals(gameLog.events);
+  const { teamScore, opponentScore } = countScores(gameLog.events);
 
   return (
     <>
@@ -55,8 +55,9 @@ export async function PastGameDetailContent({
         <GameStatChips
           eventCount={gameLog.events.length}
           eventLabel="logged events"
+          opponentScore={opponentScore}
           playerCount={gameLog.players.length}
-          score={score}
+          teamScore={teamScore}
         />
       </div>
 

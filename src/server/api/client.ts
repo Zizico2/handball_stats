@@ -10,6 +10,7 @@ import {
   matchClockSnapshotSchema,
   type PauseToggle,
   type PlayerEvent,
+  type PlayerEventId,
   pauseToggleSchema,
   playerEventSchema,
   type QuickSubPair,
@@ -75,7 +76,7 @@ export async function createPlayerEventsMutation(items: PlayerEvent[]) {
     );
 }
 
-export async function deletePlayerEventsMutation(ids: ClientId[]) {
+export async function deletePlayerEventsMutation(ids: PlayerEventId[]) {
   await parseResponse(
     apiClient.api.collections["player-events"].$delete({ json: ids }),
   );

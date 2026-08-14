@@ -20,12 +20,12 @@ import {
   formatUndoEventLabel,
   getLastUndoableEvent,
 } from "@/components/active-game/utils/lastUndoableEvent";
-import type { ClientId, EventGroup, PlayerEvent } from "@/datamodel";
+import type { EventGroup, PlayerEvent, PlayerEventId } from "@/datamodel";
 import { eventMachine } from "@/event_form_fsm";
 import { usePlayerLabelMap } from "@/hooks/usePlayerLabelMap";
 import type { MatchStatus } from "@/inGameControlsAtoms";
-import { createClientId } from "@/lib/clientId";
-import { countGoals } from "@/lib/display/countGoals";
+import { createPlayerEventId } from "@/lib/clientId";
+import { countScores } from "@/lib/display/countGoals";
 import {
   beginMatchSaving,
   markMatchFailed,
@@ -73,13 +73,15 @@ function ActiveGame() {
     teamQuickSubPairs,
   } = useActiveGameData(matchStatus);
 
+  const { teamScore, opponentScore } = countScores(activeGameEvents);
   const { activeHalf, eventElapsedSeconds, minutes, seconds } =
     useActiveGameControls({
       activeGameData,
       activeGameRecord,
       eventCount: activeGameEvents.length,
       firstHalfStartingPlayerNumbers,
-      goals: countGoals(activeGameEvents),
+      teamScore,
+      opponentScore,
       secondHalfStartingPlayerNumbers,
       matchStatus,
       setMatchStatus,
@@ -139,7 +141,7 @@ function ActiveGame() {
       beginMatchSaving();
       try {
         const tx = insertPlayerEvent({
-          id: createClientId(),
+          id: createPlayerEventId(),
           player: suspension.offender,
           game_id: activeGameData.gameId,
           ellapsed_seconds: eventElapsedSeconds,
@@ -184,7 +186,7 @@ function ActiveGame() {
       eventGroup,
       ellapsed_seconds: eventElapsedSeconds,
       game_id: activeGame.data.gameId,
-      id: createClientId(),
+      id: createPlayerEventId(),
       half: activeHalf,
     });
   };
@@ -192,7 +194,7 @@ function ActiveGame() {
   const handleSaveStarting7 = useCallback(
     async (
       numbers: number[],
-      eventIds: ClientId[] = numbers.map(() => createClientId()),
+      eventIds: PlayerEventId[] = numbers.map(() => createPlayerEventId()),
     ) => {
       if (!activeGameData || isSavingStarting7) {
         return;
@@ -256,7 +258,7 @@ function ActiveGame() {
     async (
       playerOut: number,
       playerIn: number,
-      eventId: ClientId = createClientId(),
+      eventId: PlayerEventId = createPlayerEventId(),
     ) => {
       if (
         !activeHalf ||
@@ -339,7 +341,7 @@ function ActiveGame() {
       eventGroup: "substitution",
       ellapsed_seconds: eventElapsedSeconds,
       game_id: activeGame.data.gameId,
-      id: createClientId(),
+      id: createPlayerEventId(),
       half: activeHalf,
     });
   };
@@ -393,7 +395,7 @@ function ActiveGame() {
   );
 
   const undoEventById = useCallback(
-    async (eventId: ClientId) => {
+    async (eventId: PlayerEventId) => {
       if (isUndoingLastEvent || matchSync.status === "saving") {
         return;
       }

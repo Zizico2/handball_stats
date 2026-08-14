@@ -13,6 +13,11 @@ interface EventLogCardProps {
 }
 
 export function EventLogCard({ event, getPlayerLabel }: EventLogCardProps) {
+  const playerLabel = "player" in event ? getPlayerLabel(event.player) : null;
+  const eventTypeLabel = formatEventTypeLabel(event);
+  const isShotResult =
+    event.eventType === "shot" || event.eventType === "sevenMeterTaken";
+
   return (
     <Card className="border border-separator shadow-sm">
       <Card.Content className="px-4 py-3">
@@ -49,10 +54,8 @@ export function EventLogCard({ event, getPlayerLabel }: EventLogCardProps) {
         ) : (
           <div className="mt-1">
             <Typography.Paragraph className="font-medium">
-              {getPlayerLabel(event.player)} —{" "}
-              <span className="capitalize">
-                {event.eventType.replace(/([A-Z])/g, " $1")}
-              </span>
+              {playerLabel ? `${playerLabel} — ` : null}
+              <span>{eventTypeLabel}</span>
             </Typography.Paragraph>
             {event.eventType === "twoMinuteSuspension" &&
             event.event.servedBy !== event.player ? (
@@ -60,10 +63,11 @@ export function EventLogCard({ event, getPlayerLabel }: EventLogCardProps) {
                 Served by {getPlayerLabel(event.event.servedBy)}
               </Typography.Paragraph>
             ) : null}
-            {event.eventType === "shot" && (
+            {isShotResult && (
               <Typography.Paragraph color="muted" className="mt-1">
                 Goal: <strong>{event.event.goal ? "Yes" : "No"}</strong>
-                {` | Position: ${event.event.position}`}
+                {event.eventType === "shot" &&
+                  ` | Position: ${event.event.position}`}
                 {event.event.direction &&
                   ` | Direction: ${event.event.direction}`}
                 {event.event.aim && ` | Aim: ${event.event.aim}`}
@@ -74,4 +78,18 @@ export function EventLogCard({ event, getPlayerLabel }: EventLogCardProps) {
       </Card.Content>
     </Card>
   );
+}
+
+function formatEventTypeLabel(event: PlayerEvent): string {
+  if (event.eventType === "sevenMeterTaken") {
+    return "7 Meter Taken";
+  }
+
+  if (event.eventType === "offensiveFoul" && event.eventGroup === "defense") {
+    return "Offensive Foul Provoked";
+  }
+
+  return event.eventType
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (character) => character.toUpperCase());
 }

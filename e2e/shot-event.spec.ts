@@ -1,9 +1,14 @@
 import { expect, test } from "./fixtures";
 
-const hasAuth = Boolean(process.env.CLERK_SECRET_KEY);
+const hasE2eCredentials = Boolean(
+  process.env.CLERK_SECRET_KEY && process.env.E2E_RESET_TOKEN,
+);
 
 test.describe("shot event creation", () => {
-  test.skip(!hasAuth, "Requires CLERK_SECRET_KEY for Clerk testing helpers.");
+  test.skip(
+    !hasE2eCredentials,
+    "Requires Clerk and E2E reset credentials for isolated event data.",
+  );
 
   test("records shot position through the live event dialogs", async ({
     page,
@@ -44,7 +49,7 @@ test.describe("shot event creation", () => {
     await attack.click();
 
     await page.getByRole("button", { name: "Shot" }).click();
-    await page.getByRole("button", { name: /#7/ }).click();
+    await page.getByRole("button", { name: "#7 Alex", exact: true }).click();
     await expect(
       page.getByRole("heading", { name: "Pick Shot Position" }),
     ).toBeVisible();
@@ -65,5 +70,107 @@ test.describe("shot event creation", () => {
     });
     await expect(page.getByText(/Direction: OnTarget/)).toBeVisible();
     await expect(page.getByText(/Aim: TopLeft/)).toBeVisible();
+
+    const defense = page.getByRole("button", { name: "Defense", exact: true });
+    await defense.click();
+    await page.getByRole("button", { name: "Shot", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Pick Shot Position" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Pick a Player" }),
+    ).toBeHidden();
+    await page.getByRole("button", { name: "6m+" }).click();
+    await page.getByRole("button", { name: "Bottom right" }).click();
+    await page.getByRole("button", { name: "Goal", exact: true }).click();
+    await expect(page.getByText(/DEFENSE/)).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.getByText(
+        "Goal: Yes | Position: 6m+ | Direction: OnTarget | Aim: BottomRight",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(defense).toBeEnabled({ timeout: 15_000 });
+
+    await defense.click();
+    await page
+      .getByRole("button", { name: "Offensive Foul Provoked", exact: true })
+      .click();
+    await page.getByRole("button", { name: "#7 Alex", exact: true }).click();
+    await expect(
+      page
+        .getByRole("main")
+        .getByText("Offensive Foul Provoked", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Attack" })).toBeEnabled({
+      timeout: 15_000,
+    });
+
+    await page.getByRole("button", { name: "Attack" }).click();
+    await page
+      .getByRole("button", { name: "Offensive Foul", exact: true })
+      .click();
+    await page.getByRole("button", { name: "#7 Alex", exact: true }).click();
+    await expect(
+      page.getByText("#7 Alex — Offensive Foul", { exact: true }),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: "Attack", exact: true }).click();
+    await page
+      .getByRole("button", { name: "7 Meter Taken", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Pick a Player" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "#7 Alex", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Shot target" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Pick Shot Position" }),
+    ).toBeHidden();
+    await page.getByRole("button", { name: "Top center" }).click();
+    await page.getByRole("button", { name: "Goal", exact: true }).click();
+    await expect(
+      page.getByText("#7 Alex — 7 Meter Taken", { exact: true }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.getByText("Goal: Yes | Direction: OnTarget | Aim: TopCenter", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", {
+        name: "Undo: #7 Alex — 7 Meter Taken (Goal)",
+        exact: true,
+      }),
+    ).toBeVisible();
+
+    await defense.click();
+    await page
+      .getByRole("button", { name: "7 Meter Taken", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Shot target" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Pick a Player" }),
+    ).toBeHidden();
+    await expect(
+      page.getByRole("heading", { name: "Pick Shot Position" }),
+    ).toBeHidden();
+    await page.getByRole("button", { name: "Bottom center" }).click();
+    await page.getByRole("button", { name: "Goal", exact: true }).click();
+    await expect(
+      page.getByText("Goal: Yes | Direction: OnTarget | Aim: BottomCenter", {
+        exact: true,
+      }),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.getByRole("button", {
+        name: "Undo: Defense — 7 Meter Taken (Goal)",
+        exact: true,
+      }),
+    ).toBeVisible();
   });
 });
