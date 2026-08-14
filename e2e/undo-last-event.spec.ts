@@ -1,5 +1,5 @@
 import type { APIRequestContext, Page } from "@playwright/test";
-import { teamPlayerSchema } from "../src/datamodel";
+import { activeGameSchema, teamPlayerSchema } from "../src/datamodel";
 import { testClientId } from "../src/testing/clientId";
 import { expect, test } from "./fixtures";
 import { E2E_TEAM_ID } from "./seedE2eData";
@@ -166,5 +166,86 @@ test.describe("undo last event", () => {
     await expect(
       page.getByRole("button", { name: "Undo last event" }),
     ).toBeDisabled();
+  });
+
+  test("keeps UUIDv7 client order when server persistence order is reversed", async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+
+    await startGameWithLineupAndFirstHalf(page);
+    await page.getByRole("button", { name: "Match controls" }).click();
+    await page.getByRole("menuitem", { name: "Pause Match" }).click();
+    await page.getByRole("button", { name: "Match controls" }).click();
+    await expect(
+      page.getByRole("menuitem", { name: "Resume Match" }),
+    ).toBeVisible();
+
+    const activeGameResponse = await page.request.get(
+      "/api/collections/active-game",
+    );
+    expect(activeGameResponse.ok()).toBeTruthy();
+    const [activeGame] = activeGameSchema
+      .array()
+      .parse(await activeGameResponse.json());
+
+    const newerEventResponse = await page.request.post(
+      "/api/collections/player-events",
+      {
+        data: [
+          {
+            id: "018f2c42-7c44-7a40-9f62-7d824f7a3dc8",
+            player: 12,
+            game_id: activeGame.gameId,
+            ellapsed_seconds: 0,
+            half: "firstHalf",
+            eventType: "shot",
+            eventGroup: "attack",
+            event: {
+              goal: true,
+              direction: "OnTarget",
+              aim: "TopCenter",
+              position: "9m+",
+            },
+          },
+        ],
+      },
+    );
+    expect(newerEventResponse.ok()).toBeTruthy();
+
+    const olderEventResponse = await page.request.post(
+      "/api/collections/player-events",
+      {
+        data: [
+          {
+            id: "018f2c42-7c43-7a40-9f62-7d824f7a3dc8",
+            player: 7,
+            game_id: activeGame.gameId,
+            ellapsed_seconds: 0,
+            half: "firstHalf",
+            eventType: "offensiveFoul",
+            eventGroup: "attack",
+          },
+        ],
+      },
+    );
+    expect(olderEventResponse.ok()).toBeTruthy();
+
+    await page.reload();
+
+    const matchLog = page
+      .getByRole("heading", { name: "Match Log" })
+      .locator("../..");
+    const eventCards = matchLog.locator('[data-slot="card"]');
+    await expect(eventCards.nth(0)).toContainText("#12 Blake — Shot");
+    await expect(eventCards.nth(1)).toContainText("#7 Alex — Offensive Foul");
+
+    await confirmUndoLastEvent(page, /Undo: #12 Blake — Shot \(Goal\)/);
+    await expect(
+      matchLog.getByText("#12 Blake — Shot", { exact: true }),
+    ).toHaveCount(0, { timeout: 15_000 });
+    await expect(
+      page.getByRole("button", { name: /Undo: #7 Alex — Offensive Foul/ }),
+    ).toBeEnabled();
   });
 });

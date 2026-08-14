@@ -24,7 +24,7 @@ import type { ClientId, EventGroup, PlayerEvent } from "@/datamodel";
 import { eventMachine } from "@/event_form_fsm";
 import { usePlayerLabelMap } from "@/hooks/usePlayerLabelMap";
 import type { MatchStatus } from "@/inGameControlsAtoms";
-import { createClientId } from "@/lib/clientId";
+import { createPlayerEventId } from "@/lib/clientId";
 import { countScores } from "@/lib/display/countGoals";
 import {
   beginMatchSaving,
@@ -141,7 +141,7 @@ function ActiveGame() {
       beginMatchSaving();
       try {
         const tx = insertPlayerEvent({
-          id: createClientId(),
+          id: createPlayerEventId(),
           player: suspension.offender,
           game_id: activeGameData.gameId,
           ellapsed_seconds: eventElapsedSeconds,
@@ -186,7 +186,7 @@ function ActiveGame() {
       eventGroup,
       ellapsed_seconds: eventElapsedSeconds,
       game_id: activeGame.data.gameId,
-      id: createClientId(),
+      id: createPlayerEventId(),
       half: activeHalf,
     });
   };
@@ -194,7 +194,7 @@ function ActiveGame() {
   const handleSaveStarting7 = useCallback(
     async (
       numbers: number[],
-      eventIds: ClientId[] = numbers.map(() => createClientId()),
+      eventIds: ClientId[] = numbers.map(() => createPlayerEventId()),
     ) => {
       if (!activeGameData || isSavingStarting7) {
         return;
@@ -258,7 +258,7 @@ function ActiveGame() {
     async (
       playerOut: number,
       playerIn: number,
-      eventId: ClientId = createClientId(),
+      eventId: ClientId = createPlayerEventId(),
     ) => {
       if (
         !activeHalf ||
@@ -341,7 +341,7 @@ function ActiveGame() {
       eventGroup: "substitution",
       ellapsed_seconds: eventElapsedSeconds,
       game_id: activeGame.data.gameId,
-      id: createClientId(),
+      id: createPlayerEventId(),
       half: activeHalf,
     });
   };

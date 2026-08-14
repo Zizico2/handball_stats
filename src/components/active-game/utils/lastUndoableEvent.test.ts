@@ -5,9 +5,9 @@ import {
   getLastUndoableEvent,
 } from "@/components/active-game/utils/lastUndoableEvent";
 import type { PlayerEvent } from "@/datamodel";
+import { parseClientId } from "@/lib/clientId";
 import { countGoals, countScores } from "@/lib/display/countGoals";
 import { testClientId } from "@/testing/clientId";
-import { rememberPlayerEventOrder } from "./playerEventOrder";
 
 const getPlayerLabel = (number: number) => `#${number}`;
 
@@ -167,11 +167,15 @@ describe("getLastUndoableEvent", () => {
     expect(last?.eventType).toBe("sevenMeterTaken");
   });
 
-  test("uses client creation order when persisted and optimistic rows mix", () => {
-    const first = shot(30, 7, true);
-    const latest = sevenMeterTaken(31, "attack", true);
-    rememberPlayerEventOrder(first.id);
-    rememberPlayerEventOrder(latest.id);
+  test("uses durable client creation order when persisted and optimistic rows mix", () => {
+    const first = {
+      ...shot(30, 7, true),
+      id: parseClientId("018f2c42-7c43-7a40-9f62-7d824f7a3dc8"),
+    };
+    const latest = {
+      ...sevenMeterTaken(31, "attack", true),
+      id: parseClientId("018f2c42-7c44-7a40-9f62-7d824f7a3dc8"),
+    };
 
     const last = getLastUndoableEvent([
       { ...first, sequence: null },

@@ -1,6 +1,8 @@
 import z from "zod";
 
-export const clientIdSchema = z.uuidv4().brand<"ClientId">();
+export const clientIdSchema = z
+  .union([z.uuidv4(), z.uuidv7()])
+  .brand<"ClientId">();
 export type ClientId = z.infer<typeof clientIdSchema>;
 
 export const matchHalfSchema = z.enum(["firstHalf", "secondHalf"]);

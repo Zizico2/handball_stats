@@ -1,8 +1,5 @@
 import type { PlayerEvent } from "@/datamodel";
-import {
-  comparePlayerEventOrder,
-  getRememberedPlayerEventOrder,
-} from "./playerEventOrder";
+import { comparePlayerEventOrder } from "./playerEventOrder";
 
 export function getLastUndoableEvent(
   events: PlayerEvent[],
@@ -25,9 +22,8 @@ export function getLastUndoableEvent(
 }
 
 /**
- * Collection inserts are rendered optimistically before the server response
- * supplies their database sequence. When either event is still optimistic,
- * collection order is the only available indication of user action order.
+ * UUIDv7 events carry their client creation order across optimistic and
+ * persisted states. Equal legacy events fall back to stable collection order.
  */
 function isLaterEvent(
   event: PlayerEvent,
@@ -35,22 +31,8 @@ function isLaterEvent(
   eventIndex: number,
   lastIndex: number,
 ): boolean {
-  const eventLocalOrder = getRememberedPlayerEventOrder(event.id);
-  const lastLocalOrder = getRememberedPlayerEventOrder(last.id);
-
-  if (eventLocalOrder !== undefined || lastLocalOrder !== undefined) {
-    if (eventLocalOrder === undefined) return false;
-    if (lastLocalOrder === undefined) return true;
-    return eventLocalOrder > lastLocalOrder;
-  }
-
-  if (event.sequence === null || last.sequence === null) {
-    if (event.sequence === null && last.sequence === null) {
-      return eventIndex > lastIndex;
-    }
-    return event.sequence === null;
-  }
-  return comparePlayerEventOrder(event, last) > 0;
+  const order = comparePlayerEventOrder(event, last);
+  return order === 0 ? eventIndex > lastIndex : order > 0;
 }
 
 function formatEventTypeLabel(eventType: string): string {

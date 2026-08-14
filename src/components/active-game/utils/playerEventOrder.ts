@@ -1,34 +1,33 @@
 import type { ClientId, PlayerEvent } from "@/datamodel";
 
-let nextLocalEventOrder = 0;
-const localEventOrder = new Map<ClientId, number>();
+export function isUuidV7(id: ClientId): boolean {
+  return id[14] === "7";
+}
 
 /**
- * Remember the order in which this client created an event. The server
- * sequence is not available while an insert is optimistic, and a refetch can
- * temporarily mix persisted rows with optimistic rows. Keeping this small
- * client-only ordering hint lets active-game undo follow the user's actions
- * during that transition.
+ * Ascending user-action order. New events use their durable UUIDv7 creation
+ * order regardless of persistence state. Legacy UUIDv4 events precede UUIDv7
+ * events and retain their server-sequence/optimistic ordering behavior.
  */
-export function rememberPlayerEventOrder(id: ClientId): void {
-  if (!localEventOrder.has(id)) {
-    localEventOrder.set(id, nextLocalEventOrder++);
-  }
-}
-
-export function getRememberedPlayerEventOrder(
-  id: ClientId,
-): number | undefined {
-  return localEventOrder.get(id);
-}
-
-/** Ascending persisted order; optimistic events sort after persisted events. */
 export function comparePlayerEventOrder(
   left: PlayerEvent,
   right: PlayerEvent,
 ): number {
+  const leftIsV7 = isUuidV7(left.id);
+  const rightIsV7 = isUuidV7(right.id);
+
+  if (leftIsV7 && rightIsV7) {
+    if (left.id < right.id) return -1;
+    if (left.id > right.id) return 1;
+    return 0;
+  }
+
+  if (leftIsV7 !== rightIsV7) {
+    return leftIsV7 ? 1 : -1;
+  }
+
   if (left.sequence === null && right.sequence === null) {
-    return left.id.localeCompare(right.id);
+    return 0;
   }
   if (left.sequence === null) return 1;
   if (right.sequence === null) return -1;

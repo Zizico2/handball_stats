@@ -2,11 +2,13 @@ import { describe, expect, test } from "bun:test";
 import type { PlayerEvent } from "@/datamodel";
 import { playerEventSchema, shotPosition } from "@/datamodel";
 import { PLAYER_EVENTS_CSV_COLUMN_KEYS } from "@/db/playerEventCsv";
+import { parseClientId } from "@/lib/clientId";
 import { testClientId } from "@/testing/clientId";
 import type { DbPlayerEvent } from "./index";
 import { dbRowToPlayerEvent, playerEventToDbRow } from "./index";
 
 const USER_ID = "test-user";
+const UUID_V7_EVENT_ID = parseClientId("018f2c42-7c43-7a40-9f62-7d824f7a3dc8");
 
 function shotEvent(
   position: (typeof shotPosition.options)[number],
@@ -124,6 +126,19 @@ function suspensionEvent(): PlayerEvent {
 }
 
 describe("playerEvent shot position round trip", () => {
+  test("preserves a UUIDv7 event ID through the database mapping", () => {
+    const event = { ...shotEvent("9m+"), id: UUID_V7_EVENT_ID };
+    const row = playerEventToDbRow(event, USER_ID, 10);
+
+    expect(row.clientId).toBe(UUID_V7_EVENT_ID);
+    expect(
+      dbRowToPlayerEvent(
+        { ...dbShotRow(), ...row, id: 42 } as DbPlayerEvent,
+        testClientId(10),
+      ),
+    ).toEqual({ ...event, sequence: 42 });
+  });
+
   test.each(
     shotPosition.options,
   )("preserves position %s through toDbRow and fromDbRow", (position) => {

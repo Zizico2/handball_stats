@@ -5,7 +5,6 @@ import {
   type PlayerEvent,
   playerEventSchema,
 } from "@/datamodel";
-import { rememberPlayerEventOrder } from "./playerEventOrder";
 
 export type PersistableWrite = {
   event: PlayerEvent;
@@ -15,7 +14,6 @@ export type PersistableWrite = {
 export function insertPlayerEvent(partialEvent: unknown): PersistableWrite {
   try {
     const parsedEvent = playerEventSchema.parse(partialEvent);
-    rememberPlayerEventOrder(parsedEvent.id);
     const transaction = playerEventsCollection.insert(parsedEvent);
     return {
       event: parsedEvent,
