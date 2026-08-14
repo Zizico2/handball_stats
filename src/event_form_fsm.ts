@@ -8,6 +8,7 @@ import type {
   MatchHalf,
   Player,
   PlayerEvent,
+  PlayerEventId,
   ShotDirectionFields,
   ShotPosition,
 } from "./datamodel";
@@ -29,7 +30,7 @@ export type Event =
       eventGroup: EventGroup;
       ellapsed_seconds: number;
       game_id: ClientId;
-      id: ClientId;
+      id: PlayerEventId;
       half: MatchHalf;
     }
   //
@@ -42,7 +43,7 @@ export type Event =
   | {
       type: "PICK_SUSPENSION_TO_END";
       player: Player;
-      suspensionId: ClientId;
+      suspensionId: PlayerEventId;
     }
   | { type: "PICK_SHOT_DIRECTION"; pick: ShotDirectionFields }
   | { type: "PICK_GOAL_OR_NO_GOAL"; goal: boolean }

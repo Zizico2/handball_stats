@@ -1,8 +1,8 @@
-import type { ClientId, MatchHalf, PlayerEvent } from "@/datamodel";
+import type { MatchHalf, PlayerEvent, PlayerEventId } from "@/datamodel";
 import { comparePlayerEventOrder } from "./playerEventOrder";
 
 export interface ActiveSuspension {
-  id: ClientId;
+  id: PlayerEventId;
   offender: number;
   servedBy: number;
   half: MatchHalf;

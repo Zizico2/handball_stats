@@ -23,7 +23,7 @@ export function getLastUndoableEvent(
 
 /**
  * UUIDv7 events carry their client creation order across optimistic and
- * persisted states. Equal legacy events fall back to stable collection order.
+ * persisted states. Equal IDs fall back to stable collection order defensively.
  */
 function isLaterEvent(
   event: PlayerEvent,

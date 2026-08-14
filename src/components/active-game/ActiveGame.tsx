@@ -20,7 +20,7 @@ import {
   formatUndoEventLabel,
   getLastUndoableEvent,
 } from "@/components/active-game/utils/lastUndoableEvent";
-import type { ClientId, EventGroup, PlayerEvent } from "@/datamodel";
+import type { EventGroup, PlayerEvent, PlayerEventId } from "@/datamodel";
 import { eventMachine } from "@/event_form_fsm";
 import { usePlayerLabelMap } from "@/hooks/usePlayerLabelMap";
 import type { MatchStatus } from "@/inGameControlsAtoms";
@@ -194,7 +194,7 @@ function ActiveGame() {
   const handleSaveStarting7 = useCallback(
     async (
       numbers: number[],
-      eventIds: ClientId[] = numbers.map(() => createPlayerEventId()),
+      eventIds: PlayerEventId[] = numbers.map(() => createPlayerEventId()),
     ) => {
       if (!activeGameData || isSavingStarting7) {
         return;
@@ -258,7 +258,7 @@ function ActiveGame() {
     async (
       playerOut: number,
       playerIn: number,
-      eventId: ClientId = createPlayerEventId(),
+      eventId: PlayerEventId = createPlayerEventId(),
     ) => {
       if (
         !activeHalf ||
@@ -395,7 +395,7 @@ function ActiveGame() {
   );
 
   const undoEventById = useCallback(
-    async (eventId: ClientId) => {
+    async (eventId: PlayerEventId) => {
       if (isUndoingLastEvent || matchSync.status === "saving") {
         return;
       }

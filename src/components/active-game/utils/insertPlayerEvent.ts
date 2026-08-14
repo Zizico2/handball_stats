@@ -1,8 +1,8 @@
 import z from "zod";
 import { playerEventsCollection } from "@/collections";
 import {
-  type ClientId,
   type PlayerEvent,
+  type PlayerEventId,
   playerEventSchema,
 } from "@/datamodel";
 
@@ -53,7 +53,7 @@ export async function awaitPlayerEventPersistence(
 
 export async function awaitPlayerEventDeletionPersistence(
   tx: { isPersisted: { promise: Promise<unknown> } },
-  eventId: ClientId,
+  eventId: PlayerEventId,
 ): Promise<void> {
   try {
     await tx.isPersisted.promise;

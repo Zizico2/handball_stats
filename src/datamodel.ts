@@ -1,9 +1,11 @@
 import z from "zod";
 
-export const clientIdSchema = z
-  .union([z.uuidv4(), z.uuidv7()])
-  .brand<"ClientId">();
+export const clientIdSchema = z.uuidv4().brand<"ClientId">();
 export type ClientId = z.infer<typeof clientIdSchema>;
+
+/** Player event IDs are UUIDv7, including IDs backfilled from legacy rows. */
+export const playerEventIdSchema = z.uuidv7().brand<"PlayerEventId">();
+export type PlayerEventId = z.infer<typeof playerEventIdSchema>;
 
 export const matchHalfSchema = z.enum(["firstHalf", "secondHalf"]);
 export type MatchHalf = z.infer<typeof matchHalfSchema>;
@@ -115,7 +117,7 @@ export const playerSchema = z.number();
 export type Player = z.infer<typeof playerSchema>;
 
 export const basePlayerEventSchema = z.object({
-  id: clientIdSchema,
+  id: playerEventIdSchema,
   sequence: z.number().int().positive().nullable().default(null),
   player: playerSchema,
   game_id: clientIdSchema,
@@ -265,7 +267,7 @@ export const twoMinuteSuspensionEndedEventSchema = withBase(
     eventType: z.literal("twoMinuteSuspensionEnded"),
     eventGroup: z.literal("sanction"),
     event: z.object({
-      suspensionId: clientIdSchema,
+      suspensionId: playerEventIdSchema,
     }),
   }),
 );

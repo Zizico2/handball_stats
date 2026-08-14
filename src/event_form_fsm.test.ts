@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createActor, fromPromise, waitFor } from "xstate";
 import type { PlayerEvent } from "./datamodel";
 import { eventMachine } from "./event_form_fsm";
-import { testClientId } from "./testing/clientId";
+import { testClientId, testPlayerEventId } from "./testing/clientId";
 import type { DeepPartial } from "./utils";
 
 const START = {
@@ -10,7 +10,7 @@ const START = {
   eventGroup: "attack" as const,
   ellapsed_seconds: 42,
   game_id: testClientId(5),
-  id: testClientId(9),
+  id: testPlayerEventId(9),
   half: "firstHalf" as const,
 };
 
@@ -64,7 +64,7 @@ describe("event form state machine", () => {
       eventGroup: "attack",
       ellapsed_seconds: 42,
       game_id: testClientId(5),
-      id: testClientId(9),
+      id: testPlayerEventId(9),
       half: "firstHalf",
       eventType: "shot",
       player: 7,
@@ -76,7 +76,7 @@ describe("event form state machine", () => {
       },
     });
 
-    actor.send({ ...START, id: testClientId(10), ellapsed_seconds: 51 });
+    actor.send({ ...START, id: testPlayerEventId(10), ellapsed_seconds: 51 });
     actor.send({ type: "PICK_ATTACK_EVENT_TYPE", eventType: "shot" });
     actor.send({ type: "PICK_PLAYER", player: 12 });
     actor.send({ type: "PICK_SHOT_POSITION", position: "leftWing" });
@@ -87,7 +87,7 @@ describe("event form state machine", () => {
     await waitForPersistedIdle(actor, persisted, 2);
 
     expect(persisted[1]).toMatchObject({
-      id: testClientId(10),
+      id: testPlayerEventId(10),
       eventType: "shot",
       player: 12,
       event: {
@@ -131,7 +131,7 @@ describe("event form state machine", () => {
       actor.start();
       actor.send({
         ...START,
-        id: testClientId(20 + index),
+        id: testPlayerEventId(20 + index),
         eventGroup: scenario.group,
       });
       actor.send(scenario.pick);
@@ -152,7 +152,7 @@ describe("event form state machine", () => {
     substitution.start();
     substitution.send({
       ...START,
-      id: testClientId(30),
+      id: testPlayerEventId(30),
       eventGroup: "substitution",
     });
     substitution.send({ type: "PICK_PLAYER", player: 7 });
@@ -174,7 +174,11 @@ describe("event form state machine", () => {
     });
     actor.start();
 
-    actor.send({ ...START, eventGroup: "defense", id: testClientId(35) });
+    actor.send({
+      ...START,
+      eventGroup: "defense",
+      id: testPlayerEventId(35),
+    });
     actor.send({ type: "PICK_DEFENSE_EVENT_TYPE", eventType: "shot" });
     expect(actor.getSnapshot().matches("pickingShotPosition")).toBe(true);
     actor.send({ type: "PICK_SHOT_POSITION", position: "6m+" });
@@ -190,7 +194,7 @@ describe("event form state machine", () => {
       eventGroup: "defense",
       ellapsed_seconds: 42,
       game_id: testClientId(5),
-      id: testClientId(35),
+      id: testPlayerEventId(35),
       half: "firstHalf",
       eventType: "shot",
       event: {
@@ -201,7 +205,11 @@ describe("event form state machine", () => {
       },
     });
 
-    actor.send({ ...START, eventGroup: "defense", id: testClientId(36) });
+    actor.send({
+      ...START,
+      eventGroup: "defense",
+      id: testPlayerEventId(36),
+    });
     actor.send({ type: "PICK_DEFENSE_EVENT_TYPE", eventType: "shot" });
     actor.send({ type: "PICK_SHOT_POSITION", position: "rightWing" });
     actor.send({
@@ -213,7 +221,7 @@ describe("event form state machine", () => {
       eventGroup: "defense",
       ellapsed_seconds: 42,
       game_id: testClientId(5),
-      id: testClientId(36),
+      id: testPlayerEventId(36),
       half: "firstHalf",
       eventType: "shot",
       event: {
@@ -232,7 +240,7 @@ describe("event form state machine", () => {
     });
     actor.start();
 
-    actor.send({ ...START, id: testClientId(37) });
+    actor.send({ ...START, id: testPlayerEventId(37) });
     actor.send({
       type: "PICK_ATTACK_EVENT_TYPE",
       eventType: "sevenMeterTaken",
@@ -252,7 +260,7 @@ describe("event form state machine", () => {
       eventGroup: "attack",
       ellapsed_seconds: 42,
       game_id: testClientId(5),
-      id: testClientId(37),
+      id: testPlayerEventId(37),
       half: "firstHalf",
       eventType: "sevenMeterTaken",
       player: 7,
@@ -263,7 +271,11 @@ describe("event form state machine", () => {
       },
     });
 
-    actor.send({ ...START, eventGroup: "defense", id: testClientId(38) });
+    actor.send({
+      ...START,
+      eventGroup: "defense",
+      id: testPlayerEventId(38),
+    });
     actor.send({
       type: "PICK_DEFENSE_EVENT_TYPE",
       eventType: "sevenMeterTaken",
@@ -279,7 +291,7 @@ describe("event form state machine", () => {
       eventGroup: "defense",
       ellapsed_seconds: 42,
       game_id: testClientId(5),
-      id: testClientId(38),
+      id: testPlayerEventId(38),
       half: "firstHalf",
       eventType: "sevenMeterTaken",
       event: {
@@ -331,7 +343,7 @@ describe("event form state machine", () => {
     actor.send({
       ...START,
       eventGroup: "defense",
-      id: testClientId(40),
+      id: testPlayerEventId(40),
       ellapsed_seconds: 3,
       half: "secondHalf",
     });
@@ -345,7 +357,7 @@ describe("event form state machine", () => {
       eventGroup: "defense",
       ellapsed_seconds: 3,
       game_id: testClientId(5),
-      id: testClientId(40),
+      id: testPlayerEventId(40),
       half: "secondHalf",
       eventType: "blockedShot",
       player: 12,
@@ -448,14 +460,14 @@ describe("event form state machine", () => {
     actor.send({
       type: "PICK_SUSPENSION_TO_END",
       player: 7,
-      suspensionId: testClientId(77),
+      suspensionId: testPlayerEventId(77),
     });
     await waitForPersistedIdle(actor, persisted);
 
     expect(persisted[0]).toMatchObject({
       eventType: "twoMinuteSuspensionEnded",
       player: 7,
-      event: { suspensionId: testClientId(77) },
+      event: { suspensionId: testPlayerEventId(77) },
     });
     actor.stop();
   });

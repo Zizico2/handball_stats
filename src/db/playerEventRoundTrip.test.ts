@@ -2,19 +2,21 @@ import { describe, expect, test } from "bun:test";
 import type { PlayerEvent } from "@/datamodel";
 import { playerEventSchema, shotPosition } from "@/datamodel";
 import { PLAYER_EVENTS_CSV_COLUMN_KEYS } from "@/db/playerEventCsv";
-import { parseClientId } from "@/lib/clientId";
-import { testClientId } from "@/testing/clientId";
+import { parsePlayerEventId } from "@/lib/clientId";
+import { testClientId, testPlayerEventId } from "@/testing/clientId";
 import type { DbPlayerEvent } from "./index";
 import { dbRowToPlayerEvent, playerEventToDbRow } from "./index";
 
 const USER_ID = "test-user";
-const UUID_V7_EVENT_ID = parseClientId("018f2c42-7c43-7a40-9f62-7d824f7a3dc8");
+const UUID_V7_EVENT_ID = parsePlayerEventId(
+  "018f2c42-7c43-7a40-9f62-7d824f7a3dc8",
+);
 
 function shotEvent(
   position: (typeof shotPosition.options)[number],
 ): PlayerEvent {
   return {
-    id: testClientId(1),
+    id: testPlayerEventId(1),
     sequence: null,
     player: 7,
     game_id: testClientId(10),
@@ -33,7 +35,7 @@ function shotEvent(
 
 function defenseShotEvent(): PlayerEvent {
   return {
-    id: testClientId(4),
+    id: testPlayerEventId(4),
     sequence: null,
     game_id: testClientId(10),
     ellapsed_seconds: 120,
@@ -54,7 +56,7 @@ function attackSevenMeterTakenEvent(): Extract<
   { eventType: "sevenMeterTaken"; eventGroup: "attack" }
 > {
   return {
-    id: testClientId(7),
+    id: testPlayerEventId(7),
     sequence: null,
     player: 7,
     game_id: testClientId(10),
@@ -75,7 +77,7 @@ function defenseSevenMeterTakenEvent(): Extract<
   { eventType: "sevenMeterTaken"; eventGroup: "defense" }
 > {
   return {
-    id: testClientId(8),
+    id: testPlayerEventId(8),
     sequence: null,
     game_id: testClientId(10),
     ellapsed_seconds: 140,
@@ -113,7 +115,7 @@ function dbShotRow(overrides: Partial<DbPlayerEvent> = {}): DbPlayerEvent {
 
 function suspensionEvent(): PlayerEvent {
   return {
-    id: testClientId(2),
+    id: testPlayerEventId(2),
     sequence: null,
     player: 7,
     game_id: testClientId(10),
@@ -248,7 +250,7 @@ describe("playerEvent shot position round trip", () => {
   test("keeps offensive fouls distinct by event group", () => {
     const events: PlayerEvent[] = [
       {
-        id: testClientId(5),
+        id: testPlayerEventId(5),
         sequence: null,
         player: 7,
         game_id: testClientId(10),
@@ -258,7 +260,7 @@ describe("playerEvent shot position round trip", () => {
         eventGroup: "attack",
       },
       {
-        id: testClientId(6),
+        id: testPlayerEventId(6),
         sequence: null,
         player: 12,
         game_id: testClientId(10),
@@ -335,7 +337,7 @@ describe("playerEvent shot position round trip", () => {
 
   test("preserves suspension end references and exports lifecycle columns", () => {
     const event: PlayerEvent = {
-      id: testClientId(3),
+      id: testPlayerEventId(3),
       sequence: null,
       player: 7,
       game_id: testClientId(10),
@@ -343,10 +345,10 @@ describe("playerEvent shot position round trip", () => {
       half: "secondHalf",
       eventType: "twoMinuteSuspensionEnded",
       eventGroup: "sanction",
-      event: { suspensionId: testClientId(2) },
+      event: { suspensionId: testPlayerEventId(2) },
     };
     const row = playerEventToDbRow(event, USER_ID, 10);
-    expect(row.suspensionEndedSuspensionId).toBe(testClientId(2));
+    expect(row.suspensionEndedSuspensionId).toBe(testPlayerEventId(2));
     expect(PLAYER_EVENTS_CSV_COLUMN_KEYS).toContain("suspensionServedBy");
     expect(PLAYER_EVENTS_CSV_COLUMN_KEYS).toContain(
       "suspensionEndedSuspensionId",
@@ -367,7 +369,7 @@ describe("playerEvent shot position round trip", () => {
     expect(parsed).toMatchObject({
       eventType: "twoMinuteSuspensionEnded",
       player: 7,
-      event: { suspensionId: testClientId(2) },
+      event: { suspensionId: testPlayerEventId(2) },
     });
   });
 });

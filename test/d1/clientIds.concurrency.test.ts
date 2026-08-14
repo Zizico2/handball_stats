@@ -1,10 +1,10 @@
 import { env } from "cloudflare:workers";
 import { asc, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { type ClientId, playerEventSchema } from "@/datamodel";
+import { type PlayerEventId, playerEventSchema } from "@/datamodel";
 import { createDb } from "@/db";
 import * as schema from "@/db/schema";
-import { testClientId } from "@/testing/clientId";
+import { testClientId, testPlayerEventId } from "@/testing/clientId";
 import { getTestDb, resetAppTables } from "./db";
 
 vi.mock("server-only", () => ({}));
@@ -153,7 +153,7 @@ describe("client UUID concurrency (D1)", () => {
       })
       .returning();
 
-    const eventBody = (id: ClientId, player: number) => [
+    const eventBody = (id: PlayerEventId, player: number) => [
       {
         id,
         sequence: null,
@@ -165,7 +165,7 @@ describe("client UUID concurrency (D1)", () => {
         eventGroup: "substitution",
       },
     ];
-    const firstIds = [testClientId(401), testClientId(402)];
+    const firstIds = [testPlayerEventId(401), testPlayerEventId(402)];
     const responses = await Promise.all([
       post(playerEventsRoutes, eventBody(firstIds[0], 7)),
       post(playerEventsRoutes, eventBody(firstIds[1], 9)),
@@ -193,7 +193,7 @@ describe("client UUID concurrency (D1)", () => {
     await db
       .delete(schema.playerEvents)
       .where(eq(schema.playerEvents.clientId, firstIds[1]));
-    const thirdId = testClientId(403);
+    const thirdId = testPlayerEventId(403);
     const thirdResponse = await post(
       playerEventsRoutes,
       eventBody(thirdId, 12),
@@ -215,8 +215,8 @@ describe("client UUID concurrency (D1)", () => {
     const db = getTestDb();
     const teamClientId = testClientId(500);
     const gameClientId = testClientId(501);
-    const suspensionId = testClientId(502);
-    const endId = testClientId(503);
+    const suspensionId = testPlayerEventId(502);
+    const endId = testPlayerEventId(503);
     const [team] = await db
       .insert(schema.teams)
       .values({ userId: USER_ID, clientId: teamClientId, name: "Home" })
@@ -274,7 +274,7 @@ describe("client UUID concurrency (D1)", () => {
 
     const duplicateEndResponse = await post(playerEventsRoutes, [
       {
-        id: testClientId(504),
+        id: testPlayerEventId(504),
         sequence: null,
         player: 7,
         game_id: gameClientId,
@@ -289,7 +289,7 @@ describe("client UUID concurrency (D1)", () => {
 
     const invalidEndResponse = await post(playerEventsRoutes, [
       {
-        id: testClientId(505),
+        id: testPlayerEventId(505),
         sequence: null,
         player: 7,
         game_id: gameClientId,
@@ -297,7 +297,7 @@ describe("client UUID concurrency (D1)", () => {
         half: "firstHalf",
         eventType: "twoMinuteSuspensionEnded",
         eventGroup: "sanction",
-        event: { suspensionId: testClientId(999) },
+        event: { suspensionId: testPlayerEventId(999) },
       },
     ]);
     expect(invalidEndResponse.status).toBe(400);
@@ -319,8 +319,8 @@ describe("client UUID concurrency (D1)", () => {
     const db = getTestDb();
     const teamClientId = testClientId(600);
     const gameClientId = testClientId(601);
-    const suspensionId = testClientId(602);
-    const endId = testClientId(603);
+    const suspensionId = testPlayerEventId(602);
+    const endId = testPlayerEventId(603);
     const [team] = await db
       .insert(schema.teams)
       .values({ userId: USER_ID, clientId: teamClientId, name: "Home" })
@@ -378,7 +378,7 @@ describe("client UUID concurrency (D1)", () => {
     const db = getTestDb();
     const teamClientId = testClientId(700);
     const gameClientId = testClientId(701);
-    const suspensionId = testClientId(702);
+    const suspensionId = testPlayerEventId(702);
     const [team] = await db
       .insert(schema.teams)
       .values({ userId: USER_ID, clientId: teamClientId, name: "Home" })
@@ -406,7 +406,7 @@ describe("client UUID concurrency (D1)", () => {
     ]);
     expect(suspensionResponse.status).toBe(200);
 
-    const endBody = (id: ClientId) => [
+    const endBody = (id: PlayerEventId) => [
       {
         id,
         sequence: null,
@@ -420,8 +420,8 @@ describe("client UUID concurrency (D1)", () => {
       },
     ];
     const responses = await Promise.all([
-      post(playerEventsRoutes, endBody(testClientId(703))),
-      post(playerEventsRoutes, endBody(testClientId(704))),
+      post(playerEventsRoutes, endBody(testPlayerEventId(703))),
+      post(playerEventsRoutes, endBody(testPlayerEventId(704))),
     ]);
     const statuses = responses.map((response) => response.status).toSorted();
     expect(statuses).toEqual([200, 409]);

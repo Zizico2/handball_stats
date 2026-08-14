@@ -1,18 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import type { PlayerEvent } from "@/datamodel";
-import { parseClientId } from "@/lib/clientId";
-import { testClientId } from "@/testing/clientId";
+import { parsePlayerEventId } from "@/lib/clientId";
+import { testClientId, testPlayerEventId } from "@/testing/clientId";
 import { comparePlayerEventOrder } from "./playerEventOrder";
 
 const UUID_V7_IDS = [
   "018f2c42-7c43-7a40-9f62-7d824f7a3dc8",
   "018f2c42-7c43-7a40-9f62-7d824f7a3dc9",
   "018f2c42-7c44-7a40-9f62-7d824f7a3dc8",
-].map(parseClientId);
+].map(parsePlayerEventId);
 
 function event(id: number, sequence: number | null): PlayerEvent {
   return {
-    id: testClientId(id),
+    id: testPlayerEventId(id),
     sequence,
     player: 7,
     game_id: testClientId(100),
@@ -31,28 +31,40 @@ function v7Event(id: number, sequence: number | null): PlayerEvent {
 }
 
 describe("comparePlayerEventOrder", () => {
-  test("sorts unordered persisted events by server sequence", () => {
-    const events = [event(30, 30), event(10, 10), event(20, 20)];
+  test("sorts persisted events by UUIDv7 creation order", () => {
+    const events = [event(30, 10), event(10, 30), event(20, 20)];
 
     expect(
-      events.toSorted(comparePlayerEventOrder).map((item) => item.sequence),
-    ).toEqual([10, 20, 30]);
+      events.toSorted(comparePlayerEventOrder).map((item) => item.id),
+    ).toEqual([
+      testPlayerEventId(10),
+      testPlayerEventId(20),
+      testPlayerEventId(30),
+    ]);
   });
 
-  test("places optimistic events after all persisted events", () => {
+  test("orders optimistic and persisted events together", () => {
     const events = [event(3, null), event(2, 20), event(1, 10)];
 
     expect(
       events.toSorted(comparePlayerEventOrder).map((item) => item.id),
-    ).toEqual([testClientId(1), testClientId(2), testClientId(3)]);
+    ).toEqual([
+      testPlayerEventId(1),
+      testPlayerEventId(2),
+      testPlayerEventId(3),
+    ]);
   });
 
-  test("retains collection order for optimistic legacy events", () => {
+  test("does not use collection order for optimistic events", () => {
     const events = [event(3, null), event(1, null), event(2, null)];
 
     expect(
       events.toSorted(comparePlayerEventOrder).map((item) => item.id),
-    ).toEqual([testClientId(3), testClientId(1), testClientId(2)]);
+    ).toEqual([
+      testPlayerEventId(1),
+      testPlayerEventId(2),
+      testPlayerEventId(3),
+    ]);
   });
 
   test("orders UUIDv7 events by client creation regardless of persistence", () => {
@@ -71,11 +83,11 @@ describe("comparePlayerEventOrder", () => {
     ).toEqual(UUID_V7_IDS.slice(0, 2));
   });
 
-  test("places historical UUIDv4 events before UUIDv7 events", () => {
+  test("backfilled epoch-zero events precede newly created events", () => {
     const events = [v7Event(1, 1), event(1, 100)];
 
     expect(
       events.toSorted(comparePlayerEventOrder).map((item) => item.id),
-    ).toEqual([testClientId(1), UUID_V7_IDS[0]]);
+    ).toEqual([event(1, 100).id, UUID_V7_IDS[0]]);
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { PlayerEvent } from "@/datamodel";
-import { testClientId } from "@/testing/clientId";
+import { testClientId, testPlayerEventId } from "@/testing/clientId";
 import {
   getActiveSuspensionPlayerNumbers,
   getActiveSuspensions,
@@ -13,7 +13,7 @@ function suspension(
   servedBy = offender,
 ): PlayerEvent {
   return {
-    id: testClientId(id),
+    id: testPlayerEventId(id),
     sequence: id,
     player: offender,
     game_id: testClientId(100),
@@ -27,7 +27,7 @@ function suspension(
 
 function ended(id: number, suspensionId: number): PlayerEvent {
   return {
-    id: testClientId(id),
+    id: testPlayerEventId(id),
     sequence: id,
     player: 7,
     game_id: testClientId(100),
@@ -35,7 +35,7 @@ function ended(id: number, suspensionId: number): PlayerEvent {
     half: "secondHalf",
     eventType: "twoMinuteSuspensionEnded",
     eventGroup: "sanction",
-    event: { suspensionId: testClientId(suspensionId) },
+    event: { suspensionId: testPlayerEventId(suspensionId) },
   };
 }
 
@@ -61,14 +61,14 @@ describe("active suspensions", () => {
     const events = [ended(5, 1), suspension(2, 9), suspension(1, 7, 12)];
 
     expect(getActiveSuspensions(events).map((item) => item.id)).toEqual([
-      testClientId(2),
+      testPlayerEventId(2),
     ]);
   });
 
   test("returns suspension metadata for warning details", () => {
     expect(getActiveSuspensions([suspension(3, 7, 12)])).toEqual([
       {
-        id: testClientId(3),
+        id: testPlayerEventId(3),
         offender: 7,
         servedBy: 12,
         half: "firstHalf",

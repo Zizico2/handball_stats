@@ -1,9 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { version } from "uuid";
-import { clientIdSchema } from "@/datamodel";
-import { createClientId, createPlayerEventId } from "@/lib/clientId";
+import { clientIdSchema, playerEventIdSchema } from "@/datamodel";
+import {
+  createClientId,
+  createPlayerEventId,
+  parsePlayerEventId,
+} from "@/lib/clientId";
 
-describe("createClientId", () => {
+describe("client and player-event identifiers", () => {
   test("generates valid UUIDv4 values", () => {
     for (let index = 0; index < 100; index += 1) {
       const id = createClientId();
@@ -34,12 +38,14 @@ describe("createClientId", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  test("accepts UUIDv4 and UUIDv7 but rejects other UUID versions", () => {
-    expect(
-      clientIdSchema.safeParse("018f2c42-7c43-7a40-9f62-7d824f7a3dc8").success,
-    ).toBe(true);
-    expect(
-      clientIdSchema.safeParse("00000000-0000-1000-8000-000000000000").success,
-    ).toBe(false);
+  test("keeps client and player-event identifier schemas distinct", () => {
+    const uuidV4 = "00000000-0000-4000-8000-000000000000";
+    const uuidV7 = "018f2c42-7c43-7a40-9f62-7d824f7a3dc8";
+
+    expect(clientIdSchema.safeParse(uuidV4).success).toBe(true);
+    expect(clientIdSchema.safeParse(uuidV7).success).toBe(false);
+    expect(playerEventIdSchema.safeParse(uuidV4).success).toBe(false);
+    expect(playerEventIdSchema.safeParse(uuidV7).success).toBe(true);
+    expect(version(parsePlayerEventId(uuidV7))).toBe(7);
   });
 });

@@ -2,6 +2,7 @@ import {
   activeGameSchema,
   gameSchema,
   pauseToggleSchema,
+  playerEventIdSchema,
   playerEventSchema,
   quickSubPairSchema,
   teamPlayerSchema,
@@ -9,6 +10,7 @@ import {
 } from "@/datamodel";
 
 export const idsSchema = teamSchema.shape.id.array();
+export const playerEventIdsSchema = playerEventIdSchema.array();
 export const activeGameIdsSchema = activeGameSchema.shape.id.array();
 export const playerEventsArraySchema = playerEventSchema.array();
 export const teamsArraySchema = teamSchema.array();

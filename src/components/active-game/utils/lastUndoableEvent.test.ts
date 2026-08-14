@@ -5,9 +5,9 @@ import {
   getLastUndoableEvent,
 } from "@/components/active-game/utils/lastUndoableEvent";
 import type { PlayerEvent } from "@/datamodel";
-import { parseClientId } from "@/lib/clientId";
+import { parsePlayerEventId } from "@/lib/clientId";
 import { countGoals, countScores } from "@/lib/display/countGoals";
-import { testClientId } from "@/testing/clientId";
+import { testClientId, testPlayerEventId } from "@/testing/clientId";
 
 const getPlayerLabel = (number: number) => `#${number}`;
 
@@ -17,7 +17,7 @@ function startingPlayer(
   half: "firstHalf" | "secondHalf" = "firstHalf",
 ): PlayerEvent {
   return {
-    id: testClientId(id),
+    id: testPlayerEventId(id),
     sequence: id,
     player,
     game_id: testClientId(100),
@@ -35,7 +35,7 @@ function shot(
   ellapsed_seconds = 60,
 ): PlayerEvent {
   return {
-    id: testClientId(id),
+    id: testPlayerEventId(id),
     sequence: id,
     player,
     game_id: testClientId(100),
@@ -54,7 +54,7 @@ function shot(
 
 function defenseShot(id: number, goal: boolean): PlayerEvent {
   return {
-    id: testClientId(id),
+    id: testPlayerEventId(id),
     sequence: id,
     game_id: testClientId(100),
     ellapsed_seconds: 60,
@@ -76,7 +76,7 @@ function sevenMeterTaken(
   goal: boolean,
 ): PlayerEvent {
   const baseEvent = {
-    id: testClientId(id),
+    id: testPlayerEventId(id),
     sequence: id,
     game_id: testClientId(100),
     ellapsed_seconds: 70,
@@ -101,7 +101,7 @@ function substitution(
   ellapsed_seconds = 90,
 ): PlayerEvent {
   return {
-    id: testClientId(id),
+    id: testPlayerEventId(id),
     sequence: id,
     player: playerOut,
     game_id: testClientId(100),
@@ -115,7 +115,7 @@ function substitution(
 
 function yellowCard(id: number, player: number): PlayerEvent {
   return {
-    id: testClientId(id),
+    id: testPlayerEventId(id),
     sequence: id,
     player,
     game_id: testClientId(100),
@@ -157,10 +157,10 @@ describe("getLastUndoableEvent", () => {
     expect(last?.eventType).toBe("sevenMeterTaken");
   });
 
-  test("uses collection order when consecutive events are optimistic", () => {
+  test("uses UUIDv7 creation order for consecutive optimistic events", () => {
     const events: PlayerEvent[] = [
-      { ...shot(3, 7, true), sequence: null },
       { ...sevenMeterTaken(4, "attack", true), sequence: null },
+      { ...shot(3, 7, true), sequence: null },
     ];
 
     const last = getLastUndoableEvent(events);
@@ -170,11 +170,11 @@ describe("getLastUndoableEvent", () => {
   test("uses durable client creation order when persisted and optimistic rows mix", () => {
     const first = {
       ...shot(30, 7, true),
-      id: parseClientId("018f2c42-7c43-7a40-9f62-7d824f7a3dc8"),
+      id: parsePlayerEventId("018f2c42-7c43-7a40-9f62-7d824f7a3dc8"),
     };
     const latest = {
       ...sevenMeterTaken(31, "attack", true),
-      id: parseClientId("018f2c42-7c44-7a40-9f62-7d824f7a3dc8"),
+      id: parsePlayerEventId("018f2c42-7c44-7a40-9f62-7d824f7a3dc8"),
     };
 
     const last = getLastUndoableEvent([

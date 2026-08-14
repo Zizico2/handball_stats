@@ -11,7 +11,7 @@ import type {
   TeamPlayer,
 } from "@/datamodel";
 import { clientIdSchema, playerEventSchema } from "@/datamodel";
-import { parseClientId } from "@/lib/clientId";
+import { parseClientId, parsePlayerEventId } from "@/lib/clientId";
 import * as schema from "./schema";
 
 export type DbPlayerEvent = typeof schema.playerEvents.$inferSelect;
@@ -37,7 +37,7 @@ const dbPlayerEventToDomainSchema = dbPlayerEventSchema
   .extend({ gameClientId: clientIdSchema })
   .transform((row): unknown => {
     const base = {
-      id: row.clientId,
+      id: parsePlayerEventId(row.clientId),
       sequence: row.id,
       game_id: row.gameClientId,
       ellapsed_seconds: row.ellapsedSeconds,
@@ -109,7 +109,7 @@ const dbPlayerEventToDomainSchema = dbPlayerEventSchema
         eventType: row.eventType,
         eventGroup: row.eventGroup,
         event: {
-          suspensionId: parseClientId(row.suspensionEndedSuspensionId),
+          suspensionId: parsePlayerEventId(row.suspensionEndedSuspensionId),
         },
       };
     }

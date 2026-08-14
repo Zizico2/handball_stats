@@ -1,5 +1,5 @@
 import type { APIRequestContext } from "@playwright/test";
-import { testClientId } from "../src/testing/clientId";
+import { testClientId, testPlayerEventId } from "../src/testing/clientId";
 
 export const E2E_TEAM_ID = testClientId(1);
 export const E2E_GAME_ID = testClientId(100);
@@ -19,7 +19,7 @@ const GAME = {
 
 const STARTING_EVENTS = [
   {
-    id: testClientId(21),
+    id: testPlayerEventId(21),
     player: 7,
     game_id: E2E_GAME_ID,
     ellapsed_seconds: 0,
@@ -28,7 +28,7 @@ const STARTING_EVENTS = [
     eventGroup: "substitution" as const,
   },
   {
-    id: testClientId(22),
+    id: testPlayerEventId(22),
     player: 12,
     game_id: E2E_GAME_ID,
     ellapsed_seconds: 0,

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import type { PlayerEvent } from "@/datamodel";
 import { dbRowToPlayerEvent, playerEventToDbRow } from "@/db";
 import * as schema from "@/db/schema";
-import { testClientId } from "@/testing/clientId";
+import { testClientId, testPlayerEventId } from "@/testing/clientId";
 import { getTestDb, resetAppTables } from "./db";
 
 const USER_ID = "user-seven-meter-taken";
@@ -31,7 +31,7 @@ async function seedGame() {
 function sevenMeterEvents(): PlayerEvent[] {
   return [
     {
-      id: testClientId(72),
+      id: testPlayerEventId(72),
       sequence: null,
       player: 7,
       game_id: GAME_ID,
@@ -46,7 +46,7 @@ function sevenMeterEvents(): PlayerEvent[] {
       },
     },
     {
-      id: testClientId(73),
+      id: testPlayerEventId(73),
       sequence: null,
       game_id: GAME_ID,
       ellapsed_seconds: 75,
@@ -108,7 +108,7 @@ describe("seven-meter taken persistence (D1)", () => {
     await expect(
       db.insert(schema.playerEvents).values({
         userId: USER_ID,
-        clientId: testClientId(74),
+        clientId: testPlayerEventId(74),
         player: null,
         gameId: game.id,
         ellapsedSeconds: 90,
@@ -123,7 +123,7 @@ describe("seven-meter taken persistence (D1)", () => {
     await expect(
       db.insert(schema.playerEvents).values({
         userId: USER_ID,
-        clientId: testClientId(75),
+        clientId: testPlayerEventId(75),
         player: null,
         gameId: game.id,
         ellapsedSeconds: 91,
