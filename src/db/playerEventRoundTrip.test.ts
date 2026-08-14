@@ -212,6 +212,22 @@ describe("playerEvent shot position round trip", () => {
         event: { goal: true, direction: "Post" },
       }),
     ).toThrow();
+    expect(() =>
+      playerEventSchema.parse({
+        ...attackSevenMeterTakenEvent(),
+        event: { goal: true, direction: "Blocked" },
+      }),
+    ).toThrow();
+    expect(() =>
+      playerEventSchema.parse({
+        ...shotEvent("9m+"),
+        event: {
+          goal: true,
+          direction: "Blocked",
+          position: "9m+",
+        },
+      }),
+    ).toThrow();
   });
 
   test("keeps offensive fouls distinct by event group", () => {

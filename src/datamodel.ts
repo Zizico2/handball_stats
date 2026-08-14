@@ -81,26 +81,31 @@ export const baseShotSchema = baseShotResultSchema.extend({
   position: shotPosition,
 });
 
-export const shotResultSchema = withShotDirectionFields(baseShotResultSchema)
-  .refine(({ direction, goal }) => !(direction === "OffTarget" && goal), {
-    message: "An off-target attempt cannot be a goal",
-    path: ["goal"],
-  })
-  .refine(({ direction, goal }) => !(direction === "Post" && goal), {
-    message: "A post attempt cannot be a goal",
-    path: ["goal"],
-  });
+function onlyOnTargetCanBeGoal({
+  direction,
+  goal,
+}: {
+  direction: ShotDirection;
+  goal: boolean;
+}) {
+  return !goal || direction === "OnTarget";
+}
+
+export const shotResultSchema = withShotDirectionFields(
+  baseShotResultSchema,
+).refine(onlyOnTargetCanBeGoal, {
+  message: "Only an on-target attempt can be a goal",
+  path: ["goal"],
+});
 export type ShotResult = z.infer<typeof shotResultSchema>;
 
-export const shotSchema = withShotDirectionFields(baseShotSchema)
-  .refine(({ direction, goal }) => !(direction === "OffTarget" && goal), {
-    message: "An off-target shot cannot be a goal",
+export const shotSchema = withShotDirectionFields(baseShotSchema).refine(
+  onlyOnTargetCanBeGoal,
+  {
+    message: "Only an on-target shot can be a goal",
     path: ["goal"],
-  })
-  .refine(({ direction, goal }) => !(direction === "Post" && goal), {
-    message: "A post shot cannot be a goal",
-    path: ["goal"],
-  });
+  },
+);
 
 export type Shot = z.infer<typeof shotSchema>;
 
