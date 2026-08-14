@@ -145,6 +145,26 @@ describe("getLastUndoableEvent", () => {
     expect(last?.sequence).toBe(5);
     expect(last?.eventType).toBe("substitution");
   });
+
+  test("treats a later optimistic event as the latest action", () => {
+    const events: PlayerEvent[] = [
+      { ...shot(3, 7, true), sequence: 20 },
+      { ...sevenMeterTaken(4, "attack", true), sequence: null },
+    ];
+
+    const last = getLastUndoableEvent(events);
+    expect(last?.eventType).toBe("sevenMeterTaken");
+  });
+
+  test("uses collection order when consecutive events are optimistic", () => {
+    const events: PlayerEvent[] = [
+      { ...shot(3, 7, true), sequence: null },
+      { ...sevenMeterTaken(4, "attack", true), sequence: null },
+    ];
+
+    const last = getLastUndoableEvent(events);
+    expect(last?.eventType).toBe("sevenMeterTaken");
+  });
 });
 
 describe("formatUndoEventLabel", () => {

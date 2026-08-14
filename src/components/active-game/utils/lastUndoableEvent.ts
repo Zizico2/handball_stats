@@ -10,12 +10,24 @@ export function getLastUndoableEvent(
     if (event.eventType === "startingPlayer") {
       continue;
     }
-    if (last === null || comparePlayerEventOrder(event, last) > 0) {
+    if (last === null || isLaterEvent(event, last)) {
       last = event;
     }
   }
 
   return last;
+}
+
+/**
+ * Collection inserts are rendered optimistically before the server response
+ * supplies their database sequence. When either event is still optimistic,
+ * collection order is the only available indication of user action order.
+ */
+function isLaterEvent(event: PlayerEvent, last: PlayerEvent): boolean {
+  if (event.sequence === null || last.sequence === null) {
+    return event.sequence === null;
+  }
+  return comparePlayerEventOrder(event, last) > 0;
 }
 
 function formatEventTypeLabel(eventType: string): string {
