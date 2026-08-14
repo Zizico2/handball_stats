@@ -1,17 +1,23 @@
 import type { PlayerEvent } from "@/datamodel";
-import { comparePlayerEventOrder } from "./playerEventOrder";
+import {
+  comparePlayerEventOrder,
+  getRememberedPlayerEventOrder,
+} from "./playerEventOrder";
 
 export function getLastUndoableEvent(
   events: PlayerEvent[],
 ): PlayerEvent | null {
   let last: PlayerEvent | null = null;
 
-  for (const event of events) {
+  let lastIndex = -1;
+
+  for (const [index, event] of events.entries()) {
     if (event.eventType === "startingPlayer") {
       continue;
     }
-    if (last === null || isLaterEvent(event, last)) {
+    if (last === null || isLaterEvent(event, last, index, lastIndex)) {
       last = event;
+      lastIndex = index;
     }
   }
 
@@ -23,8 +29,25 @@ export function getLastUndoableEvent(
  * supplies their database sequence. When either event is still optimistic,
  * collection order is the only available indication of user action order.
  */
-function isLaterEvent(event: PlayerEvent, last: PlayerEvent): boolean {
+function isLaterEvent(
+  event: PlayerEvent,
+  last: PlayerEvent,
+  eventIndex: number,
+  lastIndex: number,
+): boolean {
+  const eventLocalOrder = getRememberedPlayerEventOrder(event.id);
+  const lastLocalOrder = getRememberedPlayerEventOrder(last.id);
+
+  if (eventLocalOrder !== undefined || lastLocalOrder !== undefined) {
+    if (eventLocalOrder === undefined) return false;
+    if (lastLocalOrder === undefined) return true;
+    return eventLocalOrder > lastLocalOrder;
+  }
+
   if (event.sequence === null || last.sequence === null) {
+    if (event.sequence === null && last.sequence === null) {
+      return eventIndex > lastIndex;
+    }
     return event.sequence === null;
   }
   return comparePlayerEventOrder(event, last) > 0;

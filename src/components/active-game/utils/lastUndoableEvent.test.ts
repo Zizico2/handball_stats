@@ -7,6 +7,7 @@ import {
 import type { PlayerEvent } from "@/datamodel";
 import { countGoals, countScores } from "@/lib/display/countGoals";
 import { testClientId } from "@/testing/clientId";
+import { rememberPlayerEventOrder } from "./playerEventOrder";
 
 const getPlayerLabel = (number: number) => `#${number}`;
 
@@ -163,6 +164,19 @@ describe("getLastUndoableEvent", () => {
     ];
 
     const last = getLastUndoableEvent(events);
+    expect(last?.eventType).toBe("sevenMeterTaken");
+  });
+
+  test("uses client creation order when persisted and optimistic rows mix", () => {
+    const first = shot(30, 7, true);
+    const latest = sevenMeterTaken(31, "attack", true);
+    rememberPlayerEventOrder(first.id);
+    rememberPlayerEventOrder(latest.id);
+
+    const last = getLastUndoableEvent([
+      { ...first, sequence: null },
+      { ...latest, sequence: 24 },
+    ]);
     expect(last?.eventType).toBe("sevenMeterTaken");
   });
 });
