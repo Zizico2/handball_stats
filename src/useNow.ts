@@ -6,9 +6,12 @@ export function useNow(
   isActive: boolean,
   intervalMs: number = 1000,
   offsetMs: number = 0,
+  initialNowMs?: number,
 ): number {
   // Keep the latest current timestamp in milliseconds.
-  const [nowMs, setNowMs] = useState(() => Date.now() + offsetMs);
+  const [nowMs, setNowMs] = useState(
+    () => (initialNowMs ?? Date.now()) + offsetMs,
+  );
 
   useEffect(() => {
     // Pause ticking entirely when not active.

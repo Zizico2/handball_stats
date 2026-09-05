@@ -12,9 +12,9 @@ import { useLiveSuspenseQuery } from "@tanstack/react-db";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
-  activeGameCollection,
-  teamPlayersCollection,
-  teamsCollection,
+  activeGameLiveQuery,
+  teamPlayersLiveQuery,
+  teamsLiveQuery,
 } from "@/collections";
 import { AppNextLink } from "@/components/AppNextLink";
 import { useNewGameForm } from "@/components/new-game/hooks/useNewGameForm";
@@ -24,13 +24,9 @@ import { MIN_ROSTER_SIZE } from "@/lib/roster/minRosterSize";
 
 function NewGame() {
   const router = useRouter();
-  const teams = useLiveSuspenseQuery((q) => q.from({ team: teamsCollection }));
-  const teamPlayers = useLiveSuspenseQuery((q) =>
-    q.from({ player: teamPlayersCollection }),
-  );
-  const activeGame = useLiveSuspenseQuery((q) =>
-    q.from({ activeGame: activeGameCollection }).findOne(),
-  );
+  const teams = useLiveSuspenseQuery(teamsLiveQuery);
+  const teamPlayers = useLiveSuspenseQuery(teamPlayersLiveQuery);
+  const activeGame = useLiveSuspenseQuery(activeGameLiveQuery);
 
   const [selectedTeamId, setSelectedTeamId] = useState<ClientId | null>(null);
 

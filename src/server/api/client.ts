@@ -27,43 +27,80 @@ import {
   TeamHasGamesError,
 } from "@/server/api/teamDeletionErrors";
 
+type ApiClient = ReturnType<typeof hc<ApiApp>>;
+
+export type CollectionQueryFns = {
+  listPlayerEventsQuery: () => Promise<PlayerEvent[]>;
+  listTeamsQuery: () => Promise<Team[]>;
+  listTeamPlayersQuery: () => Promise<TeamPlayer[]>;
+  listGamesQuery: () => Promise<Game[]>;
+  listActiveGameQuery: () => Promise<ActiveGame[]>;
+  listQuickSubPairsQuery: () => Promise<QuickSubPair[]>;
+  listPauseTogglesQuery: () => Promise<PauseToggle[]>;
+};
+
+export function createCollectionQueries(client: ApiClient): CollectionQueryFns {
+  return {
+    async listPlayerEventsQuery() {
+      return playerEventSchema
+        .array()
+        .parse(
+          await parseResponse(client.api.collections["player-events"].$get()),
+        );
+    },
+    async listTeamsQuery() {
+      return teamSchema
+        .array()
+        .parse(await parseResponse(client.api.collections.teams.$get()));
+    },
+    async listTeamPlayersQuery() {
+      return teamPlayerSchema
+        .array()
+        .parse(
+          await parseResponse(client.api.collections["team-players"].$get()),
+        );
+    },
+    async listGamesQuery() {
+      return gameSchema
+        .array()
+        .parse(await parseResponse(client.api.collections.games.$get()));
+    },
+    async listActiveGameQuery() {
+      return activeGameSchema
+        .array()
+        .parse(
+          await parseResponse(client.api.collections["active-game"].$get()),
+        );
+    },
+    async listQuickSubPairsQuery() {
+      return quickSubPairSchema
+        .array()
+        .parse(
+          await parseResponse(client.api.collections["quick-sub-pairs"].$get()),
+        );
+    },
+    async listPauseTogglesQuery() {
+      return pauseToggleSchema
+        .array()
+        .parse(
+          await parseResponse(client.api.collections["pause-toggles"].$get()),
+        );
+    },
+  };
+}
+
 const apiClient = hc<ApiApp>("/");
+const collectionQueries = createCollectionQueries(apiClient);
 
-export async function listPlayerEventsQuery() {
-  return playerEventSchema
-    .array()
-    .parse(
-      await parseResponse(apiClient.api.collections["player-events"].$get()),
-    );
-}
-
-export async function listTeamsQuery() {
-  return teamSchema
-    .array()
-    .parse(await parseResponse(apiClient.api.collections.teams.$get()));
-}
-
-export async function listTeamPlayersQuery() {
-  return teamPlayerSchema
-    .array()
-    .parse(
-      await parseResponse(apiClient.api.collections["team-players"].$get()),
-    );
-}
-
-export async function listGamesQuery() {
-  return gameSchema
-    .array()
-    .parse(await parseResponse(apiClient.api.collections.games.$get()));
-}
-
-export async function listActiveGameQuery() {
-  return activeGameSchema
-    .array()
-    .parse(
-      await parseResponse(apiClient.api.collections["active-game"].$get()),
-    );
-}
+export const {
+  listActiveGameQuery,
+  listGamesQuery,
+  listPauseTogglesQuery,
+  listPlayerEventsQuery,
+  listQuickSubPairsQuery,
+  listTeamPlayersQuery,
+  listTeamsQuery,
+} = collectionQueries;
 
 export async function createPlayerEventsMutation(items: PlayerEvent[]) {
   return playerEventSchema
@@ -116,14 +153,6 @@ export async function deleteTeamPlayersMutation(ids: ClientId[]) {
   await parseResponse(
     apiClient.api.collections["team-players"].$delete({ json: ids }),
   );
-}
-
-export async function listQuickSubPairsQuery() {
-  return quickSubPairSchema
-    .array()
-    .parse(
-      await parseResponse(apiClient.api.collections["quick-sub-pairs"].$get()),
-    );
 }
 
 export async function createQuickSubPairsMutation(items: QuickSubPair[]) {
@@ -216,14 +245,6 @@ export async function deleteActiveGameMutation(ids: 1[]) {
   await parseResponse(
     apiClient.api.collections["active-game"].$delete({ json: ids }),
   );
-}
-
-export async function listPauseTogglesQuery() {
-  return pauseToggleSchema
-    .array()
-    .parse(
-      await parseResponse(apiClient.api.collections["pause-toggles"].$get()),
-    );
 }
 
 export async function upsertPauseToggleMutation(item: PauseToggle) {

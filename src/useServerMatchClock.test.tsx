@@ -11,19 +11,25 @@ const useNowCalls: Array<{
   offsetMs: number;
 }> = [];
 
-mock.module("@tanstack/react-db", () => ({
-  useLiveSuspenseQuery: () => ({ data: pauseToggles }),
+mock.module("@/useAppCollections", () => ({
+  useAppCollections: () => ({
+    gamesCollection: {
+      get: () => undefined,
+      update: () => undefined,
+      utils: { refetch: async () => undefined },
+    },
+    pauseTogglesCollection: {
+      utils: { refetch: async () => undefined },
+    },
+  }),
 }));
 
 mock.module("@/collections", () => ({
-  gamesCollection: {
-    get: () => undefined,
-    update: () => undefined,
-    utils: { refetch: async () => undefined },
-  },
-  pauseTogglesCollection: {
-    utils: { refetch: async () => undefined },
-  },
+  pauseTogglesLiveQuery: {},
+}));
+
+mock.module("@tanstack/react-db", () => ({
+  useLiveSuspenseQuery: () => ({ data: pauseToggles }),
 }));
 
 mock.module("@/server/api/client", () => ({
@@ -57,6 +63,7 @@ function ClockHarness({ game }: { game: Game }) {
   useServerMatchClock({
     activeGameData: activeGame,
     activeGameRecord: game,
+    initialNowMs: 10_000,
     matchStatus: null,
     setMatchStatus: () => undefined,
   });

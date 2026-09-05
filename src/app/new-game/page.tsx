@@ -1,6 +1,28 @@
-import { NewGameClient } from "@/components/new-game/NewGameClient";
+import { auth } from "@clerk/nextjs/server";
+import { HydrationBoundary } from "@tanstack/react-db";
+import {
+  activeGameLiveQuery,
+  teamPlayersLiveQuery,
+  teamsLiveQuery,
+} from "@/collections";
+import NewGame from "@/components/new-game/NewGame";
+import { preloadDbState } from "@/server/tanstackDb";
 
-// TODO: remove client wrapper once TanStack DB supports SSR
-export default function NewGamePage() {
-  return <NewGameClient />;
+export default async function NewGamePage() {
+  const { userId } = await auth();
+  if (!userId) {
+    return null;
+  }
+
+  const state = await preloadDbState(userId, [
+    teamsLiveQuery,
+    teamPlayersLiveQuery,
+    activeGameLiveQuery,
+  ]);
+
+  return (
+    <HydrationBoundary state={state}>
+      <NewGame />
+    </HydrationBoundary>
+  );
 }

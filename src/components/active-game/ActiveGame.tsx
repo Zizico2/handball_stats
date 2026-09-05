@@ -4,7 +4,6 @@ import { useMachine } from "@xstate/react";
 import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 import { fromPromise } from "xstate";
-import { playerEventsCollection } from "@/collections";
 import { ActiveGameEventDialogs } from "@/components/active-game/ActiveGameEventDialogs";
 import { ActiveGameView } from "@/components/active-game/ActiveGameView";
 import { SuspensionWarningDialog } from "@/components/active-game/dialogs/SuspensionWarningDialog";
@@ -32,6 +31,7 @@ import {
   markMatchSaved,
   matchSyncAtom,
 } from "@/matchSyncAtom";
+import { useAppCollections } from "@/useAppCollections";
 import type { DeepPartial } from "@/utils";
 
 interface PendingExternalSuspensionAction {
@@ -42,7 +42,7 @@ interface PendingExternalSuspensionAction {
   suspensions: ActiveSuspension[];
 }
 
-function ActiveGame() {
+function ActiveGame({ initialNowMs }: { initialNowMs: number }) {
   const [matchStatus, setMatchStatus] = useState<MatchStatus | null>(null);
   const [starting7DialogOpen, setStarting7DialogOpen] = useState(false);
   const [quickSubDialogOpen, setQuickSubDialogOpen] = useState(false);
@@ -55,6 +55,7 @@ function ActiveGame() {
     string | null
   >(null);
   const matchSync = useAtomValue(matchSyncAtom);
+  const collections = useAppCollections();
 
   const {
     activeGame,
@@ -84,6 +85,7 @@ function ActiveGame() {
       matchStatus,
       setMatchStatus,
       teamName,
+      initialNowMs,
     });
 
   const { getPlayerLabel } = usePlayerLabelMap(
@@ -104,8 +106,8 @@ function ActiveGame() {
           async ({ input }: { input: DeepPartial<PlayerEvent> }) => {
             beginMatchSaving();
             try {
-              const tx = insertPlayerEvent(input);
-              await awaitPlayerEventPersistence(tx);
+              const tx = insertPlayerEvent(collections, input);
+              await awaitPlayerEventPersistence(collections, tx);
               markMatchSaved();
             } catch (error) {
               console.error("Failed to persist player event", error);
@@ -138,7 +140,7 @@ function ActiveGame() {
 
       beginMatchSaving();
       try {
-        const tx = insertPlayerEvent({
+        const tx = insertPlayerEvent(collections, {
           id: createClientId(),
           player: suspension.offender,
           game_id: activeGameData.gameId,
@@ -148,7 +150,7 @@ function ActiveGame() {
           eventGroup: "sanction",
           event: { suspensionId: suspension.id },
         });
-        await awaitPlayerEventPersistence(tx);
+        await awaitPlayerEventPersistence(collections, tx);
         markMatchSaved();
         return true;
       } catch (error) {
@@ -162,7 +164,7 @@ function ActiveGame() {
         return false;
       }
     },
-    [activeGameData, activeHalf, eventElapsedSeconds],
+    [activeGameData, activeHalf, collections, eventElapsedSeconds],
   );
 
   const handleStartEvent = (eventGroup: EventGroup) => {
@@ -209,10 +211,10 @@ function ActiveGame() {
         );
 
         const deleteTxs = existingStarting.map((event) =>
-          playerEventsCollection.delete(event.id),
+          collections.playerEventsCollection.delete(event.id),
         );
         const insertTxs = numbers.map((num, index) =>
-          insertPlayerEvent({
+          insertPlayerEvent(collections, {
             id: eventIds[index],
             player: num,
             game_id: activeGameData.gameId,
@@ -225,9 +227,15 @@ function ActiveGame() {
 
         await Promise.all([
           ...deleteTxs.map((tx, index) =>
-            awaitPlayerEventDeletionPersistence(tx, existingStarting[index].id),
+            awaitPlayerEventDeletionPersistence(
+              collections,
+              tx,
+              existingStarting[index].id,
+            ),
           ),
-          ...insertTxs.map((tx) => awaitPlayerEventPersistence(tx)),
+          ...insertTxs.map((tx) =>
+            awaitPlayerEventPersistence(collections, tx),
+          ),
         ]);
 
         markMatchSaved();
@@ -247,6 +255,7 @@ function ActiveGame() {
     [
       activeGameData,
       activeGameEvents,
+      collections,
       currentHalfForStarting,
       isSavingStarting7,
     ],
@@ -271,7 +280,7 @@ function ActiveGame() {
       beginMatchSaving();
 
       try {
-        const tx = insertPlayerEvent({
+        const tx = insertPlayerEvent(collections, {
           id: eventId,
           player: playerOut,
           game_id: activeGameData.gameId,
@@ -281,7 +290,7 @@ function ActiveGame() {
           eventGroup: "substitution",
           event: { playerIn },
         });
-        await awaitPlayerEventPersistence(tx);
+        await awaitPlayerEventPersistence(collections, tx);
         markMatchSaved();
         setQuickSubDialogOpen(false);
       } catch (error) {
@@ -302,6 +311,7 @@ function ActiveGame() {
       activeHalf,
       eventElapsedSeconds,
       isSavingQuickSub,
+      collections,
     ],
   );
 
@@ -402,16 +412,16 @@ function ActiveGame() {
       beginMatchSaving();
 
       try {
-        if (playerEventsCollection.get(eventId) === undefined) {
-          await playerEventsCollection.utils.refetch();
-          if (playerEventsCollection.get(eventId) === undefined) {
+        if (collections.playerEventsCollection.get(eventId) === undefined) {
+          await collections.playerEventsCollection.utils.refetch();
+          if (collections.playerEventsCollection.get(eventId) === undefined) {
             markMatchSaved();
             return;
           }
         }
 
-        const tx = playerEventsCollection.delete(eventId);
-        await awaitPlayerEventDeletionPersistence(tx, eventId);
+        const tx = collections.playerEventsCollection.delete(eventId);
+        await awaitPlayerEventDeletionPersistence(collections, tx, eventId);
         markMatchSaved();
       } catch (error) {
         console.error("Failed to undo last event", error);
@@ -425,7 +435,7 @@ function ActiveGame() {
         setIsUndoingLastEvent(false);
       }
     },
-    [isUndoingLastEvent, matchSync.status],
+    [collections, isUndoingLastEvent, matchSync.status],
   );
 
   const handleUndoLastEvent = useCallback(() => {
