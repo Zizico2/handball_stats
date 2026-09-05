@@ -3,37 +3,29 @@
 import { useLiveSuspenseQuery } from "@tanstack/react-db";
 import { useMemo } from "react";
 import {
-  activeGameCollection,
-  gamesCollection,
-  playerEventsCollection,
-  quickSubPairsCollection,
-  teamPlayersCollection,
-  teamsCollection,
+  activeGameLiveQuery,
+  gamesLiveQuery,
+  playerEventsLiveQuery,
+  quickSubPairsLiveQuery,
+  teamPlayersLiveQuery,
+  teamsLiveQuery,
 } from "@/collections";
 import { getActivePlayers } from "@/components/active-game/utils/activePlayers";
 import { getActiveSuspensions } from "@/components/active-game/utils/activeSuspensions";
 import type { MatchStatus } from "@/inGameControlsAtoms";
 
 export function useActiveGameData(matchStatus: MatchStatus | null) {
-  const playerEvents = useLiveSuspenseQuery((q) =>
-    q.from({ event: playerEventsCollection }),
-  );
+  const playerEvents = useLiveSuspenseQuery(playerEventsLiveQuery);
 
-  const games = useLiveSuspenseQuery((q) => q.from({ game: gamesCollection }));
+  const games = useLiveSuspenseQuery(gamesLiveQuery);
 
-  const activeGame = useLiveSuspenseQuery((q) =>
-    q.from({ activeGame: activeGameCollection }).findOne(),
-  );
+  const activeGame = useLiveSuspenseQuery(activeGameLiveQuery);
 
-  const teams = useLiveSuspenseQuery((q) => q.from({ team: teamsCollection }));
+  const teams = useLiveSuspenseQuery(teamsLiveQuery);
 
-  const teamPlayers = useLiveSuspenseQuery((q) =>
-    q.from({ player: teamPlayersCollection }),
-  );
+  const teamPlayers = useLiveSuspenseQuery(teamPlayersLiveQuery);
 
-  const quickSubPairs = useLiveSuspenseQuery((q) =>
-    q.from({ pair: quickSubPairsCollection }),
-  );
+  const quickSubPairs = useLiveSuspenseQuery(quickSubPairsLiveQuery);
 
   const activeGameData = activeGame.data ?? null;
 

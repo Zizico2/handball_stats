@@ -1,20 +1,25 @@
 import z from "zod";
-import { playerEventsCollection } from "@/collections";
+import type { AppCollections } from "@/collections";
 import {
   type ClientId,
   type PlayerEvent,
   playerEventSchema,
 } from "@/datamodel";
 
+type PlayerEventCollections = Pick<AppCollections, "playerEventsCollection">;
+
 export type PersistableWrite = {
   event: PlayerEvent;
   isPersisted: { promise: Promise<unknown> };
 };
 
-export function insertPlayerEvent(partialEvent: unknown): PersistableWrite {
+export function insertPlayerEvent(
+  collections: PlayerEventCollections,
+  partialEvent: unknown,
+): PersistableWrite {
   try {
     const parsedEvent = playerEventSchema.parse(partialEvent);
-    const transaction = playerEventsCollection.insert(parsedEvent);
+    const transaction = collections.playerEventsCollection.insert(parsedEvent);
     return {
       event: parsedEvent,
       isPersisted: transaction.isPersisted,
@@ -30,14 +35,15 @@ export function insertPlayerEvent(partialEvent: unknown): PersistableWrite {
 }
 
 export async function awaitPlayerEventPersistence(
+  collections: PlayerEventCollections,
   tx: PersistableWrite,
 ): Promise<void> {
   try {
     await tx.isPersisted.promise;
   } catch (error) {
     try {
-      await playerEventsCollection.utils.refetch();
-      const persisted = playerEventsCollection.get(tx.event.id);
+      await collections.playerEventsCollection.utils.refetch();
+      const persisted = collections.playerEventsCollection.get(tx.event.id);
       if (persisted && hasSamePlayerEventIntent(persisted, tx.event)) {
         return;
       }
@@ -52,6 +58,7 @@ export async function awaitPlayerEventPersistence(
 }
 
 export async function awaitPlayerEventDeletionPersistence(
+  collections: PlayerEventCollections,
   tx: { isPersisted: { promise: Promise<unknown> } },
   eventId: ClientId,
 ): Promise<void> {
@@ -59,8 +66,8 @@ export async function awaitPlayerEventDeletionPersistence(
     await tx.isPersisted.promise;
   } catch (error) {
     try {
-      await playerEventsCollection.utils.refetch();
-      if (playerEventsCollection.get(eventId) === undefined) {
+      await collections.playerEventsCollection.utils.refetch();
+      if (collections.playerEventsCollection.get(eventId) === undefined) {
         return;
       }
     } catch (reconcileError) {

@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { gamesCollection, pauseTogglesCollection } from "@/collections";
+import { pauseTogglesLiveQuery } from "@/collections";
 import type {
   ActiveGame,
   ClientId,
@@ -30,6 +30,7 @@ import {
   transitionGamePhaseMutation,
 } from "@/server/api/client";
 import { calculateElapsedMs } from "@/server/matchClockLogic";
+import { useAppCollections } from "@/useAppCollections";
 import { useNow } from "@/useNow";
 
 function matchStatusFromGame(game: Game): MatchStatus | null {
@@ -48,7 +49,10 @@ function matchStatusFromGame(game: Game): MatchStatus | null {
   return null;
 }
 
-function applyGamePhaseLocally(game: Game) {
+function applyGamePhaseLocally(
+  gamesCollection: ReturnType<typeof useAppCollections>["gamesCollection"],
+  game: Game,
+) {
   gamesCollection.update(game.id, (draft) => {
     draft.firstHalfStartedAtMs = game.firstHalfStartedAtMs ?? null;
     draft.halftimeStartedAtMs = game.halftimeStartedAtMs ?? null;
@@ -65,6 +69,7 @@ interface UseServerMatchClockOptions {
   activeGameRecord: Game | null;
   matchStatus: MatchStatus | null;
   setMatchStatus: Dispatch<SetStateAction<MatchStatus | null>>;
+  initialNowMs: number;
 }
 
 interface UseServerMatchClockResult {
@@ -128,7 +133,12 @@ function inferActiveHalf(
   return null;
 }
 
-async function reloadMatchClockCollections() {
+async function reloadMatchClockCollections(
+  gamesCollection: ReturnType<typeof useAppCollections>["gamesCollection"],
+  pauseTogglesCollection: ReturnType<
+    typeof useAppCollections
+  >["pauseTogglesCollection"],
+) {
   await Promise.all([
     gamesCollection.utils.refetch(),
     pauseTogglesCollection.utils.refetch(),
@@ -140,10 +150,10 @@ export function useServerMatchClock({
   activeGameRecord,
   matchStatus,
   setMatchStatus,
+  initialNowMs,
 }: UseServerMatchClockOptions): UseServerMatchClockResult {
-  const pauseTogglesQuery = useLiveSuspenseQuery((q) =>
-    q.from({ pauseToggle: pauseTogglesCollection }),
-  );
+  const { gamesCollection, pauseTogglesCollection } = useAppCollections();
+  const pauseTogglesQuery = useLiveSuspenseQuery(pauseTogglesLiveQuery);
   const pauseToggles = pauseTogglesQuery.data;
 
   const [serverOffsetMs, setServerOffsetMs] = useState(0);
@@ -248,7 +258,7 @@ export function useServerMatchClock({
     halftimeStartedAtMs !== null && secondHalfStartedAtMs === null;
   const isRunning = activeHalf !== null && !isHalftime && !paused;
 
-  const nowMs = useNow(isRunning, 1000, serverOffsetMs);
+  const nowMs = useNow(isRunning, 1000, serverOffsetMs, initialNowMs);
 
   const activeElapsedMs = calculateElapsedMs(
     activeHalf === "firstHalf"
@@ -314,7 +324,7 @@ export function useServerMatchClock({
       await pauseTogglesCollection.utils.refetch();
       return result;
     },
-    [activeGameData],
+    [activeGameData, pauseTogglesCollection],
   );
 
   const setPaused = useCallback(
@@ -345,7 +355,12 @@ export function useServerMatchClock({
         endClockMutation();
       }
     },
-    [beginClockMutation, endClockMutation, requestPauseState],
+    [
+      beginClockMutation,
+      endClockMutation,
+      pauseTogglesCollection,
+      requestPauseState,
+    ],
   );
 
   const reconcilePhaseConflict = useCallback(
@@ -356,7 +371,7 @@ export function useServerMatchClock({
         setMatchStatus(matchStatusFromGame(refreshed));
       }
     },
-    [setMatchStatus],
+    [gamesCollection, setMatchStatus],
   );
 
   const startFirstHalf = useCallback(() => {
@@ -370,7 +385,7 @@ export function useServerMatchClock({
           activeGameRecord.id,
           "firstHalf",
         );
-        applyGamePhaseLocally(game);
+        applyGamePhaseLocally(gamesCollection, game);
         setMatchStatus(matchStatusFromGame(game));
         markMatchSaved();
       } catch (error) {
@@ -381,7 +396,10 @@ export function useServerMatchClock({
         }
         console.error("Failed to start first half", error);
         try {
-          await reloadMatchClockCollections();
+          await reloadMatchClockCollections(
+            gamesCollection,
+            pauseTogglesCollection,
+          );
         } catch (refetchError) {
           console.error(
             "Failed to reload match after clock error",
@@ -402,7 +420,9 @@ export function useServerMatchClock({
     activeGameRecord,
     beginClockMutation,
     endClockMutation,
+    gamesCollection,
     reconcilePhaseConflict,
+    pauseTogglesCollection,
     setMatchStatus,
   ]);
 
@@ -417,7 +437,7 @@ export function useServerMatchClock({
           activeGameRecord.id,
           "secondHalf",
         );
-        applyGamePhaseLocally(game);
+        applyGamePhaseLocally(gamesCollection, game);
         setMatchStatus(matchStatusFromGame(game));
         markMatchSaved();
       } catch (error) {
@@ -428,7 +448,10 @@ export function useServerMatchClock({
         }
         console.error("Failed to start second half", error);
         try {
-          await reloadMatchClockCollections();
+          await reloadMatchClockCollections(
+            gamesCollection,
+            pauseTogglesCollection,
+          );
         } catch (refetchError) {
           console.error(
             "Failed to reload match after clock error",
@@ -449,7 +472,9 @@ export function useServerMatchClock({
     activeGameRecord,
     beginClockMutation,
     endClockMutation,
+    gamesCollection,
     reconcilePhaseConflict,
+    pauseTogglesCollection,
     setMatchStatus,
   ]);
 
@@ -464,7 +489,7 @@ export function useServerMatchClock({
           activeGameRecord.id,
           "halftime",
         );
-        applyGamePhaseLocally(game);
+        applyGamePhaseLocally(gamesCollection, game);
         // Every successful or idempotent HT transition enforces the desired
         // paused state. The server rejects stale resumes once HT has started.
         await requestPauseState("firstHalf", true);
@@ -478,7 +503,10 @@ export function useServerMatchClock({
         }
         console.error("Failed to start halftime", error);
         try {
-          await reloadMatchClockCollections();
+          await reloadMatchClockCollections(
+            gamesCollection,
+            pauseTogglesCollection,
+          );
         } catch (refetchError) {
           console.error(
             "Failed to reload match after clock error",
@@ -499,7 +527,9 @@ export function useServerMatchClock({
     activeGameRecord,
     beginClockMutation,
     endClockMutation,
+    gamesCollection,
     reconcilePhaseConflict,
+    pauseTogglesCollection,
     requestPauseState,
     setMatchStatus,
   ]);

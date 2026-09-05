@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { activeGameCollection, gamesCollection } from "@/collections";
 import type { ClientId } from "@/datamodel";
 import { createClientId } from "@/lib/clientId";
 import {
@@ -10,6 +9,7 @@ import {
   markMatchSaved,
 } from "@/matchSyncAtom";
 import { startGameMutation } from "@/server/api/client";
+import { useAppCollections } from "@/useAppCollections";
 
 interface UseNewGameFormParams {
   onStarted: () => void;
@@ -22,6 +22,7 @@ export function useNewGameForm({
   rosterReady,
   selectedTeamId,
 }: UseNewGameFormParams) {
+  const { activeGameCollection, gamesCollection } = useAppCollections();
   const [isStarting, setIsStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   const pendingGameIdRef = useRef<ClientId | null>(null);
@@ -86,7 +87,14 @@ export function useNewGameForm({
     } finally {
       setIsStarting(false);
     }
-  }, [isStarting, onStarted, rosterReady, selectedTeamId]);
+  }, [
+    activeGameCollection,
+    gamesCollection,
+    isStarting,
+    onStarted,
+    rosterReady,
+    selectedTeamId,
+  ]);
 
   return {
     clearStartError,

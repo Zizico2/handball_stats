@@ -49,6 +49,15 @@ export default defineConfig({
       },
     },
     {
+      name: "ssr-routes",
+      testMatch: /ssr-routes\.spec\.ts/,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: authFile,
+      },
+    },
+    {
       name: "match-mutation-sync",
       testMatch: /match-mutation-sync\.spec\.ts/,
       dependencies: ["setup"],

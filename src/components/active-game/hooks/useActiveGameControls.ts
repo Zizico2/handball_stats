@@ -8,7 +8,6 @@ import {
   useEffect,
   useRef,
 } from "react";
-import { activeGameCollection } from "@/collections";
 import type { ActiveGame, Game } from "@/datamodel";
 import {
   inGameControlsAtom,
@@ -21,6 +20,7 @@ import {
   markMatchFailed,
   markMatchSaved,
 } from "@/matchSyncAtom";
+import { useAppCollections } from "@/useAppCollections";
 import { useServerMatchClock } from "@/useServerMatchClock";
 
 interface UseActiveGameControlsParams {
@@ -33,6 +33,7 @@ interface UseActiveGameControlsParams {
   matchStatus: MatchStatus | null;
   setMatchStatus: Dispatch<SetStateAction<MatchStatus | null>>;
   teamName: string | null;
+  initialNowMs: number;
 }
 
 export function useActiveGameControls({
@@ -45,9 +46,11 @@ export function useActiveGameControls({
   matchStatus,
   setMatchStatus,
   teamName,
+  initialNowMs,
 }: UseActiveGameControlsParams) {
   const setActiveGameControls = useSetAtom(inGameControlsAtom);
   const endMatchPendingRef = useRef(false);
+  const { activeGameCollection } = useAppCollections();
 
   const {
     activeHalf,
@@ -64,6 +67,7 @@ export function useActiveGameControls({
   } = useServerMatchClock({
     activeGameData,
     activeGameRecord,
+    initialNowMs,
     matchStatus,
     setMatchStatus,
   });
@@ -102,7 +106,7 @@ export function useActiveGameControls({
     } finally {
       endMatchPendingRef.current = false;
     }
-  }, [activeGameData, clearClockState]);
+  }, [activeGameCollection, activeGameData, clearClockState]);
 
   useEffect(() => {
     const disableStartFirstHalf = firstHalfStartingPlayerNumbers.length === 0;

@@ -5,11 +5,11 @@ import { useLiveSuspenseQuery } from "@tanstack/react-db";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import {
-  activeGameCollection,
-  gamesCollection,
-  pauseTogglesCollection,
-  teamPlayersCollection,
-  teamsCollection,
+  activeGameLiveQuery,
+  gamesLiveQuery,
+  pauseTogglesLiveQuery,
+  teamPlayersLiveQuery,
+  teamsLiveQuery,
 } from "@/collections";
 import { AppNextLink } from "@/components/AppNextLink";
 import { resolveHomeHubState } from "@/components/home/resolveHomeHubState";
@@ -40,19 +40,13 @@ function matchStatusFromGame(game: {
   return null;
 }
 
-function HomeHub() {
+function HomeHub({ initialNowMs }: { initialNowMs: number }) {
   const router = useRouter();
-  const teams = useLiveSuspenseQuery((q) => q.from({ team: teamsCollection }));
-  const teamPlayers = useLiveSuspenseQuery((q) =>
-    q.from({ player: teamPlayersCollection }),
-  );
-  const games = useLiveSuspenseQuery((q) => q.from({ game: gamesCollection }));
-  const activeGame = useLiveSuspenseQuery((q) =>
-    q.from({ activeGame: activeGameCollection }).findOne(),
-  );
-  const pauseToggles = useLiveSuspenseQuery((q) =>
-    q.from({ pauseToggle: pauseTogglesCollection }),
-  );
+  const teams = useLiveSuspenseQuery(teamsLiveQuery);
+  const teamPlayers = useLiveSuspenseQuery(teamPlayersLiveQuery);
+  const games = useLiveSuspenseQuery(gamesLiveQuery);
+  const activeGame = useLiveSuspenseQuery(activeGameLiveQuery);
+  const pauseToggles = useLiveSuspenseQuery(pauseTogglesLiveQuery);
 
   const activeGameData = activeGame.data ?? null;
   const activeGameRecord = useMemo(() => {
@@ -101,7 +95,7 @@ function HomeHub() {
       matchStatus !== "halftime" &&
       isRunning,
   );
-  const nowMs = useNow(clockIsTicking, 1000);
+  const nowMs = useNow(clockIsTicking, 1000, 0, initialNowMs);
 
   const clockDigits = useMemo(() => {
     if (!activeGameRecord) {
@@ -109,7 +103,7 @@ function HomeHub() {
     }
     const snapshot = buildMatchClockSnapshot({
       gameId: activeGameRecord.id,
-      nowMs: clockIsTicking ? nowMs : Date.now(),
+      nowMs,
       firstHalfStartedAtMs: activeGameRecord.firstHalfStartedAtMs ?? null,
       halftimeStartedAtMs: activeGameRecord.halftimeStartedAtMs ?? null,
       secondHalfStartedAtMs: activeGameRecord.secondHalfStartedAtMs ?? null,
@@ -122,7 +116,7 @@ function HomeHub() {
     });
     const total = snapshot.activeElapsedSeconds;
     return formatClockDigits(Math.floor(total / 60), total % 60);
-  }, [activeGameRecord, clockIsTicking, nowMs, pauseToggles.data]);
+  }, [activeGameRecord, nowMs, pauseToggles.data]);
 
   const readyTeamPlayerCount = useMemo(() => {
     if (teams.data.length === 0) {
