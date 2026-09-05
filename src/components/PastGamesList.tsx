@@ -1,14 +1,38 @@
+"use client";
+
 import { Card, Typography } from "@heroui/react";
+import { useLiveSuspenseQuery } from "@tanstack/react-db";
 import { ChevronRight } from "lucide-react";
+import { useMemo } from "react";
+import {
+  activeGameLiveQuery,
+  gamesLiveQuery,
+  playerEventsLiveQuery,
+  teamsLiveQuery,
+} from "@/collections";
 import { AppNextLink } from "@/components/AppNextLink";
 import { GameMetaLine } from "@/components/game/GameMetaLine";
 import { GameStatChips } from "@/components/game/GameStatChips";
-import { listPastGames } from "@/server/gameHistory";
+import { buildPastGameSummaries } from "@/lib/gameHistory";
 
-export async function PastGamesList() {
-  const games = await listPastGames();
+export function PastGamesList() {
+  const games = useLiveSuspenseQuery(gamesLiveQuery);
+  const teams = useLiveSuspenseQuery(teamsLiveQuery);
+  const playerEvents = useLiveSuspenseQuery(playerEventsLiveQuery);
+  const activeGame = useLiveSuspenseQuery(activeGameLiveQuery);
 
-  if (games.length === 0) {
+  const pastGames = useMemo(
+    () =>
+      buildPastGameSummaries({
+        games: games.data,
+        teams: teams.data,
+        playerEvents: playerEvents.data,
+        activeGame: activeGame.data,
+      }),
+    [activeGame.data, games.data, playerEvents.data, teams.data],
+  );
+
+  if (pastGames.length === 0) {
     return (
       <Card className="max-w-[720px] border border-separator">
         <Card.Content className="p-4">
@@ -23,7 +47,7 @@ export async function PastGamesList() {
 
   return (
     <div className="flex max-w-[720px] flex-col gap-4">
-      {games.map((game) => (
+      {pastGames.map((game) => (
         <AppNextLink
           key={game.id}
           className="no-underline"

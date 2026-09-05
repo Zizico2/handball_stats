@@ -13,6 +13,7 @@ import { useState } from "react";
 import { MatchSyncStatus } from "@/components/MatchSyncStatus";
 import { MobileNavDrawer } from "@/components/ResponsiveDrawer/MobileNavDrawer";
 import { NavLinks } from "@/components/ResponsiveDrawer/NavLinks";
+import { RoutePrefetcher } from "@/components/RoutePrefetcher";
 
 export default function ResponsiveDrawer({
   children,
@@ -25,6 +26,7 @@ export default function ResponsiveDrawer({
 
   return (
     <div className="flex h-full w-full flex-row">
+      <RoutePrefetcher />
       <Surface
         aria-label="Navigation"
         className="hidden h-full w-60 shrink-0 border-r border-separator sm:block"
