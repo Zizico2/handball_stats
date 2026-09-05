@@ -7,6 +7,14 @@ import {
 } from "@tanstack/db";
 import { QueryClient } from "@tanstack/query-core";
 import { hc } from "hono/client";
+import {
+  gamesCollection,
+  gamesLiveQuery,
+  playerEventsLiveQuery,
+  teamPlayersLiveQuery,
+  teamsLiveQuery,
+} from "@/collections";
+import type { ClientId } from "@/datamodel";
 import type { ApiApp } from "@/server/api/app";
 import { apiApp } from "@/server/api/app";
 import {
@@ -45,6 +53,34 @@ export async function preloadDbState(
 
   try {
     await Promise.all(queries.map((query) => client.preloadLiveQuery(query)));
+    return client.dehydrate();
+  } finally {
+    await client.cleanup();
+  }
+}
+
+/**
+ * Preload a past-game detail route and validate its game ownership from the
+ * same server-scoped collection that will be dehydrated for the client.
+ */
+export async function preloadPastGameDbState(
+  userId: string,
+  gameId: ClientId,
+): Promise<DehydratedDbState | null> {
+  const client = createServerDbClient(userId);
+
+  try {
+    await Promise.all([
+      client.preloadLiveQuery(gamesLiveQuery),
+      client.preloadLiveQuery(teamsLiveQuery),
+      client.preloadLiveQuery(teamPlayersLiveQuery),
+      client.preloadLiveQuery(playerEventsLiveQuery),
+    ]);
+
+    if (!client.collection(gamesCollection).get(gameId)) {
+      return null;
+    }
+
     return client.dehydrate();
   } finally {
     await client.cleanup();

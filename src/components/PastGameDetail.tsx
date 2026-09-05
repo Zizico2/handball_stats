@@ -1,39 +1,43 @@
+"use client";
+
 import { Typography } from "@heroui/react";
+import { useLiveSuspenseQuery } from "@tanstack/react-db";
 import { ArrowLeft } from "lucide-react";
-import { notFound } from "next/navigation";
+import { useMemo } from "react";
+import {
+  gamesLiveQuery,
+  playerEventsLiveQuery,
+  teamPlayersLiveQuery,
+  teamsLiveQuery,
+} from "@/collections";
 import { AppNextLink } from "@/components/AppNextLink";
 import { GameMetaLine } from "@/components/game/GameMetaLine";
 import { GameStatChips } from "@/components/game/GameStatChips";
 import { PastGameCsvDownloadButton } from "@/components/PastGameCsvDownloadButton";
 import { PastGameEventLog } from "@/components/PastGameEventLog";
-import { clientIdSchema } from "@/datamodel";
+import type { ClientId } from "@/datamodel";
 import { countGoals } from "@/lib/display/countGoals";
-import {
-  getPastGameLog,
-  getPastGamePlayerEventsCsv,
-} from "@/server/gameHistory";
+import { buildPastGameLog } from "@/lib/gameHistory";
 
-export async function PastGameDetailContent({
-  params,
-}: {
-  params: Promise<{ gameId: string }>;
-}) {
-  const resolvedParams = await params;
-  const parsedGameId = clientIdSchema.safeParse(resolvedParams.gameId);
+export function PastGameDetailContent({ gameId }: { gameId: ClientId }) {
+  const games = useLiveSuspenseQuery(gamesLiveQuery);
+  const teams = useLiveSuspenseQuery(teamsLiveQuery);
+  const teamPlayers = useLiveSuspenseQuery(teamPlayersLiveQuery);
+  const playerEvents = useLiveSuspenseQuery(playerEventsLiveQuery);
 
-  if (!parsedGameId.success) {
-    notFound();
-  }
-  const gameId = parsedGameId.data;
+  const gameLog = useMemo(
+    () =>
+      buildPastGameLog({
+        gameId,
+        games: games.data,
+        teams: teams.data,
+        teamPlayers: teamPlayers.data,
+        playerEvents: playerEvents.data,
+      }),
+    [gameId, games.data, playerEvents.data, teamPlayers.data, teams.data],
+  );
 
-  const [gameLog, csvPayload] = await Promise.all([
-    getPastGameLog(gameId),
-    getPastGamePlayerEventsCsv(gameId),
-  ]);
-
-  if (!gameLog) {
-    notFound();
-  }
+  if (!gameLog) return null;
 
   const score = countGoals(gameLog.events);
 
@@ -61,10 +65,8 @@ export async function PastGameDetailContent({
       </div>
 
       <PastGameCsvDownloadButton
-        csv={csvPayload?.csv ?? ""}
-        fileName={
-          csvPayload?.fileName ?? `game-${gameLog.game.id}-player-events.csv`
-        }
+        events={gameLog.events}
+        fileName={`game-${gameLog.game.id}-player-events.csv`}
       />
 
       <PastGameEventLog events={gameLog.events} players={gameLog.players} />

@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { HydrationBoundary } from "@tanstack/react-db";
+import { Suspense } from "react";
 import {
   activeGameLiveQuery,
   gamesLiveQuery,
@@ -10,6 +11,7 @@ import {
   teamsLiveQuery,
 } from "@/collections";
 import ActiveGame from "@/components/active-game/ActiveGame";
+import { ActiveGamePageSkeleton } from "@/components/GameRouteSkeletons";
 import { preloadDbState } from "@/server/tanstackDb";
 
 export default async function ActiveGamePage() {
@@ -30,7 +32,9 @@ export default async function ActiveGamePage() {
 
   return (
     <HydrationBoundary state={state}>
-      <ActiveGame initialNowMs={Date.now()} />
+      <Suspense fallback={<ActiveGamePageSkeleton />}>
+        <ActiveGame initialNowMs={Date.now()} />
+      </Suspense>
     </HydrationBoundary>
   );
 }

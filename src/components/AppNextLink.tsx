@@ -4,5 +4,5 @@ import type { ComponentProps } from "react";
 type AppNextLinkProps = ComponentProps<typeof NextLink>;
 
 export function AppNextLink(props: AppNextLinkProps) {
-  return <NextLink {...props} />;
+  return <NextLink prefetch={true} {...props} />;
 }

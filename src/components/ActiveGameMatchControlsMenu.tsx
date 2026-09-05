@@ -4,7 +4,7 @@ import { AlertDialog, Button, Dropdown, Label } from "@heroui/react";
 import { useAtomValue } from "jotai";
 import { MoreVertical } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { inGameControlsAtom } from "@/inGameControlsAtoms";
 import { formatMatchPhase } from "@/lib/display/formatMatchPhase";
 import { formatClockDigits } from "@/lib/display/formatMatchTime";
@@ -18,6 +18,12 @@ export default function ActiveGameMatchControlsMenu() {
   const [isEnding, setIsEnding] = useState(false);
   const hasUnresolvedMutation =
     matchSync.status === "saving" || matchSync.status === "failed";
+
+  useEffect(() => {
+    if (inGameControls.gameId) {
+      router.prefetch(`/past-games/${inGameControls.gameId}`);
+    }
+  }, [inGameControls.gameId, router]);
 
   const disabledKeys = new Set<string>();
 

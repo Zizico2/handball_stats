@@ -2,17 +2,20 @@
 
 import { Button } from "@heroui/react";
 import { Download } from "lucide-react";
+import type { PlayerEvent } from "@/datamodel";
+import { playerEventsToCsv } from "@/lib/gameHistory";
 
 interface PastGameCsvDownloadButtonProps {
-  csv: string;
+  events: PlayerEvent[];
   fileName: string;
 }
 
 export function PastGameCsvDownloadButton({
-  csv,
+  events,
   fileName,
 }: PastGameCsvDownloadButtonProps) {
   const handleDownload = () => {
+    const csv = playerEventsToCsv(events);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
